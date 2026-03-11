@@ -1,0 +1,35 @@
+# ======================================================
+# 공통 설정 파일 (모든 환경에서 공통으로 적용)
+#
+# [프로파일 구조]
+#   application.yaml              ← 공통 (현재 파일)
+#   application-local.yml         ← 로컬 개발용 (gitignore, 직접 생성 필요)
+#   application-local.yml.example ← 로컬 설정 템플릿 (git 포함, 참고용)
+#   application-prod.yml          ← 운영 환경 (git 포함, 비밀값은 환경변수)
+# ======================================================
+
+spring:
+  application:
+    name: ddoya
+
+  profiles:
+    active: local
+
+  jpa:
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        default_batch_fetch_size: 100
+
+  mvc:
+    pathmatch:
+      matching-strategy: ant_path_matcher
+
+server:
+  port: 8080
+
+logging:
+  level:
+    root: INFO
+    com.ssafy.ddoya: INFO
