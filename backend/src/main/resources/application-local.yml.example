@@ -1,0 +1,21 @@
+# ======================================================
+# 로컬 개발 환경 설정 템플릿 (application-local.yml.example)
+# ======================================================
+
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/ddoya?useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
+    username: root
+    password: YOUR_PASSWORD     # ← 본인 MySQL 비밀번호로 변경
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:serverTimezone
+      ddl-auto: update          # 로컬: 스키마 자동 업데이트
+    show-sql: true
+
+logging:
+  level:
+    com.ssafy.ddoya: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.orm.jdbc.bind: TRACE
