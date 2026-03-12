@@ -1,5 +1,4 @@
-// Fallback for using MaterialIcons on Android and web.
-
+// 아이콘 컴포넌트(iOS/Android 공통)
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { SymbolWeight, SymbolViewProps } from 'expo-symbols';
 import { ComponentProps } from 'react';

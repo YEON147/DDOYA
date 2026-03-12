@@ -1,6 +1,8 @@
+// 테마 적용 Text 컴포넌트(Dark/light)
+
 import { StyleSheet, Text, type TextProps } from 'react-native';
 
-import { useThemeColor } from '@/hooks/use-theme-color';
+import { useThemeColor } from '@/hooks/theme/use-theme-color';
 
 export type ThemedTextProps = TextProps & {
   lightColor?: string;

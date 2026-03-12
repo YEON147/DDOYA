@@ -1,3 +1,4 @@
+// iOS 전용 아이콘 컴포넌트
 import { SymbolView, SymbolViewProps, SymbolWeight } from 'expo-symbols';
 import { StyleProp, ViewStyle } from 'react-native';
 

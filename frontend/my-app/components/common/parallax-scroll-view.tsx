@@ -1,3 +1,4 @@
+// 스크롤 시 헤더 시차효과 
 import type { PropsWithChildren, ReactElement } from 'react';
 import { StyleSheet } from 'react-native';
 import Animated, {
@@ -7,9 +8,9 @@ import Animated, {
   useScrollOffset,
 } from 'react-native-reanimated';
 
-import { ThemedView } from '@/components/themed-view';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { useThemeColor } from '@/hooks/use-theme-color';
+import { ThemedView } from '@/components/ui/themed-view';
+import { useColorScheme } from '@/hooks/theme/use-color-scheme';
+import { useThemeColor } from '@/hooks/theme/use-theme-color';
 
 const HEADER_HEIGHT = 250;
 
