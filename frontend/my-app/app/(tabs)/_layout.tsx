@@ -1,13 +1,31 @@
 import { Tabs } from 'expo-router';
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useFonts } from 'expo-font';
+import * as SplashScreen from 'expo-splash-screen';
 
 import { HapticTab } from '@/components/common/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/theme/use-color-scheme';
 
+SplashScreen.preventAutoHideAsync();
+
 export default function TabLayout() {
   const colorScheme = useColorScheme();
+
+  const [loaded] = useFonts({
+    SCoreDreamExtraBold: require('../../assets/fonts/SCDream7.otf'),
+  });
+
+  useEffect(() => {
+    if (loaded) {
+      SplashScreen.hideAsync();
+    }
+  }, [loaded]);
+
+  if (!loaded) {
+    return null;
+  }
 
   return (
     <Tabs
