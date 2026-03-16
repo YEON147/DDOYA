@@ -108,4 +108,10 @@ public class AuthService {
 
         return SignUpResponseDto.from(savedUser);
     }
+
+    public void checkEmailDuplicate(String email) {
+        if (userRepository.existsByEmail(email)) {
+            throw CustomException.conflict("이미 사용 중인 이메일입니다.");
+        }
+    }
 }
