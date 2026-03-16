@@ -17,7 +17,7 @@ export default function LoadingScreen() {
     <View
       style={{
         flex: 1,
-        backgroundColor: colors.surface,
+        backgroundColor: colors.background,
         justifyContent: 'center',
         alignItems: 'center',
       }}
