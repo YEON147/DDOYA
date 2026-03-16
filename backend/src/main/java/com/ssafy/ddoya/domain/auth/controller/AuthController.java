@@ -7,9 +7,11 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -42,5 +44,15 @@ public class AuthController {
         RefreshTokenResponseDto tokens = authService.refresh(refreshToken);
 
         return ResponseEntity.ok(SuccessResponse.of("토큰이 재발급 되었습니다.", tokens));
+    }
+
+    @GetMapping("/check-email")
+    public ResponseEntity<SuccessResponse<Void>> checkEmailDuplicate(
+            @RequestParam String email) {
+
+        authService.checkEmailDuplicate(email);
+        return ResponseEntity.ok(
+                SuccessResponse.of("이메일 중복 확인에 성공했습니다.")
+        );
     }
 }
