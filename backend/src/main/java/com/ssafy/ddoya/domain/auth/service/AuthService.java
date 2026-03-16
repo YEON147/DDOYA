@@ -89,6 +89,11 @@ public class AuthService {
             throw CustomException.conflict("이미 사용 중인 이메일입니다.");
         }
 
+        // 비밀번호 확인 검증
+        if (!request.getPassword().equals(request.getConfirmPassword())) {
+            throw CustomException.badRequest("비밀번호가 일치하지 않습니다.");
+        }
+
         // 비밀번호 암호화
         String encodedPassword = passwordEncoder.encode(request.getPassword());
 
