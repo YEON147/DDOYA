@@ -1,10 +1,10 @@
 import { Tabs } from 'expo-router';
-import React from 'react';
 
 import { HapticTab } from '@/components/common/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/theme/use-color-scheme';
+
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
@@ -26,7 +26,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="(profile)"
         options={{
-          title: 'Explore',
+          title: 'Profile',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
         }}
       />

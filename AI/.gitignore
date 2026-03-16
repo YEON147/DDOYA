@@ -1,0 +1,35 @@
+# 환경변수 (키 유출 방지)
+.env
+
+# 가상환경
+venv/
+.venv/
+env/
+
+# 파이썬 캐시 및 빌드
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+build/
+dist/
+*.egg-info/
+
+# 모델 가중치 (용량 큼)
+weights/*.pt
+
+# 임베딩 벡터 (용량 큼)
+*.npy
+
+# 주피터
+.ipynb_checkpoints/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+*~
+*.swp

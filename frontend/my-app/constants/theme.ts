@@ -1,3 +1,7 @@
+// 기존 템플릿 theme.ts 파일 -> constants/theme/index.ts로 이동
+// constants/theme/colors.ts, constants/theme/typography.ts 파일 생성
+// 추후 다크모드 관리를 위해 일단 보류
+
 /**
  * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
  * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
