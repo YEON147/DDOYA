@@ -1,7 +1,5 @@
 package com.ssafy.ddoya.domain.auth.service;
 
-import com.ssafy.ddoya.domain.auth.dto.LoginRequestDto;
-import com.ssafy.ddoya.domain.auth.dto.LoginResponseDto;
 import com.ssafy.ddoya.domain.auth.dto.SignUpRequestDto;
 import com.ssafy.ddoya.domain.auth.dto.SignUpResponseDto;
 import com.ssafy.ddoya.domain.auth.dto.RefreshTokenResponseDto;
