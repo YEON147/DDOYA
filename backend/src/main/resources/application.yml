@@ -12,9 +12,6 @@ spring:
   application:
     name: ddoya
 
-  profiles:
-    active: local
-
   jpa:
     show-sql: false
     properties:

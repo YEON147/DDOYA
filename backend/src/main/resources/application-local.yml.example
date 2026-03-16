@@ -3,6 +3,8 @@
 # ======================================================
 
 spring:
+  jwt:
+    secret: YOUR_JWT_SECRET_KEY_HERE_THAT_IS_LONG_ENOUGH # ← 본인 JWT 비밀키로 변경
   datasource:
     url: jdbc:mysql://localhost:3306/ddoya?useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
     username: root
@@ -10,9 +12,9 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:
-    hibernate:serverTimezone
+    hibernate:
       ddl-auto: update          # 로컬: 스키마 자동 업데이트
-    show-sql: true
+    show-sql: true              # 로컬: SQL 쿼리 로깅
 
 logging:
   level:
