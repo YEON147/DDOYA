@@ -3,6 +3,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 import '../global.css';
+import { colors } from '../constants/theme/colors';
 
 import { useEffect } from 'react';
 import { useFonts } from 'expo-font';
@@ -33,8 +34,16 @@ export default function RootLayout() {
     return null;
   }
 
+  const theme = {
+    ...(colorScheme === 'dark' ? DarkTheme : DefaultTheme),
+    colors: {
+      ...(colorScheme === 'dark' ? DarkTheme.colors : DefaultTheme.colors),
+      background: colors.background,
+    },
+  };
+
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <ThemeProvider value={theme}>
       <Stack>
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
