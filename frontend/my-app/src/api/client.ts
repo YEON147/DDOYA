@@ -1,7 +1,7 @@
 // axios/fetch 클라이언트 설정
 import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
-
+  
 const apiClient = axios.create({
     baseURL: process.env.EXPO_PUBLIC_API_URL,
     timeout: 10000,
