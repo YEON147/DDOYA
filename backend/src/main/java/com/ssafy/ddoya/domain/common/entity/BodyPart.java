@@ -17,13 +17,13 @@ public class BodyPart {
 
     @Id
     @Column(name = "body_part_id")
-    private Integer bodyPartId;
+    private Byte bodyPartId;
 
     @Column(name = "body_part_name", nullable = false, unique = true, length = 50, updatable = false)
     private String bodyPartName;
 
     @Builder
-    private BodyPart(Integer bodyPartId, String bodyPartName) {
+    private BodyPart(Byte bodyPartId, String bodyPartName) {
         this.bodyPartId = bodyPartId;
         this.bodyPartName = bodyPartName;
     }
