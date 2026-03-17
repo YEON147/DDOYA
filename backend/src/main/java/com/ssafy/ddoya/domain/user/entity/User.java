@@ -1,10 +1,7 @@
 package com.ssafy.ddoya.domain.user.entity;
 
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.math.BigDecimal;
@@ -13,6 +10,8 @@ import java.time.LocalDateTime;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
+@Builder
 @Entity
 @Table(name = "users")
 public class User {
@@ -52,8 +51,9 @@ public class User {
     private UserNotificationSetting notificationSetting;
 
     @Builder
-    private User(String email, String password, String nickname, Gender gender,
+    private User(Long userId, String email, String password, String nickname, Gender gender,
             LocalDate birthDate, BigDecimal heightCm, BigDecimal weightKg) {
+        this.userId = userId;
         this.email = email;
         this.password = password;
         this.nickname = nickname;

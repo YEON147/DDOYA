@@ -4,6 +4,8 @@ import com.ssafy.ddoya.global.response.ErrorResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.validation.BindException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -32,17 +34,43 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of(HttpStatus.BAD_REQUEST, e.getMessage()));
     }
 
-    // @Valid 유효성 검사 실패 (400)
+    // @RequestBody + @Valid 유효성 검사 실패 (400)
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException e) {
+    public ResponseEntity<ErrorResponse> handleMethodArgumentNotValid(MethodArgumentNotValidException e) {
         String message = e.getBindingResult().getFieldErrors().stream()
-                .map(error -> error.getField() + ": " + error.getDefaultMessage())
+                .map(error -> error.getDefaultMessage())
                 .findFirst()
-                .orElse("유효성 검사에 실패했습니다.");
+                .orElse("입력값이 올바르지 않습니다.");
+
         log.warn("[MethodArgumentNotValidException] {}", message);
+
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
                 .body(ErrorResponse.of(HttpStatus.BAD_REQUEST, message));
+    }
+
+    // 바인딩 실패 (400)
+    @ExceptionHandler(BindException.class)
+    public ResponseEntity<ErrorResponse> handleBindException(BindException e) {
+        String message = e.getBindingResult().getFieldErrors().stream()
+                .map(error -> error.getDefaultMessage())
+                .findFirst()
+                .orElse("입력값이 올바르지 않습니다.");
+
+        log.warn("[BindException] {}", message);
+
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ErrorResponse.of(HttpStatus.BAD_REQUEST, message));
+    }
+
+    // JSON 본문 자체가 없거나 타입이 일치하지 않는 경우 (400)
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleHttpMessageNotReadableException(HttpMessageNotReadableException e) {
+        log.warn("[HttpMessageNotReadableException] {}", e.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ErrorResponse.of(HttpStatus.BAD_REQUEST, "요청 본문 형식이 올바르지 않거나 누락되었습니다."));
     }
 
     // 상태 충돌 (409)
