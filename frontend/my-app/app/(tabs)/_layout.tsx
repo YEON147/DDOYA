@@ -17,7 +17,7 @@ export default function TabLayout() {
       }}
     >
       <Tabs.Screen
-        name="(home)"
+        name="(home)/index"
         options={{
           title: '홈',
           tabBarIcon: ({ color }) => (
@@ -26,7 +26,7 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="(profile)"
+        name="(profile)/index"
         options={{
           title: '프로필',
           tabBarIcon: ({ color }) => (
