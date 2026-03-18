@@ -28,7 +28,7 @@ export default function SupplementsScreen() {
           {item.primary_ingredient}
         </Text>
         <Text className="text-sm font-semibold" style={{ color: colors.primary }}>
-          재고: {item.stock_quantity}정
+          재고: {item.stock_quantity}{item.unit || '정'}
         </Text>
       </View>
       <TouchableOpacity 
