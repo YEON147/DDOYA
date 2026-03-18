@@ -10,9 +10,23 @@ export default function ProfileLayout() {
         }}
       />
       <Stack.Screen
-        name="supplements"
+        name="supplements/index"
         options={{
           headerTitle: '영양제 관리',
+          headerBackTitle: '뒤로',
+        }}
+      />
+      <Stack.Screen
+        name="supplements/create"
+        options={{
+          headerTitle: '영양제 등록',
+          headerBackTitle: '뒤로',
+        }}
+      />
+      <Stack.Screen
+        name="supplements/[supplementId]"
+        options={{
+          headerTitle: '영양제 상세',
           headerBackTitle: '뒤로',
         }}
       />
