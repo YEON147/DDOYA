@@ -21,3 +21,11 @@ logging:
     com.ssafy.ddoya: DEBUG
     org.hibernate.SQL: DEBUG
     org.hibernate.orm.jdbc.bind: TRACE
+
+app:
+  s3:
+    enabled: false
+
+cors:
+  allowed-origins:
+    - http://localhost:
