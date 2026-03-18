@@ -1,7 +1,4 @@
 def parse_ocr_result(ocr_result: dict) -> list:
-    """
-    Clova OCR 결과에서 텍스트 추출
-    """
     texts = []
     
     try:
@@ -16,16 +13,14 @@ def parse_ocr_result(ocr_result: dict) -> list:
                         "text": text,
                         "confidence": confidence
                     })
+
     except Exception as e:
         print(f"OCR 파싱 오류: {e}")
-    
+
     return texts
 
 
 def calculate_confidence(ocr_result: dict) -> float:
-    """
-    전체 신뢰도 평균 계산
-    """
     try:
         images = ocr_result.get("images", [])
         confidences = []
@@ -33,7 +28,6 @@ def calculate_confidence(ocr_result: dict) -> float:
             fields = image.get("fields", [])
             for field in fields:
                 confidences.append(field.get("inferConfidence", 0))
-        
         if not confidences:
             return 0.0
         return sum(confidences) / len(confidences)
