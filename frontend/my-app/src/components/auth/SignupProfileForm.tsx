@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { View, TextInput, Text, Alert } from 'react-native';
 import { router } from 'expo-router';
+import axios from 'axios';
 import { AppButton } from '../common/AppButton';
 import { authApi } from '../../api/auth';
 import { useSignupStore } from '../../store/signupStore';
 import { SignupStep2Input } from '../../types/types';
 
 export function SignupProfileForm() {
+  const step1 = useSignupStore((state) => state.step1);
   const step2 = useSignupStore((state) => state.step2);
   const buildPayload = useSignupStore((state) => state.buildPayload);
   const reset = useSignupStore((state) => state.reset);
@@ -26,10 +28,16 @@ export function SignupProfileForm() {
     weightKg.trim() !== '';
 
   const handleSubmit = async () => {
-    const payload = { ...buildPayload(), ...step2 };
     const parsedHeight = Number(heightCm);
     const parsedWeight = Number(weightKg);
-    console.log('전송 데이터:', JSON.stringify(payload));
+
+    // 1단계 데이터가 비어 있으면 회원가입 요청을 막고 이전 화면으로 유도
+    if (!step1.email.trim() || !step1.password.trim() || !step1.confirmPassword.trim()) {
+      setErrorMessage('이전 단계 정보가 없습니다. 다시 입력해주세요.');
+      router.replace('/(auth)/signup');
+      return;
+    }
+
     if (!isFormValid || Number.isNaN(parsedHeight) || Number.isNaN(parsedWeight)) {
       setErrorMessage('모든 값을 올바르게 입력해주세요.');
       return;
@@ -44,11 +52,27 @@ export function SignupProfileForm() {
     };
 
     try {
-      await authApi.signup({ ...buildPayload(), ...step2Data });
+      const requestPayload = { ...buildPayload(), ...step2Data };
+      console.log('전송 데이터:', JSON.stringify(requestPayload));
+      await authApi.signup(requestPayload);
       Alert.alert('회원가입 완료');
       reset();
       router.replace('/(auth)/login');
     } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const status = error.response?.status;
+        const data = error.response?.data as
+          | { message?: string; error?: string; data?: { message?: string } }
+          | undefined;
+
+        const backendMessage =
+          data?.message || data?.data?.message || data?.error || error.message;
+
+        console.log('회원가입 API 실패:', status, backendMessage, error.response?.data);
+        setErrorMessage(backendMessage || '회원가입에 실패했습니다. 다시 시도해주세요.');
+        return;
+      }
+
       setErrorMessage('회원가입에 실패했습니다. 다시 시도해주세요.');
     }
   };
