@@ -6,4 +6,6 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface SupplementRepository extends JpaRepository<Supplement, Long> {
+
+    boolean existsByUser_UserIdAndAlias(Long userId, String alias);
 }

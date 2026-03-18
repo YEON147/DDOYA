@@ -25,7 +25,8 @@ logging:
 app:
   s3:
     enabled: false
+  fastapi:
+    mock_enabled: true
 
 cors:
   allowed-origins:
-    - http://localhost:

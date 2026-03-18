@@ -1,11 +1,401 @@
 package com.ssafy.ddoya.domain.supplement.service;
 
+import com.ssafy.ddoya.domain.common.entity.BodyPart;
+import com.ssafy.ddoya.domain.common.entity.IngredientMaster;
+import com.ssafy.ddoya.domain.common.repository.BodyPartRepository;
+import com.ssafy.ddoya.domain.common.repository.IngredientMasterRepository;
+import com.ssafy.ddoya.domain.common.util.ImageCompressUtil;
+import com.ssafy.ddoya.domain.supplement.dto.FastApiOcrResponse;
+import com.ssafy.ddoya.domain.supplement.dto.IngredientAnalyzeResponse;
+import com.ssafy.ddoya.domain.supplement.dto.SupplementRegisterRequest;
+import com.ssafy.ddoya.domain.supplement.dto.SupplementRegisterResponse;
+import com.ssafy.ddoya.domain.supplement.entity.Supplement;
+import com.ssafy.ddoya.domain.supplement.entity.SupplementInventory;
+import com.ssafy.ddoya.domain.supplement.entity.UserSupplementIngredient;
+import com.ssafy.ddoya.domain.supplement.repository.SupplementInventoryRepository;
+import com.ssafy.ddoya.domain.supplement.repository.SupplementRepository;
+import com.ssafy.ddoya.domain.supplement.repository.UserSupplementIngredientRepository;
+import com.ssafy.ddoya.domain.user.entity.User;
+import com.ssafy.ddoya.global.exception.CustomException;
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.util.unit.DataSize;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+import static java.nio.file.Files.write;
+import static java.util.Collections.emptyList;
+import static java.util.UUID.randomUUID;
+import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
 
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class SupplementService {
+
+    @Value("${spring.servlet.multipart.max-file-size}")
+    private DataSize maxFileSize;
+
+    @Value("${app.fastapi.url:http://localhost:8000}")
+    private String fastApiUrl;
+
+    // fastApi 준비 완료 시 제거
+    @Value("${app.fastapi.mock_enabled:false}")
+    private boolean isFastApiMockEnabled;
+
+    // S3 준비 완료 시 주석 해제
+    // private final ImageStorageService imageStorageService;
+    private final SupplementRepository supplementRepository;
+    private final UserSupplementIngredientRepository userSupplementIngredientRepository;
+    private final SupplementInventoryRepository supplementInventoryRepository;
+    private final BodyPartRepository bodyPartRepository;
+    private final IngredientMasterRepository ingredientMasterRepository;
+    private final EntityManager entityManager;
+    public IngredientAnalyzeResponse analyzeIngredients(MultipartFile ingredientsImg) {
+        validateImageFile(ingredientsImg);
+        IngredientAnalyzeResponse ocrResult = runOcr(ingredientsImg);
+        return resolveBodyPartName(ocrResult);
+    }
+
+    @Transactional
+    public SupplementRegisterResponse registerSupplement(Long userId, MultipartFile pillImg,
+            SupplementRegisterRequest request) {
+        // 알약 이미지 업로드
+        String pillImgUrl = uploadPillImage(pillImg);
+
+        // 연관 엔티티 프록시 조회
+        User user = entityManager.getReference(User.class, userId);
+        BodyPart bodyPart = null;
+        Byte bodyPartId = request.getBodyPartId();
+        if (bodyPartId != null)
+            bodyPart = entityManager.getReference(BodyPart.class, bodyPartId);
+
+        // 사용자별 영양제 이름(alias) 중복 체크
+        if (supplementRepository.existsByUser_UserIdAndAlias(userId, request.getAlias())) {
+            throw CustomException.conflict("이미 동일한 이름의 영양제가 등록되어 있습니다: " + request.getAlias());
+        }
+
+        // 영양제 저장 (is_reflected 기본값: false)
+        Supplement savedSupplement = saveSupplement(user, bodyPart, pillImgUrl, request);
+
+        // 재고 저장 (stock_quantity=capacity, stock_alert_enabled=true)
+        SupplementInventory inventory = saveInventory(savedSupplement, request.getCapacity());
+
+        // 성분 저장 (analyze API 응답값을 프론트가 그대로 전달)
+        List<SupplementRegisterResponse.IngredientDto> ingredientDtos = saveIngredients(savedSupplement,
+                request.getIngredients());
+
+        // 응답 DTO 생성
+        return buildResponse(savedSupplement, inventory,
+                request.getBodyPartId(), request.getBodyPartName(), ingredientDtos);
+    }
+
+    /**
+     * 성분표 이미지 OCR 분석 (FastAPI 연동)
+     */
+    private IngredientAnalyzeResponse runOcr(MultipartFile ingredientsImg) {
+        // fastApi 준비 완료 시 제거
+        if (isFastApiMockEnabled) {
+            return generateMockOcrResponse();
+        }
+
+        String url = fastApiUrl + "/api/ai/ocr/analyze";
+
+        // HTTP 요청 헤더 생성
+        HttpHeaders headers = new HttpHeaders();
+        // Content-Type 설정
+        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+        // multipart/form-data 요청 body 생성
+        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+
+        try {
+            // MultipartFile → ByteArrayResource 변환
+            // RestTemplate multipart 요청 시 Resource 타입을 사용해야 파일로 인식됨
+            ByteArrayResource resource = new ByteArrayResource(ingredientsImg.getBytes()) {
+                // 파일명을 반환하도록 override
+                // 일부 서버에서는 filename이 없으면 파일 파싱을 못할 수 있음
+                @Override
+                public String getFilename() {
+                    return ingredientsImg.getOriginalFilename() != null ? ingredientsImg.getOriginalFilename()
+                            : "ingredientImg.jpg";
+                }
+            };
+
+            // multipart body에 파일 추가
+            // FastAPI에서 받을 필드명이 "image" 이므로 동일하게 설정
+            body.add("image", resource);
+        } catch (IOException e) {
+            throw new CustomException(INTERNAL_SERVER_ERROR, "성분표 이미지 읽기 실패");
+        }
+
+        // 요청 body + header를 하나의 HttpEntity로 묶음
+        HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
+
+        // FastAPI 호출을 위한 RestTemplate 생성
+        RestTemplate restTemplate = new RestTemplate();
+
+        ResponseEntity<FastApiOcrResponse> responseEntity;
+
+        try {
+            // FastAPI OCR API 호출
+            // 요청: multipart/form-data (image 파일)
+            // 응답: FastApiOcrResponse DTO로 매핑
+            responseEntity = restTemplate.postForEntity(url, requestEntity, FastApiOcrResponse.class);
+        } catch (Exception e) {
+            throw new CustomException(INTERNAL_SERVER_ERROR, "FastAPI OCR 서버 호출 실패: " + e.getMessage());
+        }
+
+        // FastAPI 응답 body 추출
+        FastApiOcrResponse ocrResponse = responseEntity.getBody();
+        // 응답 유효성 검증
+        if (ocrResponse == null || !ocrResponse.isSuccess() || ocrResponse.getData() == null) {
+            throw new CustomException(INTERNAL_SERVER_ERROR, "FastAPI OCR 서버 분석 실패");
+        }
+
+        // OCR 결과 성분을 응답 DTO로 변환할 리스트
+        List<IngredientAnalyzeResponse.IngredientDto> mappedIngredients = new ArrayList<>();
+        // FastAPI 응답의 성분 목록이 존재하면 변환 진행
+        if (ocrResponse.getData().getIngredients() != null) {
+            for (FastApiOcrResponse.OcrIngredient aiItem : ocrResponse.getData().getIngredients()) {
+
+                // FastAPI가 반환한 ingredient_id
+                Long ingredientId = aiItem.getIngredientId();
+
+                // DB에서 ingredient_id 로 정규화된 이름(normalizedName) 조회 (화면 표시용)
+                String normalizedName = null;
+                if (ingredientId != null) {
+                    normalizedName = ingredientMasterRepository.findById(ingredientId)
+                            .map(IngredientMaster::getNormalizedName)
+                            .orElse(null);
+                }
+
+                boolean isPrimary = (aiItem.getIsPrimary() != null && aiItem.getIsPrimary() == 1);
+
+                // OCR 응답 데이터를 응답 DTO로 매핑
+                mappedIngredients.add(IngredientAnalyzeResponse.IngredientDto.builder()
+                        .normalizedIngredientId(ingredientId)
+                        .normalizedName(normalizedName)
+                        .rawName(aiItem.getOriginalName())
+                        .unit(aiItem.getUnit())
+                        .amount(aiItem.getAmount())
+                        .isPrimary(isPrimary)
+                        .build());
+            }
+        }
+
+        // 최종적으로 프론트에 반환할 분석 결과 DTO 생성
+        return IngredientAnalyzeResponse.builder()
+                // FastAPI가 판단한 대표 신체부위 ID
+                .bodyPartId(ocrResponse.getData().getBodyPartId())
+
+                // 변환된 성분 리스트
+                .ingredients(mappedIngredients)
+                .build();
+    }
+
+    /**
+     * fastApi 준비 완료 시 제거
+     * Mock OCR 분석 결과 생성 (테스트용)
+     */
+    private IngredientAnalyzeResponse generateMockOcrResponse() {
+        List<IngredientAnalyzeResponse.IngredientDto> mockIngredients = new ArrayList<>();
+        mockIngredients.add(IngredientAnalyzeResponse.IngredientDto.builder()
+                .normalizedIngredientId(1L)
+                .normalizedName("비타민C")
+                .rawName("Vitamin C")
+                .unit("mg")
+                .amount(java.math.BigDecimal.valueOf(500.0))
+                .isPrimary(true)
+                .build());
+
+        mockIngredients.add(IngredientAnalyzeResponse.IngredientDto.builder()
+                .normalizedIngredientId(2L)
+                .normalizedName("아연")
+                .rawName("Zinc")
+                .unit("mg")
+                .amount(java.math.BigDecimal.valueOf(8.5))
+                .isPrimary(false)
+                .build());
+
+        return IngredientAnalyzeResponse.builder()
+                .bodyPartId((byte) 3)
+                .ingredients(mockIngredients)
+                .build();
+    }
+
+    // OCR 결과의 bodyPartId로 bodyPartName 조회
+    private IngredientAnalyzeResponse resolveBodyPartName(IngredientAnalyzeResponse ocrResult) {
+        if (ocrResult.getBodyPartId() == null) {
+            return ocrResult;
+        }
+
+        String bodyPartName = bodyPartRepository.findById(ocrResult.getBodyPartId())
+                .map(BodyPart::getBodyPartName)
+                .orElse(null);
+
+        return IngredientAnalyzeResponse.builder()
+                .bodyPartId(ocrResult.getBodyPartId())
+                .bodyPartName(bodyPartName)
+                .ingredients(ocrResult.getIngredients())
+                .build();
+    }
+
+    private Supplement saveSupplement(User user, BodyPart bodyPart, String pillImgUrl,
+            SupplementRegisterRequest request) {
+        Supplement supplement = Supplement.builder()
+                .user(user)
+                .bodyPart(bodyPart)
+                .alias(request.getAlias())
+                .dailyDose(request.getDailyDose())
+                .dosePerIntake(request.getDosePerIntake())
+                .capacity(request.getCapacity())
+                .pillImageUrl(pillImgUrl)
+                .build();
+        return supplementRepository.save(supplement);
+    }
+
+    private SupplementInventory saveInventory(Supplement supplement, Integer capacity) {
+        SupplementInventory inventory = SupplementInventory.builder()
+                .supplement(supplement)
+                .stockQuantity(capacity)
+                .stockAlertEnabled(true) // 재고 알림 기본값: true
+                .build();
+        return supplementInventoryRepository.save(inventory);
+    }
+
+    private List<SupplementRegisterResponse.IngredientDto> saveIngredients(
+            Supplement supplement, List<SupplementRegisterRequest.IngredientDto> ingredients) {
+
+        if (ingredients == null || ingredients.isEmpty()) {
+            return emptyList();
+        }
+
+        List<UserSupplementIngredient> entities = new ArrayList<>();
+        List<SupplementRegisterResponse.IngredientDto> dtos = new ArrayList<>();
+
+        for (SupplementRegisterRequest.IngredientDto dto : ingredients) {
+            if (dto.getNormalizedIngredientId() == null)
+                continue;
+
+            IngredientMaster master = entityManager.getReference(IngredientMaster.class,
+                    dto.getNormalizedIngredientId());
+            boolean isPrimary = Boolean.TRUE.equals(dto.getIsPrimary());
+
+            entities.add(UserSupplementIngredient.builder()
+                    .supplement(supplement)
+                    .normalizedIngredient(master)
+                    .rawIngredientName(dto.getRawName())
+                    .unit(dto.getUnit())
+                    .amount(dto.getAmount())
+                    .isPrimary(isPrimary)
+                    .build());
+
+            dtos.add(SupplementRegisterResponse.IngredientDto.builder()
+                    .normalizedIngredientId(dto.getNormalizedIngredientId())
+                    .normalizedName(dto.getNormalizedName())
+                    .rawName(dto.getRawName())
+                    .unit(dto.getUnit())
+                    .amount(dto.getAmount())
+                    .isPrimary(isPrimary)
+                    .build());
+        }
+
+        if (!entities.isEmpty()) {
+            userSupplementIngredientRepository.saveAll(entities);
+        }
+        return dtos;
+    }
+
+    private SupplementRegisterResponse buildResponse(Supplement supplement, SupplementInventory inventory,
+            Byte bodyPartId, String bodyPartName,
+            List<SupplementRegisterResponse.IngredientDto> ingredientDtos) {
+        return SupplementRegisterResponse.builder()
+                .supplementId(supplement.getUserSupplementId())
+                .pillImageUrl(supplement.getPillImageUrl())
+                .alias(supplement.getAlias())
+                .dailyDose(supplement.getDailyDose())
+                .dosePerIntake(supplement.getDosePerIntake())
+                .capacity(supplement.getCapacity())
+                .isReflected(supplement.isReflected())
+                .bodyPartId(bodyPartId)
+                .bodyPartName(bodyPartName)
+                .inventoryId(inventory.getInventoryId())
+                .stockQuantity(inventory.getStockQuantity())
+                .ingredients(ingredientDtos)
+                .build();
+    }
+
+    // 알약 이미지 압축 후 업로드
+    private String uploadPillImage(MultipartFile pillImg) {
+        validateImageFile(pillImg);
+
+        try {
+            byte[] original = pillImg.getBytes();
+
+            // 원본 이미지 압축 (긴축 1200px, 품질 0.7)
+            byte[] compressed = ImageCompressUtil.compressToJpeg(original, 1200, 0.7f);
+
+            // 압축 후 더 커지면 원본 사용
+            byte[] toStore = compressed;
+            String ext = "jpeg";
+
+            if (original.length <= compressed.length) {
+                toStore = original;
+                String originalFilename = pillImg.getOriginalFilename();
+                if (originalFilename != null && originalFilename.contains(".")) {
+                    ext = originalFilename.substring(originalFilename.lastIndexOf(".") + 1);
+                }
+            }
+
+            // S3 준비 완료 시 주석 해제
+            // --- [S3 저장 로직] ---
+            // return imageStorageService.upload(toStore, "supplements/pill", ext);
+
+            // S3 준비 완료 시 제거
+            // --- [로컬 저장 로직 (테스트용)] ---
+            String filename = randomUUID() + "." + ext;
+            File directory = new File("uploads/supplements/pill");
+            if (!directory.exists()) {
+                directory.mkdirs();
+            }
+            write(new File(directory, filename).toPath(), toStore);
+            return "/uploads/supplements/pill/" + filename;
+            // ────────────────────────────────────
+
+        } catch (IOException e) {
+            throw new CustomException(INTERNAL_SERVER_ERROR, "이미지 처리 중 오류가 발생했습니다.");
+        }
+    }
+
+    // 이미지 파일 유효성 검사 (빈 파일 / 크기 초과 / 지원하지 않는 형식 검사)
+    private void validateImageFile(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw CustomException.badRequest("빈 파일이 포함되어 있습니다.");
+        }
+        if (file.getSize() > maxFileSize.toBytes()) {
+            throw CustomException.badRequest(
+                    "이미지 파일 크기는 " + maxFileSize.toMegabytes() + "MB 이하만 가능합니다.");
+        }
+        String contentType = file.getContentType();
+        if (contentType == null || !(contentType.equals("image/jpeg")
+                || contentType.equals("image/png")
+                || contentType.equals("image/webp"))) {
+            throw CustomException.badRequest("지원하지 않는 이미지 형식입니다. (jpeg/png/webp만 가능)");
+        }
+    }
 }
