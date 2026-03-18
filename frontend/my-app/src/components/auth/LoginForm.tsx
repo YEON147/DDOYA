@@ -27,26 +27,22 @@ export function LoginForm() {
           <TextInput
             className="w-full h-[52px] bg-white border border-black rounded-xl px-4 text-sm font-scdream"
             placeholder="아이디를 입력해주세요"
-            placeholderTextColor={colors.text}
             value={loginId}
             onChangeText={(text) => {
               setLoginId(text);
               setErrorMessage('');
             }}
             autoCapitalize="none"
-            style={{ fontFamily: 'SCoreDreamExtraBold', color: colors.text }}
           />
           <TextInput
             className="w-full h-[52px] bg-white border border-black rounded-xl px-4 text-sm font-scdream"
             placeholder="비밀번호를 입력해주세요"
-            placeholderTextColor={colors.text}
             value={password}
             onChangeText={(text) => {
               setPassword(text);
               setErrorMessage('');
             }}
             secureTextEntry
-            style={{ fontFamily: 'SCoreDreamExtraBold', color: colors.text }}
           />
 
           {/* Error message area */}

@@ -1,7 +1,7 @@
 import { Tabs } from 'expo-router';
 
-import { HapticTab } from '@/components/common/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
+import { HapticTab } from '@/src/components/common/haptic-tab';
+import { IconSymbol } from '@/src/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/theme/use-color-scheme';
 
@@ -17,7 +17,7 @@ export default function TabLayout() {
       }}
     >
       <Tabs.Screen
-        name="(home)/index"
+        name="(home)"
         options={{
           title: '홈',
           tabBarIcon: ({ color }) => (
@@ -26,12 +26,10 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="(profile)/index"
+        name="(profile)"
         options={{
-          title: '프로필',
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="person.fill" color={color} />
-          ),
+          title: 'Profile',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="person.fill" color={color} />,
         }}
       />
     </Tabs>
