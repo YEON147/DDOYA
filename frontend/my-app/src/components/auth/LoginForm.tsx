@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { View, TextInput, Text } from 'react-native';
+import { View, TextInput, Text, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { AppButton } from '../common/AppButton';
 import { SocialLoginButtons } from './SocialLoginButtons';
 import { colors } from '../../../constants/theme/colors';
+import { authApi } from '@/src/api/auth';
 
 export function LoginForm() {
   const [loginId, setLoginId] = useState('');
@@ -12,10 +13,14 @@ export function LoginForm() {
 
   const isFormValid = loginId.trim() !== '' && password.trim() !== '';
 
-  const handleLogin = () => {
-    if (loginId === 'test' && password === '1234') {
+  const handleLogin = async () => {
+    try {
+      await authApi.login(loginId, password);
+      setErrorMessage('');
+      Alert.alert('로그인 완료');
       router.replace('/(tabs)/(home)');
-    } else {
+    } catch (error) {
+      console.error('Login failed:', error);
       setErrorMessage('아이디/비밀번호 정보가 올바르지 않습니다.');
     }
   };
