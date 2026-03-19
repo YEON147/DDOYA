@@ -534,6 +534,7 @@ public class SupplementService {
                 .alias(supplement.getAlias())
                 .primaryIngredientNames(primaryIngredientNames)
                 .dailyDose(supplement.getDailyDose())
+                .dosePerIntake(supplement.getDosePerIntake())
                 .stockQuantity(inventory.getStockQuantity())
                 .stockNotificationEnabled(inventory.isStockAlertEnabled())
                 .intakeSchedules(scheduleDtos)

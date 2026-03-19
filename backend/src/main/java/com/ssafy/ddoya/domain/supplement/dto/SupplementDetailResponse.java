@@ -14,6 +14,7 @@ public class SupplementDetailResponse {
     private String alias;
     private List<String> primaryIngredientNames;
     private Integer dailyDose;
+    private Integer dosePerIntake;
     private Integer stockQuantity;
     private Boolean stockNotificationEnabled;
     private List<IntakeScheduleDto> intakeSchedules;
