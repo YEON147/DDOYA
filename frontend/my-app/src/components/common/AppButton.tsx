@@ -1,5 +1,6 @@
 import { TouchableOpacity, Text, TouchableOpacityProps } from 'react-native';
 import { cn } from '../../lib/utils';
+import { colors } from '@/constants/theme/colors';
 
 interface AppButtonProps extends TouchableOpacityProps {
   title: string;
@@ -13,9 +14,10 @@ export function AppButton({ title, variant = 'primary', className, disabled, ...
     <TouchableOpacity
       className={cn(
         'h-14 rounded-full items-center justify-center',
-        isDisabled ? 'bg-gray-300' : 'bg-black',
+        isDisabled ? 'bg-gray-300' : '',
         className
       )}
+      style={!isDisabled ? { backgroundColor: colors.point } : undefined}
       disabled={isDisabled}
       {...props}
     >

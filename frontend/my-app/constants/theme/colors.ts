@@ -1,10 +1,11 @@
 export const colors = {
-    background: '#F5F6F7',
-    surface: '#FFFFFF',
+    background: '#FFFEF9',
+    surface: '#FFF7E6',
     input: '#F5F6F7',
-    border: '#E5E7EB',
+    dark: '#3F2207',
     text: '#000000',
     primary: '#FF8A15',
+    point: '#FF8B1F',
 } as const
 
 export type ColorToken = keyof typeof colors

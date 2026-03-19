@@ -5,7 +5,16 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        scdream: ['SCoreDreamExtraBold'],
+        scdream: ['SCoreDreamRegular'],
+        'scdream-thin': ['SCoreDreamThin'],
+        'scdream-extralight': ['SCoreDreamExtraLight'],
+        'scdream-light': ['SCoreDreamLight'],
+        'scdream-regular': ['SCoreDreamRegular'],
+        'scdream-medium': ['SCoreDreamMedium'],
+        'scdream-bold': ['SCoreDreamBold'],
+        'scdream-extrabold': ['SCoreDreamExtraBold'],
+        'scdream-heavy': ['SCoreDreamHeavy'],
+        'scdream-black': ['SCoreDreamBlack'],
       },
     },
   },
