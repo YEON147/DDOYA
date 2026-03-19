@@ -48,6 +48,10 @@ import static java.util.Collections.emptyList;
 import static java.util.UUID.randomUUID;
 import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
 
+/**
+ * 영양제 관련 비즈니스 로직을 처리하는 서비스 클래스입니다.
+ * 이미지 분석(OCR), 알약 검증, 등록, 목록 및 상세 조회, 수정을 담당합니다.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -75,7 +79,12 @@ public class SupplementService {
     private final EntityManager entityManager;
     private final RestTemplate restTemplate;
 
-    // 성분표 분석 (FastAPI 호출)
+    /**
+     * 성분표 이미지를 OCR 분석하여 정규화된 성분 정보와 권장 섭취 정보를 추출합니다. (FastAPI 호출)
+     *
+     * @param ingredientsImg 성분표 이미지 파일
+     * @return 분석 과정 중 발생한 메시지와 추출된 성분 목록을 포함한 응답 DTO
+     */
     public IngredientAnalyzeResponse analyzeIngredients(MultipartFile ingredientsImg) {
         validateImageFile(ingredientsImg);
         IngredientAnalyzeResponse ocrResult = runOcr(ingredientsImg);
@@ -87,17 +96,31 @@ public class SupplementService {
         return resolveBodyPartName(ocrResult);
     }
 
-    // 알약 이미지 검증 (FastAPI 호출)
+    /**
+     * 업로드된 사진이 서버에서 인식 가능한 알약 이미지인지 검증합니다. (FastAPI 호출)
+     *
+     * @param pillImg 알약 사진 파일
+     * @return 검증 성공 여부와 안내 메시지
+     */
     public FastApiPillValidationResponse validatePillImage(MultipartFile pillImg) {
         validateImageFile(pillImg);
         return runPillImageValidation(pillImg);
     }
 
-    // 영양제 등록
+    /**
+     * 영양제 정보를 사용자의 목록에 저장합니다.
+     * 이미지 업로드, Embedding 경로 저장, 재고 및 성분 정보 저장을 포함합니다.
+     *
+     * @param userId                     등록할 사용자 ID
+     * @param pillImg                    알약 원본 사진
+     * @param request                    등록 정보 요청 DTO
+     * @param pillReferenceEmbeddingPath Embedding 파일 저장 경로
+     * @return 등록 완료된 상세 정보를 포함한 응답 DTO
+     */
     @Transactional
     public SupplementRegisterResponse registerSupplement(Long userId, MultipartFile pillImg,
             SupplementRegisterRequest request, String pillReferenceEmbeddingPath) {
-        // 알약 이미지 업로드
+        // 1. 알약 이미지 업로드 및 URL 획득
         String pillImgUrl = uploadPillImage(pillImg);
 
         // 연관 엔티티 프록시 조회
@@ -112,13 +135,13 @@ public class SupplementService {
             throw CustomException.conflict("이미 동일한 이름의 영양제가 등록되어 있습니다: " + request.getAlias());
         }
 
-        // 영양제 저장 (is_reflected 기본값: false)
+        // 2. 영양제 기본 정보 저장
         Supplement savedSupplement = saveSupplement(user, bodyPart, pillImgUrl, request, pillReferenceEmbeddingPath);
 
-        // 재고 저장 (stock_quantity=capacity, stock_alert_enabled=true)
+        // 3. 재고(Inventory) 정보 초기화
         SupplementInventory inventory = saveInventory(savedSupplement, request.getCapacity());
 
-        // 성분 저장 (analyze API 응답값을 프론트가 그대로 전달)
+        // 4. 추출된 성분 리스트 저장
         List<SupplementRegisterResponse.IngredientDto> ingredientDtos = saveIngredients(savedSupplement,
                 request.getIngredients());
 
@@ -128,7 +151,7 @@ public class SupplementService {
     }
 
     /**
-     * 성분표 이미지 OCR 분석 (FastAPI 연동)
+     * FastAPI를 통해 성분표 이미지 분석(OCR)을 실행합니다. (FastAPI 호출)
      */
     private IngredientAnalyzeResponse runOcr(MultipartFile ingredientsImg) {
         // fastApi 준비 완료 시 제거
@@ -188,7 +211,6 @@ public class SupplementService {
 
                 // 일괄 조회된 Map 에서 이름 매핑 (조회되지 않았거나 id 가 null 이면 null)
                 String normalizedName = (id != null) ? masterNameMap.get(id) : null;
-
                 boolean isPrimary = (aiItem.getIsPrimary() != null && aiItem.getIsPrimary() == 1);
 
                 mappedIngredients.add(IngredientAnalyzeResponse.IngredientDto.builder()
@@ -222,7 +244,7 @@ public class SupplementService {
     }
 
     /**
-     * 알약 이미지 검증 (FastAPI 연동)
+     * FastAPI를 통해 알약 이미지의 유효성 검증을 실행합니다. (FastAPI 호출)
      */
     private FastApiPillValidationResponse runPillImageValidation(MultipartFile pillImg) {
         // Mock 응답 처리
@@ -243,7 +265,6 @@ public class SupplementService {
         boolean isSuccess = validationResponse.isSuccess();
         String message = validationResponse.getMessage();
 
-        // 메시지 기본값 처리
         if (message == null) {
             message = isSuccess ? "사용 가능한 알약 이미지입니다." : "알약 사진 재촬영이 필요합니다.";
         }
@@ -254,7 +275,9 @@ public class SupplementService {
                 .build();
     }
 
-    // 알약 이미지 임베딩 (FastAPI 연동)
+    /**
+     * FastAPI를 통해 알약 이미지 특징점(Embedding)을 추출합니다. (FastAPI 호출)
+     */
     public FastApiEmbeddingResponse pillImageEmbedding(MultipartFile pillImg) {
         // Mock 응답 처리
         if (isFastApiMockEnabled) {
@@ -274,9 +297,7 @@ public class SupplementService {
         boolean isSuccess = fastApiEmbeddingResponse.isSuccess();
         String message = fastApiEmbeddingResponse.getMessage();
 
-        // 메시지 기본값 처리
         if (message == null) {
-
             message = isSuccess ? "임베딩 성공하였습니다." : "임베딩 실패하였습니다.";
         }
 
@@ -286,6 +307,10 @@ public class SupplementService {
                 .build();
     }
 
+    /**
+     * 이미지를 FastAPI 서버로 전송합니다.
+     * Multi-Value Map을 활용하여 Multipart 요청을 수행합니다.
+     */
     private <T> T postImageToFastApi(String url, MultipartFile imageFile, Class<T> responseType) {
         // HTTP 요청 헤더 생성
         HttpHeaders headers = new HttpHeaders();
@@ -302,8 +327,7 @@ public class SupplementService {
                 // 일부 서버에서는 filename이 없으면 파일 파싱을 못할 수 있음
                 @Override
                 public String getFilename() {
-                    return imageFile.getOriginalFilename() != null ? imageFile.getOriginalFilename()
-                            : "image.jpg";
+                    return imageFile.getOriginalFilename() != null ? imageFile.getOriginalFilename() : "image.jpg";
                 }
             };
 
@@ -417,7 +441,7 @@ public class SupplementService {
         SupplementInventory inventory = SupplementInventory.builder()
                 .supplement(supplement)
                 .stockQuantity(capacity)
-                .stockAlertEnabled(true) // 재고 알림 기본값: true
+                .stockAlertEnabled(true)
                 .build();
         return supplementInventoryRepository.save(inventory);
     }
@@ -533,8 +557,7 @@ public class SupplementService {
             throw CustomException.badRequest("빈 파일이 포함되어 있습니다.");
         }
         if (file.getSize() > maxFileSize.toBytes()) {
-            throw CustomException.badRequest(
-                    "이미지 파일 크기는 " + maxFileSize.toMegabytes() + "MB 이하만 가능합니다.");
+            throw CustomException.badRequest("이미지 파일 크기는 " + maxFileSize.toMegabytes() + "MB 이하만 가능합니다.");
         }
         String contentType = file.getContentType();
         if (contentType == null || !(contentType.equals("image/jpeg")
@@ -548,7 +571,6 @@ public class SupplementService {
     public SupplementListResponse getMySupplements(Long userId, int page, int size) {
         // 해당 유저가 등록한 영양제를 페이징 조회
         Page<Supplement> supplementPage = supplementRepository.findByUserId(userId, PageRequest.of(page, size));
-
         List<Supplement> supplements = supplementPage.getContent();
 
         // 등록된 영양제가 없음
@@ -564,8 +586,7 @@ public class SupplementService {
         }
 
         // 조회된 영양제들의 ID를 추출
-        List<Long> supplementIds = supplements.stream()
-                .map(Supplement::getUserSupplementId)
+        List<Long> supplementIds = supplements.stream().map(Supplement::getUserSupplementId)
                 .collect(Collectors.toList());
 
         // 주성분 일괄 조회 (N+1 방지)
@@ -597,8 +618,7 @@ public class SupplementService {
                         .userSupplementId(s.getUserSupplementId())
                         .pillImageUrl(s.getPillImageUrl())
                         .alias(s.getAlias())
-                        .primaryIngredientNames(
-                                primaryNameMap.getOrDefault(s.getUserSupplementId(), emptyList()))
+                        .primaryIngredientNames(primaryNameMap.getOrDefault(s.getUserSupplementId(), emptyList()))
                         .stockQuantity(stockQuantityMap.getOrDefault(s.getUserSupplementId(), 0))
                         .build())
                 .collect(Collectors.toList());
@@ -614,9 +634,10 @@ public class SupplementService {
                 .build();
     }
 
-    // 영양제 상세 조회
+    /**
+     * 영양제 상세 정보 및 섭취 일정을 조회합니다.
+     */
     public SupplementDetailResponse getSupplementDetail(Long userId, Long supplementId) {
-
         Supplement supplement = supplementRepository.findById(supplementId)
                 .orElseThrow(() -> CustomException.notFound("요청한 영양제를 찾을 수 없습니다."));
 
@@ -633,8 +654,7 @@ public class SupplementService {
 
         // 재고 조회
         SupplementInventory inventory = supplementInventoryRepository.findBySupplementIds(List.of(supplementId))
-                .stream().findFirst()
-                .orElseThrow(() -> CustomException.notFound("재고 정보를 찾을 수 없습니다."));
+                .stream().findFirst().orElseThrow(() -> CustomException.notFound("재고 정보를 찾을 수 없습니다."));
 
         // 스케줄 조회
         List<IntakeScheduleDto> scheduleDtos = intakeScheduleRepository
@@ -659,13 +679,14 @@ public class SupplementService {
                 .build();
     }
 
-    // 영양제 삭제
+    /**
+     * 영양제 및 관련 정보를 삭제합니다.
+     */
     @Transactional
     public void deleteSupplement(Long userId, Long supplementId) {
         Supplement supplement = supplementRepository.findById(supplementId)
                 .orElseThrow(() -> CustomException.notFound("요청한 영양제를 찾을 수 없습니다."));
 
-        // 소유권 검증
         if (!supplement.getUser().getUserId().equals(userId)) {
             throw CustomException.forbidden("해당 영양제에 대한 권한이 없습니다.");
         }
@@ -677,12 +698,11 @@ public class SupplementService {
         supplementRepository.delete(supplement); // 4. 영양제
     }
 
-    // 영양제 상세 정보 수정 (최종 상태 동기화 방식)
+    /**
+     * 영양제 정보를 수정하며, 섭취 일정(Schedule)은 최종 상태로 동기화합니다.
+     */
     @Transactional
-    public SupplementUpdateResponse updateSupplement(Long userId, Long supplementId,
-            SupplementUpdateRequest request) {
-
-        // 소유권 검증 + 영양제 조회
+    public SupplementUpdateResponse updateSupplement(Long userId, Long supplementId, SupplementUpdateRequest request) {
         Supplement supplement = supplementRepository.findByIdAndUserId(supplementId, userId)
                 .orElseThrow(() -> CustomException.notFound("해당 영양제를 찾을 수 없거나 권한이 없습니다."));
 
