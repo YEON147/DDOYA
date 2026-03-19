@@ -69,7 +69,7 @@ export function LoginForm() {
         </View>
 
         <View className="items-center mt-3 mb-4">
-          <Text className="text-[#a5a5a5] text-[11px] mb-1 font-scdream">계정이 없으신가요 ?</Text>
+          <Text className="text-[#a5a5a5] text-md mb-1 font-scdream">계정이 없으신가요 ?</Text>
           <Text
             className="text-black font-scdream text-sm"
             onPress={() => router.push('/(auth)/signup')}
@@ -77,8 +77,6 @@ export function LoginForm() {
             회원가입
           </Text>
         </View>
-
-        <SocialLoginButtons />
       </View>
 
       {/* Push to bottom spacer */}

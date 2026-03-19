@@ -21,7 +21,15 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
 
   const [loaded] = useFonts({
+    SCoreDreamThin: require('../assets/fonts/SCDream1.otf'),
+    SCoreDreamExtraLight: require('../assets/fonts/SCDream2.otf'),
+    SCoreDreamLight: require('../assets/fonts/SCDream3.otf'),
+    SCoreDreamRegular: require('../assets/fonts/SCDream4.otf'),
+    SCoreDreamMedium: require('../assets/fonts/SCDream5.otf'),
+    SCoreDreamBold: require('../assets/fonts/SCDream6.otf'),
     SCoreDreamExtraBold: require('../assets/fonts/SCDream7.otf'),
+    SCoreDreamHeavy: require('../assets/fonts/SCDream8.otf'),
+    SCoreDreamBlack: require('../assets/fonts/SCDream9.otf'),
   });
 
   useEffect(() => {

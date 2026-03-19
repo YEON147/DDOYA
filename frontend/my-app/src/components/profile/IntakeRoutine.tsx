@@ -1,12 +1,13 @@
 import { View, Text, TouchableOpacity } from 'react-native';
 import { colors } from '@/constants/theme/colors';
+import { CardContainer } from '../common/CardContainer';
 
 export function IntakeRoutine() {
   return (
-    <View className="px-6 py-8">
+    <CardContainer>
       <View className="flex-row items-center justify-between mb-4">
         <Text
-          className="text-lg font-scdream"
+          className="text-lg font-scdream-medium"
           style={{ color: colors.text }}
         >
           섭취 루틴
@@ -21,13 +22,6 @@ export function IntakeRoutine() {
         </TouchableOpacity>
       </View>
 
-      <View
-        className="rounded-2xl p-5 shadow-sm border"
-        style={{
-          backgroundColor: colors.surface,
-          borderColor: colors.border
-        }}
-      >
         <View className="flex-row items-center mb-4">
           <View
             className="w-10 h-10 rounded-full items-center justify-center mr-3"
@@ -73,7 +67,6 @@ export function IntakeRoutine() {
             </Text>
           </View>
         </View>
-      </View>
-    </View>
+    </CardContainer>
   );
 }
