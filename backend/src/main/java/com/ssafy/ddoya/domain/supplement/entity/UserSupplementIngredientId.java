@@ -6,6 +6,10 @@ import lombok.*;
 
 import java.io.Serializable;
 
+/**
+ * UserSupplementIngredient 엔티티의 복합키를 정의하는 클래스입니다.
+ * 영양제 ID와 정규화된 성분 ID의 조합으로 구성됩니다.
+ */
 @Embeddable
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)

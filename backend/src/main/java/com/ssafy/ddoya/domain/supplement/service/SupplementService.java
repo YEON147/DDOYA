@@ -8,17 +8,10 @@ import com.ssafy.ddoya.domain.common.util.ImageCompressUtil;
 import com.ssafy.ddoya.domain.intake.entity.IntakeSchedule;
 import com.ssafy.ddoya.domain.intake.entity.ScheduleType;
 import com.ssafy.ddoya.domain.intake.repository.IntakeScheduleRepository;
-import com.ssafy.ddoya.domain.supplement.dto.FastApiOcrResponse;
-import com.ssafy.ddoya.domain.supplement.dto.IngredientAnalyzeResponse;
-import com.ssafy.ddoya.domain.supplement.dto.SupplementDetailResponse;
+import com.ssafy.ddoya.domain.supplement.dto.*;
 import com.ssafy.ddoya.domain.supplement.dto.SupplementDetailResponse.IntakeScheduleDto;
-import com.ssafy.ddoya.domain.supplement.dto.SupplementUpdateRequest;
 import com.ssafy.ddoya.domain.supplement.dto.SupplementUpdateRequest.IntakeScheduleUpdateDto;
-import com.ssafy.ddoya.domain.supplement.dto.SupplementUpdateResponse;
-import com.ssafy.ddoya.domain.supplement.dto.SupplementListResponse;
 import com.ssafy.ddoya.domain.supplement.dto.SupplementListResponse.SupplementSummaryDto;
-import com.ssafy.ddoya.domain.supplement.dto.SupplementRegisterRequest;
-import com.ssafy.ddoya.domain.supplement.dto.SupplementRegisterResponse;
 import com.ssafy.ddoya.domain.supplement.entity.Supplement;
 import com.ssafy.ddoya.domain.supplement.entity.SupplementInventory;
 import com.ssafy.ddoya.domain.supplement.entity.UserSupplementIngredient;
@@ -29,14 +22,12 @@ import com.ssafy.ddoya.domain.user.entity.User;
 import com.ssafy.ddoya.global.exception.CustomException;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.LinkedMultiValueMap;
@@ -47,12 +38,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.time.LocalTime;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static java.nio.file.Files.write;
@@ -60,6 +48,11 @@ import static java.util.Collections.emptyList;
 import static java.util.UUID.randomUUID;
 import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
 
+/**
+ * 영양제 관련 비즈니스 로직을 처리하는 서비스 클래스입니다.
+ * 이미지 분석(OCR), 알약 검증, 등록, 목록 및 상세 조회, 수정을 담당합니다.
+ */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -84,19 +77,50 @@ public class SupplementService {
     private final BodyPartRepository bodyPartRepository;
     private final IngredientMasterRepository ingredientMasterRepository;
     private final EntityManager entityManager;
+    private final RestTemplate restTemplate;
 
-    // 성분표 분석 (FastAPI 호출)
+    /**
+     * 성분표 이미지를 OCR 분석하여 정규화된 성분 정보와 권장 섭취 정보를 추출합니다. (FastAPI 호출)
+     *
+     * @param ingredientsImg 성분표 이미지 파일
+     * @return 분석 과정 중 발생한 메시지와 추출된 성분 목록을 포함한 응답 DTO
+     */
     public IngredientAnalyzeResponse analyzeIngredients(MultipartFile ingredientsImg) {
         validateImageFile(ingredientsImg);
         IngredientAnalyzeResponse ocrResult = runOcr(ingredientsImg);
+
+        // 분석 성공(success=true)인 경우에만 신체부위 ID -> 이름 변환 수행
+        if (!ocrResult.isSuccess()) {
+            return ocrResult;
+        }
         return resolveBodyPartName(ocrResult);
     }
 
-    // 영양제 등록
+    /**
+     * 업로드된 사진이 서버에서 인식 가능한 알약 이미지인지 검증합니다. (FastAPI 호출)
+     *
+     * @param pillImg 알약 사진 파일
+     * @return 검증 성공 여부와 안내 메시지
+     */
+    public FastApiPillValidationResponse validatePillImage(MultipartFile pillImg) {
+        validateImageFile(pillImg);
+        return runPillImageValidation(pillImg);
+    }
+
+    /**
+     * 영양제 정보를 사용자의 목록에 저장합니다.
+     * 이미지 업로드, Embedding 경로 저장, 재고 및 성분 정보 저장을 포함합니다.
+     *
+     * @param userId                     등록할 사용자 ID
+     * @param pillImg                    알약 원본 사진
+     * @param request                    등록 정보 요청 DTO
+     * @param pillReferenceEmbeddingPath Embedding 파일 저장 경로
+     * @return 등록 완료된 상세 정보를 포함한 응답 DTO
+     */
     @Transactional
     public SupplementRegisterResponse registerSupplement(Long userId, MultipartFile pillImg,
-            SupplementRegisterRequest request) {
-        // 알약 이미지 업로드
+            SupplementRegisterRequest request, String pillReferenceEmbeddingPath) {
+        // 1. 알약 이미지 업로드 및 URL 획득
         String pillImgUrl = uploadPillImage(pillImg);
 
         // 연관 엔티티 프록시 조회
@@ -111,23 +135,23 @@ public class SupplementService {
             throw CustomException.conflict("이미 동일한 이름의 영양제가 등록되어 있습니다: " + request.getAlias());
         }
 
-        // 영양제 저장 (is_reflected 기본값: false)
-        Supplement savedSupplement = saveSupplement(user, bodyPart, pillImgUrl, request);
+        // 2. 영양제 기본 정보 저장
+        Supplement savedSupplement = saveSupplement(user, bodyPart, pillImgUrl, request, pillReferenceEmbeddingPath);
 
-        // 재고 저장 (stock_quantity=capacity, stock_alert_enabled=true)
+        // 3. 재고(Inventory) 정보 초기화
         SupplementInventory inventory = saveInventory(savedSupplement, request.getCapacity());
 
-        // 성분 저장 (analyze API 응답값을 프론트가 그대로 전달)
+        // 4. 추출된 성분 리스트 저장
         List<SupplementRegisterResponse.IngredientDto> ingredientDtos = saveIngredients(savedSupplement,
                 request.getIngredients());
 
         // 응답 DTO 생성
         return buildResponse(savedSupplement, inventory,
-                request.getBodyPartId(), request.getBodyPartName(), ingredientDtos);
+                request.getBodyPartId(), request.getBodyPartName(), pillReferenceEmbeddingPath, ingredientDtos);
     }
 
     /**
-     * 성분표 이미지 OCR 분석 (FastAPI 연동)
+     * FastAPI를 통해 성분표 이미지 분석(OCR)을 실행합니다. (FastAPI 호출)
      */
     private IngredientAnalyzeResponse runOcr(MultipartFile ingredientsImg) {
         // fastApi 준비 완료 시 제거
@@ -136,7 +160,158 @@ public class SupplementService {
         }
 
         String url = fastApiUrl + "/api/ai/ocr/analyze";
+        FastApiOcrResponse ocrResponse = postImageToFastApi(url, ingredientsImg, FastApiOcrResponse.class);
 
+        // 서버 오류 (응답 본문 없음)
+        if (ocrResponse == null) {
+            throw new CustomException(HttpStatus.INTERNAL_SERVER_ERROR, "FastAPI OCR 서버 응답 없음");
+        }
+
+        // 비즈니스 실패 (ex. 낮은 OCR 신뢰도 -> 사용자 재촬영 유도)
+        if (!ocrResponse.isSuccess()) {
+            return IngredientAnalyzeResponse.builder()
+                    .success(false)
+                    .message(ocrResponse.getMessage() != null ? ocrResponse.getMessage() : "성분표 재촬영이 필요합니다.")
+                    .bodyPartId(null)
+                    .bodyPartName(null)
+                    .dailyDose(null)
+                    .dosePerIntake(null)
+                    .ingredients(Collections.emptyList())
+                    .build();
+        }
+
+        // 서버 오류 (success는 true인데 data가 없음)
+        if (ocrResponse.getData() == null) {
+            throw new CustomException(HttpStatus.INTERNAL_SERVER_ERROR, "FastAPI OCR 응답 데이터(data)가 누락되었습니다.");
+        }
+
+        // 일괄 조회를 위해 ingredientId 목록 수집 (null 제외, 중복 제거)
+        List<Long> ingredientIds = ocrResponse.getData().getIngredients() != null
+                ? ocrResponse.getData().getIngredients().stream()
+                        .map(FastApiOcrResponse.OcrIngredient::getIngredientId)
+                        .filter(Objects::nonNull)
+                        .distinct()
+                        .collect(Collectors.toList())
+                : Collections.emptyList();
+
+        // IngredientMaster 일괄 조회 (N+1 방지)
+        Map<Long, String> masterNameMap = Collections.emptyMap();
+        if (!ingredientIds.isEmpty()) {
+            masterNameMap = ingredientMasterRepository.findAllById(ingredientIds).stream()
+                    .collect(Collectors.toMap(
+                            IngredientMaster::getIngredientId,
+                            IngredientMaster::getNormalizedName));
+        }
+
+        // OCR 결과 성분을 응답 DTO로 변환할 리스트 생성
+        List<IngredientAnalyzeResponse.IngredientDto> mappedIngredients = new ArrayList<>();
+        if (ocrResponse.getData().getIngredients() != null) {
+            for (FastApiOcrResponse.OcrIngredient aiItem : ocrResponse.getData().getIngredients()) {
+                Long id = aiItem.getIngredientId();
+
+                // 일괄 조회된 Map 에서 이름 매핑 (조회되지 않았거나 id 가 null 이면 null)
+                String normalizedName = (id != null) ? masterNameMap.get(id) : null;
+                boolean isPrimary = (aiItem.getIsPrimary() != null && aiItem.getIsPrimary() == 1);
+
+                mappedIngredients.add(IngredientAnalyzeResponse.IngredientDto.builder()
+                        .normalizedIngredientId(id)
+                        .normalizedName(normalizedName)
+                        .rawName(aiItem.getOriginalName())
+                        .unit(aiItem.getUnit())
+                        .amount(aiItem.getAmount())
+                        .isPrimary(isPrimary)
+                        .build());
+            }
+        }
+
+        // 섭취 정보 매핑 (daily_dose, dose_per_intake)
+        Integer dailyDose = null;
+        Integer dosePerIntake = null;
+        if (ocrResponse.getData().getServingInfo() != null) {
+            dailyDose = ocrResponse.getData().getServingInfo().getDailyDose();
+            dosePerIntake = ocrResponse.getData().getServingInfo().getDosePerIntake();
+        }
+
+        // 최종 성공 응답 반환
+        return IngredientAnalyzeResponse.builder()
+                .success(true)
+                .message(ocrResponse.getMessage() != null ? ocrResponse.getMessage() : "OCR 분석이 완료되었습니다.")
+                .bodyPartId(ocrResponse.getData().getBodyPartId())
+                .dailyDose(dailyDose)
+                .dosePerIntake(dosePerIntake)
+                .ingredients(mappedIngredients)
+                .build();
+    }
+
+    /**
+     * FastAPI를 통해 알약 이미지의 유효성 검증을 실행합니다. (FastAPI 호출)
+     */
+    private FastApiPillValidationResponse runPillImageValidation(MultipartFile pillImg) {
+        // Mock 응답 처리
+        if (isFastApiMockEnabled) {
+            return generateMockPillValidationResponse();
+        }
+
+        String url = fastApiUrl + "/api/ai/pills/register/check";
+        FastApiPillValidationResponse validationResponse = postImageToFastApi(url, pillImg,
+                FastApiPillValidationResponse.class);
+
+        // 서버 오류 (응답 본문 없음)
+        if (validationResponse == null) {
+            throw new CustomException(INTERNAL_SERVER_ERROR, "FastAPI 알약 이미지 검증 서버 응답 없음");
+        }
+
+        // 비즈니스 실패 (ex. 이미지가 흐리거나 알약이 아님 -> 사용자 재촬영 유도)
+        boolean isSuccess = validationResponse.isSuccess();
+        String message = validationResponse.getMessage();
+
+        if (message == null) {
+            message = isSuccess ? "사용 가능한 알약 이미지입니다." : "알약 사진 재촬영이 필요합니다.";
+        }
+
+        return FastApiPillValidationResponse.builder()
+                .success(isSuccess)
+                .message(message)
+                .build();
+    }
+
+    /**
+     * FastAPI를 통해 알약 이미지 특징점(Embedding)을 추출합니다. (FastAPI 호출)
+     */
+    public FastApiEmbeddingResponse pillImageEmbedding(MultipartFile pillImg) {
+        // Mock 응답 처리
+        if (isFastApiMockEnabled) {
+            return generateMockPillEmbeddingResponse();
+        }
+
+        String url = fastApiUrl + "/api/ai/pills/register/embedding";
+        FastApiEmbeddingResponse fastApiEmbeddingResponse = postImageToFastApi(url, pillImg,
+                FastApiEmbeddingResponse.class);
+
+        // 서버 오류 (응답 본문 없음)
+        if (fastApiEmbeddingResponse == null) {
+            throw new CustomException(INTERNAL_SERVER_ERROR, "FastAPI 알약 이미지 임베딩 서버 응답 없음");
+        }
+
+        // 비즈니스 실패 (ex. 임베딩 결과 실패)
+        boolean isSuccess = fastApiEmbeddingResponse.isSuccess();
+        String message = fastApiEmbeddingResponse.getMessage();
+
+        if (message == null) {
+            message = isSuccess ? "임베딩 성공하였습니다." : "임베딩 실패하였습니다.";
+        }
+
+        return FastApiEmbeddingResponse.builder()
+                .success(isSuccess)
+                .message(message)
+                .build();
+    }
+
+    /**
+     * 이미지를 FastAPI 서버로 전송합니다.
+     * Multi-Value Map을 활용하여 Multipart 요청을 수행합니다.
+     */
+    private <T> T postImageToFastApi(String url, MultipartFile imageFile, Class<T> responseType) {
         // HTTP 요청 헤더 생성
         HttpHeaders headers = new HttpHeaders();
         // Content-Type 설정
@@ -147,13 +322,12 @@ public class SupplementService {
         try {
             // MultipartFile → ByteArrayResource 변환
             // RestTemplate multipart 요청 시 Resource 타입을 사용해야 파일로 인식됨
-            ByteArrayResource resource = new ByteArrayResource(ingredientsImg.getBytes()) {
+            ByteArrayResource resource = new ByteArrayResource(imageFile.getBytes()) {
                 // 파일명을 반환하도록 override
                 // 일부 서버에서는 filename이 없으면 파일 파싱을 못할 수 있음
                 @Override
                 public String getFilename() {
-                    return ingredientsImg.getOriginalFilename() != null ? ingredientsImg.getOriginalFilename()
-                            : "ingredientImg.jpg";
+                    return imageFile.getOriginalFilename() != null ? imageFile.getOriginalFilename() : "image.jpg";
                 }
             };
 
@@ -161,72 +335,22 @@ public class SupplementService {
             // FastAPI에서 받을 필드명이 "image" 이므로 동일하게 설정
             body.add("image", resource);
         } catch (IOException e) {
-            throw new CustomException(INTERNAL_SERVER_ERROR, "성분표 이미지 읽기 실패");
+            throw new CustomException(INTERNAL_SERVER_ERROR, "이미지 파일 읽기 실패");
         }
 
         // 요청 body + header를 하나의 HttpEntity로 묶음
         HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
 
-        // FastAPI 호출을 위한 RestTemplate 생성
-        RestTemplate restTemplate = new RestTemplate();
-
-        ResponseEntity<FastApiOcrResponse> responseEntity;
-
         try {
-            // FastAPI OCR API 호출
+            // FastAPI API 호출
             // 요청: multipart/form-data (image 파일)
-            // 응답: FastApiOcrResponse DTO로 매핑
-            responseEntity = restTemplate.postForEntity(url, requestEntity, FastApiOcrResponse.class);
+            // 응답: responseType에 해당하는 DTO로 매핑
+            ResponseEntity<T> responseEntity = restTemplate.postForEntity(url, requestEntity, responseType);
+            return responseEntity.getBody();
         } catch (Exception e) {
-            throw new CustomException(INTERNAL_SERVER_ERROR, "FastAPI OCR 서버 호출 실패: " + e.getMessage());
+            log.error("FastAPI 호출 실패. url={}", url, e);
+            throw new CustomException(HttpStatus.INTERNAL_SERVER_ERROR, "FastAPI 서버 호출 실패");
         }
-
-        // FastAPI 응답 body 추출
-        FastApiOcrResponse ocrResponse = responseEntity.getBody();
-        // 응답 유효성 검증
-        if (ocrResponse == null || !ocrResponse.isSuccess() || ocrResponse.getData() == null) {
-            throw new CustomException(INTERNAL_SERVER_ERROR, "FastAPI OCR 서버 분석 실패");
-        }
-
-        // OCR 결과 성분을 응답 DTO로 변환할 리스트
-        List<IngredientAnalyzeResponse.IngredientDto> mappedIngredients = new ArrayList<>();
-        // FastAPI 응답의 성분 목록이 존재하면 변환 진행
-        if (ocrResponse.getData().getIngredients() != null) {
-            for (FastApiOcrResponse.OcrIngredient aiItem : ocrResponse.getData().getIngredients()) {
-
-                // FastAPI가 반환한 ingredient_id
-                Long ingredientId = aiItem.getIngredientId();
-
-                // DB에서 ingredient_id 로 정규화된 이름(normalizedName) 조회 (화면 표시용)
-                String normalizedName = null;
-                if (ingredientId != null) {
-                    normalizedName = ingredientMasterRepository.findById(ingredientId)
-                            .map(IngredientMaster::getNormalizedName)
-                            .orElse(null);
-                }
-
-                boolean isPrimary = (aiItem.getIsPrimary() != null && aiItem.getIsPrimary() == 1);
-
-                // OCR 응답 데이터를 응답 DTO로 매핑
-                mappedIngredients.add(IngredientAnalyzeResponse.IngredientDto.builder()
-                        .normalizedIngredientId(ingredientId)
-                        .normalizedName(normalizedName)
-                        .rawName(aiItem.getOriginalName())
-                        .unit(aiItem.getUnit())
-                        .amount(aiItem.getAmount())
-                        .isPrimary(isPrimary)
-                        .build());
-            }
-        }
-
-        // 최종적으로 프론트에 반환할 분석 결과 DTO 생성
-        return IngredientAnalyzeResponse.builder()
-                // FastAPI가 판단한 대표 신체부위 ID
-                .bodyPartId(ocrResponse.getData().getBodyPartId())
-
-                // 변환된 성분 리스트
-                .ingredients(mappedIngredients)
-                .build();
     }
 
     /**
@@ -240,26 +364,44 @@ public class SupplementService {
                 .normalizedName("비타민C")
                 .rawName("Vitamin C")
                 .unit("mg")
-                .amount(java.math.BigDecimal.valueOf(500.0))
+                .amount(BigDecimal.valueOf(500.0))
                 .isPrimary(true)
                 .build());
 
-        mockIngredients.add(IngredientAnalyzeResponse.IngredientDto.builder()
-                .normalizedIngredientId(2L)
-                .normalizedName("아연")
-                .rawName("Zinc")
-                .unit("mg")
-                .amount(java.math.BigDecimal.valueOf(8.5))
-                .isPrimary(false)
-                .build());
-
         return IngredientAnalyzeResponse.builder()
+                .success(true)
+                .message("OCR 분석 완료 (Mock)")
                 .bodyPartId((byte) 3)
+                .dailyDose(2)
+                .dosePerIntake(1)
                 .ingredients(mockIngredients)
                 .build();
     }
 
-    // OCR 결과의 bodyPartId로 bodyPartName 조회
+    /**
+     * fastApi 준비 완료 시 제거
+     * 알약 이미지 검증 결과 생성 (테스트용)
+     */
+    private FastApiPillValidationResponse generateMockPillValidationResponse() {
+        return FastApiPillValidationResponse.builder()
+                .success(true)
+                .message("사용 가능한 알약 이미지입니다. (Mock)")
+                .build();
+    }
+
+    /**
+     * fastApi 준비 완료 시 제거
+     * 알약 이미지 임베딩 결과 생성 (테스트용)
+     */
+    private FastApiEmbeddingResponse generateMockPillEmbeddingResponse() {
+        return FastApiEmbeddingResponse.builder()
+                .success(true)
+                .pillReferenceEmbeddingPath("임베딩 경로 (Mock)")
+                .message("임베딩 성공하였습니다. (Mock)")
+                .build();
+    }
+
+    // OCR 결과의 bodyPartId로 bodyPartName 조회 (기존 success, message 정보 유지)
     private IngredientAnalyzeResponse resolveBodyPartName(IngredientAnalyzeResponse ocrResult) {
         if (ocrResult.getBodyPartId() == null) {
             return ocrResult;
@@ -270,14 +412,18 @@ public class SupplementService {
                 .orElse(null);
 
         return IngredientAnalyzeResponse.builder()
+                .success(ocrResult.isSuccess())
+                .message(ocrResult.getMessage())
                 .bodyPartId(ocrResult.getBodyPartId())
                 .bodyPartName(bodyPartName)
+                .dailyDose(ocrResult.getDailyDose())
+                .dosePerIntake(ocrResult.getDosePerIntake())
                 .ingredients(ocrResult.getIngredients())
                 .build();
     }
 
     private Supplement saveSupplement(User user, BodyPart bodyPart, String pillImgUrl,
-            SupplementRegisterRequest request) {
+            SupplementRegisterRequest request, String pillReferenceEmbeddingPath) {
         Supplement supplement = Supplement.builder()
                 .user(user)
                 .bodyPart(bodyPart)
@@ -286,6 +432,7 @@ public class SupplementService {
                 .dosePerIntake(request.getDosePerIntake())
                 .capacity(request.getCapacity())
                 .pillImageUrl(pillImgUrl)
+                .pillReferenceEmbeddingPath(pillReferenceEmbeddingPath)
                 .build();
         return supplementRepository.save(supplement);
     }
@@ -294,7 +441,7 @@ public class SupplementService {
         SupplementInventory inventory = SupplementInventory.builder()
                 .supplement(supplement)
                 .stockQuantity(capacity)
-                .stockAlertEnabled(true) // 재고 알림 기본값: true
+                .stockAlertEnabled(true)
                 .build();
         return supplementInventoryRepository.save(inventory);
     }
@@ -343,7 +490,7 @@ public class SupplementService {
     }
 
     private SupplementRegisterResponse buildResponse(Supplement supplement, SupplementInventory inventory,
-            Byte bodyPartId, String bodyPartName,
+            Byte bodyPartId, String bodyPartName, String pillReferenceEmbeddingPath,
             List<SupplementRegisterResponse.IngredientDto> ingredientDtos) {
         return SupplementRegisterResponse.builder()
                 .supplementId(supplement.getUserSupplementId())
@@ -357,6 +504,7 @@ public class SupplementService {
                 .bodyPartName(bodyPartName)
                 .inventoryId(inventory.getInventoryId())
                 .stockQuantity(inventory.getStockQuantity())
+                .pillReferenceEmbeddingPath(pillReferenceEmbeddingPath)
                 .ingredients(ingredientDtos)
                 .build();
     }
@@ -409,8 +557,7 @@ public class SupplementService {
             throw CustomException.badRequest("빈 파일이 포함되어 있습니다.");
         }
         if (file.getSize() > maxFileSize.toBytes()) {
-            throw CustomException.badRequest(
-                    "이미지 파일 크기는 " + maxFileSize.toMegabytes() + "MB 이하만 가능합니다.");
+            throw CustomException.badRequest("이미지 파일 크기는 " + maxFileSize.toMegabytes() + "MB 이하만 가능합니다.");
         }
         String contentType = file.getContentType();
         if (contentType == null || !(contentType.equals("image/jpeg")
@@ -423,9 +570,7 @@ public class SupplementService {
     // 내 영양제 목록 조회
     public SupplementListResponse getMySupplements(Long userId, int page, int size) {
         // 해당 유저가 등록한 영양제를 페이징 조회
-        Page<Supplement> supplementPage =
-                supplementRepository.findByUserId(userId, PageRequest.of(page, size));
-
+        Page<Supplement> supplementPage = supplementRepository.findByUserId(userId, PageRequest.of(page, size));
         List<Supplement> supplements = supplementPage.getContent();
 
         // 등록된 영양제가 없음
@@ -441,13 +586,12 @@ public class SupplementService {
         }
 
         // 조회된 영양제들의 ID를 추출
-        List<Long> supplementIds = supplements.stream()
-                .map(Supplement::getUserSupplementId)
+        List<Long> supplementIds = supplements.stream().map(Supplement::getUserSupplementId)
                 .collect(Collectors.toList());
 
         // 주성분 일괄 조회 (N+1 방지)
-        List<UserSupplementIngredient> primaryIngredients =
-                userSupplementIngredientRepository.findPrimaryIngredientsBySupplementIds(supplementIds);
+        List<UserSupplementIngredient> primaryIngredients = userSupplementIngredientRepository
+                .findPrimaryIngredientsBySupplementIds(supplementIds);
 
         // supplementId → 주성분명 목록 Map
         Map<Long, List<String>> primaryNameMap = primaryIngredients.stream()
@@ -458,9 +602,7 @@ public class SupplementService {
                         // value : 주성분 이름 리스트
                         Collectors.mapping(
                                 u -> u.getNormalizedIngredient().getNormalizedName(),
-                                Collectors.toList()
-                        )
-                ));
+                                Collectors.toList())));
 
         // 재고 일괄 조회 (N+1 방지)
         Map<Long, Integer> stockQuantityMap = supplementInventoryRepository
@@ -468,8 +610,7 @@ public class SupplementService {
                 .stream()
                 .collect(Collectors.toMap(
                         i -> i.getSupplement().getUserSupplementId(),
-                        SupplementInventory::getStockQuantity
-                ));
+                        SupplementInventory::getStockQuantity));
 
         // Supplement 엔티티 → 응답 DTO 변환
         List<SupplementSummaryDto> dtos = supplements.stream()
@@ -477,8 +618,7 @@ public class SupplementService {
                         .userSupplementId(s.getUserSupplementId())
                         .pillImageUrl(s.getPillImageUrl())
                         .alias(s.getAlias())
-                        .primaryIngredientNames(
-                                primaryNameMap.getOrDefault(s.getUserSupplementId(), emptyList()))
+                        .primaryIngredientNames(primaryNameMap.getOrDefault(s.getUserSupplementId(), emptyList()))
                         .stockQuantity(stockQuantityMap.getOrDefault(s.getUserSupplementId(), 0))
                         .build())
                 .collect(Collectors.toList());
@@ -494,9 +634,10 @@ public class SupplementService {
                 .build();
     }
 
-    // 영양제 상세 조회
+    /**
+     * 영양제 상세 정보 및 섭취 일정을 조회합니다.
+     */
     public SupplementDetailResponse getSupplementDetail(Long userId, Long supplementId) {
-
         Supplement supplement = supplementRepository.findById(supplementId)
                 .orElseThrow(() -> CustomException.notFound("요청한 영양제를 찾을 수 없습니다."));
 
@@ -505,18 +646,15 @@ public class SupplementService {
         }
 
         // 주성분명 목록 조회
-        List<String> primaryIngredientNames =
-                userSupplementIngredientRepository
-                        .findPrimaryIngredientsBySupplementIds(List.of(supplementId))
-                        .stream()
-                        .map(u -> u.getNormalizedIngredient().getNormalizedName())
-                        .collect(Collectors.toList());
+        List<String> primaryIngredientNames = userSupplementIngredientRepository
+                .findPrimaryIngredientsBySupplementIds(List.of(supplementId))
+                .stream()
+                .map(u -> u.getNormalizedIngredient().getNormalizedName())
+                .collect(Collectors.toList());
 
         // 재고 조회
-        SupplementInventory inventory =
-                supplementInventoryRepository.findBySupplementIds(List.of(supplementId))
-                        .stream().findFirst()
-                        .orElseThrow(() -> CustomException.notFound("재고 정보를 찾을 수 없습니다."));
+        SupplementInventory inventory = supplementInventoryRepository.findBySupplementIds(List.of(supplementId))
+                .stream().findFirst().orElseThrow(() -> CustomException.notFound("재고 정보를 찾을 수 없습니다."));
 
         // 스케줄 조회
         List<IntakeScheduleDto> scheduleDtos = intakeScheduleRepository
@@ -541,30 +679,30 @@ public class SupplementService {
                 .build();
     }
 
-    // 영양제 삭제
+    /**
+     * 영양제 및 관련 정보를 삭제합니다.
+     */
     @Transactional
     public void deleteSupplement(Long userId, Long supplementId) {
         Supplement supplement = supplementRepository.findById(supplementId)
                 .orElseThrow(() -> CustomException.notFound("요청한 영양제를 찾을 수 없습니다."));
 
-        // 소유권 검증
         if (!supplement.getUser().getUserId().equals(userId)) {
             throw CustomException.forbidden("해당 영양제에 대한 권한이 없습니다.");
         }
 
         // FK 제약 순서에 맞게 삭제
-        intakeScheduleRepository.deleteBySupplementId(supplementId);         // 1. 스케줄
+        intakeScheduleRepository.deleteBySupplementId(supplementId); // 1. 스케줄
         userSupplementIngredientRepository.deleteBySupplementId(supplementId); // 2. 성분
         supplementInventoryRepository.deleteBySupplementIds(List.of(supplementId)); // 3. 재고
-        supplementRepository.delete(supplement);                              // 4. 영양제
+        supplementRepository.delete(supplement); // 4. 영양제
     }
 
-    // 영양제 상세 정보 수정 (최종 상태 동기화 방식)
+    /**
+     * 영양제 정보를 수정하며, 섭취 일정(Schedule)은 최종 상태로 동기화합니다.
+     */
     @Transactional
-    public SupplementUpdateResponse updateSupplement(Long userId, Long supplementId,
-            SupplementUpdateRequest request) {
-
-        // 소유권 검증 + 영양제 조회
+    public SupplementUpdateResponse updateSupplement(Long userId, Long supplementId, SupplementUpdateRequest request) {
         Supplement supplement = supplementRepository.findByIdAndUserId(supplementId, userId)
                 .orElseThrow(() -> CustomException.notFound("해당 영양제를 찾을 수 없거나 권한이 없습니다."));
 
@@ -572,8 +710,8 @@ public class SupplementService {
         if (request.getDailyDose() != request.getIntakeSchedules().size()) {
             throw CustomException.badRequest(
                     "일일 섭취횟수("
-                    + request.getDailyDose() + ")와 스케줄 개수("
-                    + request.getIntakeSchedules().size() + ")가 일치하지 않습니다.");
+                            + request.getDailyDose() + ")와 스케줄 개수("
+                            + request.getIntakeSchedules().size() + ")가 일치하지 않습니다.");
         }
 
         // intakeTime 중복 검증
@@ -599,10 +737,9 @@ public class SupplementService {
         supplement.updateBasicInfo(request.getAlias(), request.getDailyDose(), request.getDosePerIntake());
 
         // 재고 수정
-        SupplementInventory inventory =
-                supplementInventoryRepository.findBySupplementIds(List.of(supplementId))
-                        .stream().findFirst()
-                        .orElseThrow(() -> CustomException.notFound("재고 정보를 찾을 수 없습니다."));
+        SupplementInventory inventory = supplementInventoryRepository.findBySupplementIds(List.of(supplementId))
+                .stream().findFirst()
+                .orElseThrow(() -> CustomException.notFound("재고 정보를 찾을 수 없습니다."));
         inventory.updateInventory(request.getStockQuantity(), request.getStockNotificationEnabled());
 
         // 기존 INTAKE 스케줄 목록 조회
@@ -642,7 +779,7 @@ public class SupplementService {
                     // 이 영양제의 INTAKE 스케줄이 아니면 scheduleId 입력 차단
                     throw CustomException.badRequest(
                             "scheduleId " + dto.getScheduleId() +
-                            "는 존재하지 않거나 해당 영양제의 INTAKE 스케줄이 아닙니다.");
+                                    "는 존재하지 않거나 해당 영양제의 INTAKE 스케줄이 아닙니다.");
                 }
                 existing.updateIntakeTime(parsedTime);
                 updatedSchedules.add(existing);
