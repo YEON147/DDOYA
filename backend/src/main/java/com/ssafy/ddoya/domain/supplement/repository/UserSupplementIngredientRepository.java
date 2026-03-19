@@ -10,11 +10,12 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface UserSupplementIngredientRepository extends JpaRepository<UserSupplementIngredient, UserSupplementIngredientId> {
+public interface UserSupplementIngredientRepository
+              extends JpaRepository<UserSupplementIngredient, UserSupplementIngredientId> {
 
-    // 영양제 ID 목록에 속하는 주성분(is_primary=true)만 조회
-    @Query("SELECT u FROM UserSupplementIngredient u JOIN FETCH u.normalizedIngredient " +
-           "WHERE u.supplement.userSupplementId IN :supplementIds AND u.isPrimary = true")
-    List<UserSupplementIngredient> findPrimaryIngredientsBySupplementIds(
-            @Param("supplementIds") List<Long> supplementIds);
+       // 영양제 주성분(is_primary=true) 조회
+       @Query("SELECT u FROM UserSupplementIngredient u JOIN FETCH u.normalizedIngredient " +
+                     "WHERE u.supplement.userSupplementId IN :supplementIds AND u.isPrimary = true")
+       List<UserSupplementIngredient> findPrimaryIngredientsBySupplementIds(
+                     @Param("supplementIds") List<Long> supplementIds);
 }
