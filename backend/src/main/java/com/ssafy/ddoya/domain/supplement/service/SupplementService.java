@@ -531,4 +531,22 @@ public class SupplementService {
                 .intakeSchedules(scheduleDtos)
                 .build();
     }
+
+    // 영양제 삭제
+    @Transactional
+    public void deleteSupplement(Long userId, Long supplementId) {
+        Supplement supplement = supplementRepository.findById(supplementId)
+                .orElseThrow(() -> CustomException.notFound("요청한 영양제를 찾을 수 없습니다."));
+
+        // 소유권 검증
+        if (!supplement.getUser().getUserId().equals(userId)) {
+            throw CustomException.forbidden("해당 영양제에 대한 권한이 없습니다.");
+        }
+
+        // FK 제약 순서에 맞게 삭제
+        intakeScheduleRepository.deleteBySupplementId(supplementId);         // 1. 스케줄
+        userSupplementIngredientRepository.deleteBySupplementId(supplementId); // 2. 성분
+        supplementInventoryRepository.deleteBySupplementIds(List.of(supplementId)); // 3. 재고
+        supplementRepository.delete(supplement);                              // 4. 영양제
+    }
 }

@@ -110,4 +110,19 @@ public class SupplementController {
         SupplementDetailResponse result = supplementService.getSupplementDetail(userId, supplementId);
         return ResponseEntity.ok(SuccessResponse.of("영양제 상세 정보를 조회했습니다.", result));
     }
+
+    // 내 영양제 삭제
+    @DeleteMapping("/{supplementId}")
+    public ResponseEntity<Void> deleteSupplement(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long supplementId) {
+
+        if (userDetails == null || userDetails.getUser() == null) {
+            throw CustomException.unauthorized("인증된 사용자 정보가 없습니다.");
+        }
+        Long userId = userDetails.getUser().getUserId();
+
+        supplementService.deleteSupplement(userId, supplementId);
+        return ResponseEntity.noContent().build();
+    }
 }
