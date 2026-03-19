@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.ddoya.domain.auth.dto.CustomUserDetails;
 import com.ssafy.ddoya.domain.supplement.dto.IngredientAnalyzeResponse;
+import com.ssafy.ddoya.domain.supplement.dto.SupplementDetailResponse;
 import com.ssafy.ddoya.domain.supplement.dto.SupplementListResponse;
 import com.ssafy.ddoya.domain.supplement.dto.SupplementRegisterRequest;
 import com.ssafy.ddoya.domain.supplement.dto.SupplementRegisterResponse;
@@ -93,5 +94,20 @@ public class SupplementController {
 
         SupplementListResponse result = supplementService.getMySupplements(userId, page, size);
         return ResponseEntity.ok(SuccessResponse.of("나의 영양제 목록을 조회했습니다.", result));
+    }
+
+    // 내 영양제 상세 조회
+    @GetMapping("/{supplementId}")
+    public ResponseEntity<SuccessResponse<SupplementDetailResponse>> getSupplementDetail(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long supplementId) {
+
+        if (userDetails == null || userDetails.getUser() == null) {
+            throw CustomException.unauthorized("인증된 사용자 정보가 없습니다.");
+        }
+        Long userId = userDetails.getUser().getUserId();
+
+        SupplementDetailResponse result = supplementService.getSupplementDetail(userId, supplementId);
+        return ResponseEntity.ok(SuccessResponse.of("영양제 상세 정보를 조회했습니다.", result));
     }
 }

@@ -5,8 +5,11 @@ import com.ssafy.ddoya.domain.common.entity.IngredientMaster;
 import com.ssafy.ddoya.domain.common.repository.BodyPartRepository;
 import com.ssafy.ddoya.domain.common.repository.IngredientMasterRepository;
 import com.ssafy.ddoya.domain.common.util.ImageCompressUtil;
+import com.ssafy.ddoya.domain.intake.repository.IntakeScheduleRepository;
 import com.ssafy.ddoya.domain.supplement.dto.FastApiOcrResponse;
 import com.ssafy.ddoya.domain.supplement.dto.IngredientAnalyzeResponse;
+import com.ssafy.ddoya.domain.supplement.dto.SupplementDetailResponse;
+import com.ssafy.ddoya.domain.supplement.dto.SupplementDetailResponse.IntakeScheduleDto;
 import com.ssafy.ddoya.domain.supplement.dto.SupplementListResponse;
 import com.ssafy.ddoya.domain.supplement.dto.SupplementListResponse.SupplementSummaryDto;
 import com.ssafy.ddoya.domain.supplement.dto.SupplementRegisterRequest;
@@ -69,16 +72,19 @@ public class SupplementService {
     private final SupplementRepository supplementRepository;
     private final UserSupplementIngredientRepository userSupplementIngredientRepository;
     private final SupplementInventoryRepository supplementInventoryRepository;
+    private final IntakeScheduleRepository intakeScheduleRepository;
     private final BodyPartRepository bodyPartRepository;
     private final IngredientMasterRepository ingredientMasterRepository;
     private final EntityManager entityManager;
 
+    // 성분표 분석 (FastAPI 호출)
     public IngredientAnalyzeResponse analyzeIngredients(MultipartFile ingredientsImg) {
         validateImageFile(ingredientsImg);
         IngredientAnalyzeResponse ocrResult = runOcr(ingredientsImg);
         return resolveBodyPartName(ocrResult);
     }
 
+    // 영양제 등록
     @Transactional
     public SupplementRegisterResponse registerSupplement(Long userId, MultipartFile pillImg,
             SupplementRegisterRequest request) {
@@ -477,6 +483,52 @@ public class SupplementService {
                 .totalElements(supplementPage.getTotalElements())
                 .totalPages(supplementPage.getTotalPages())
                 .hasNext(supplementPage.hasNext())
+                .build();
+    }
+
+    // 영양제 상세 조회
+    public SupplementDetailResponse getSupplementDetail(Long userId, Long supplementId) {
+
+        Supplement supplement = supplementRepository.findById(supplementId)
+                .orElseThrow(() -> CustomException.notFound("요청한 영양제를 찾을 수 없습니다."));
+
+        if (!supplement.getUser().getUserId().equals(userId)) {
+            throw CustomException.forbidden("해당 영양제에 대한 권한이 없습니다.");
+        }
+
+        // 주성분명 목록 조회
+        List<String> primaryIngredientNames =
+                userSupplementIngredientRepository
+                        .findPrimaryIngredientsBySupplementIds(List.of(supplementId))
+                        .stream()
+                        .map(u -> u.getNormalizedIngredient().getNormalizedName())
+                        .collect(Collectors.toList());
+
+        // 재고 조회
+        SupplementInventory inventory =
+                supplementInventoryRepository.findBySupplementIds(List.of(supplementId))
+                        .stream().findFirst()
+                        .orElseThrow(() -> CustomException.notFound("재고 정보를 찾을 수 없습니다."));
+
+        // 스케줄 조회
+        List<IntakeScheduleDto> scheduleDtos = intakeScheduleRepository
+                .findBySupplementId(supplementId)
+                .stream()
+                .map(s -> IntakeScheduleDto.builder()
+                        .scheduleId(s.getScheduleId())
+                        .intakeTime(s.getIntakeTime().toString().substring(0, 5)) // HH:mm
+                        .build())
+                .collect(Collectors.toList());
+
+        return SupplementDetailResponse.builder()
+                .userSupplementId(supplement.getUserSupplementId())
+                .pillImageUrl(supplement.getPillImageUrl())
+                .alias(supplement.getAlias())
+                .primaryIngredientNames(primaryIngredientNames)
+                .dailyDose(supplement.getDailyDose())
+                .stockQuantity(inventory.getStockQuantity())
+                .stockNotificationEnabled(inventory.isStockAlertEnabled())
+                .intakeSchedules(scheduleDtos)
                 .build();
     }
 }
