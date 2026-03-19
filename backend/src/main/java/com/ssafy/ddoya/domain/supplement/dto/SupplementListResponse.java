@@ -23,6 +23,6 @@ public class SupplementListResponse {
         private String pillImageUrl;
         private String alias;
         private List<String> primaryIngredientNames;
-        private Integer capacity;
+        private Integer stockQuantity;
     }
 }

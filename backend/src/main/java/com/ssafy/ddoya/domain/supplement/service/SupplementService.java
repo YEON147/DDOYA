@@ -448,6 +448,15 @@ public class SupplementService {
                         )
                 ));
 
+        // 재고 일괄 조회 (N+1 방지)
+        Map<Long, Integer> stockQuantityMap = supplementInventoryRepository
+                .findBySupplementIds(supplementIds)
+                .stream()
+                .collect(Collectors.toMap(
+                        i -> i.getSupplement().getUserSupplementId(),
+                        SupplementInventory::getStockQuantity
+                ));
+
         // Supplement 엔티티 → 응답 DTO 변환
         List<SupplementSummaryDto> dtos = supplements.stream()
                 .map(s -> SupplementSummaryDto.builder()
@@ -456,7 +465,7 @@ public class SupplementService {
                         .alias(s.getAlias())
                         .primaryIngredientNames(
                                 primaryNameMap.getOrDefault(s.getUserSupplementId(), emptyList()))
-                        .capacity(s.getCapacity())
+                        .stockQuantity(stockQuantityMap.getOrDefault(s.getUserSupplementId(), 0))
                         .build())
                 .collect(Collectors.toList());
 
