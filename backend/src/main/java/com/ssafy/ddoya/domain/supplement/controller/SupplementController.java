@@ -4,9 +4,11 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.ddoya.domain.auth.dto.CustomUserDetails;
 import com.ssafy.ddoya.domain.supplement.dto.IngredientAnalyzeResponse;
+import com.ssafy.ddoya.domain.supplement.dto.SupplementListResponse;
 import com.ssafy.ddoya.domain.supplement.dto.SupplementRegisterRequest;
 import com.ssafy.ddoya.domain.supplement.dto.SupplementRegisterResponse;
 import com.ssafy.ddoya.domain.supplement.service.SupplementService;
+import com.ssafy.ddoya.global.exception.CustomException;
 import com.ssafy.ddoya.global.response.SuccessResponse;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
@@ -31,6 +33,7 @@ public class SupplementController {
     private final ObjectMapper objectMapper;
     private final Validator validator;
 
+    // 성분표 분석 (ocr)
     @PostMapping("/ingredients/ocr")
     public ResponseEntity<SuccessResponse<IngredientAnalyzeResponse>> analyzeIngredients(
             @RequestPart("ingredientsImg") MultipartFile ingredientsImg) {
@@ -39,6 +42,7 @@ public class SupplementController {
         return ResponseEntity.ok(SuccessResponse.of("성분표 분석이 완료되었습니다.", result));
     }
 
+    // 내 영양제 등록
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> registerSupplement(
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -47,7 +51,7 @@ public class SupplementController {
     ) throws JsonProcessingException {
 
         if (userDetails == null || userDetails.getUser() == null) {
-            throw new IllegalArgumentException("인증된 사용자 정보가 없습니다.");
+            throw CustomException.unauthorized("인증된 사용자 정보가 없습니다.");
         }
         Long userId = userDetails.getUser().getUserId();
 
@@ -60,7 +64,7 @@ public class SupplementController {
             String message = violations.stream()
                     .map(ConstraintViolation::getMessage)
                     .collect(Collectors.joining(", "));
-            throw new IllegalArgumentException(message);
+            throw CustomException.badRequest(message);
         }
 
         if (request.getIngredients() != null) {
@@ -73,5 +77,21 @@ public class SupplementController {
                 supplementService.registerSupplement(userId, pillImg, request);
 
         return ResponseEntity.ok(SuccessResponse.of("영양제 등록을 성공했습니다.", result));
+    }
+
+    // 내 영양제 목록 조회
+    @GetMapping
+    public ResponseEntity<SuccessResponse<SupplementListResponse>> getMySupplements(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        if (userDetails == null || userDetails.getUser() == null) {
+            throw CustomException.unauthorized("인증된 사용자 정보가 없습니다.");
+        }
+        Long userId = userDetails.getUser().getUserId();
+
+        SupplementListResponse result = supplementService.getMySupplements(userId, page, size);
+        return ResponseEntity.ok(SuccessResponse.of("나의 영양제 목록을 조회했습니다.", result));
     }
 }

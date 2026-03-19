@@ -7,6 +7,8 @@ import com.ssafy.ddoya.domain.common.repository.IngredientMasterRepository;
 import com.ssafy.ddoya.domain.common.util.ImageCompressUtil;
 import com.ssafy.ddoya.domain.supplement.dto.FastApiOcrResponse;
 import com.ssafy.ddoya.domain.supplement.dto.IngredientAnalyzeResponse;
+import com.ssafy.ddoya.domain.supplement.dto.SupplementListResponse;
+import com.ssafy.ddoya.domain.supplement.dto.SupplementListResponse.SupplementSummaryDto;
 import com.ssafy.ddoya.domain.supplement.dto.SupplementRegisterRequest;
 import com.ssafy.ddoya.domain.supplement.dto.SupplementRegisterResponse;
 import com.ssafy.ddoya.domain.supplement.entity.Supplement;
@@ -21,6 +23,8 @@ import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -37,6 +41,8 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import static java.nio.file.Files.write;
 import static java.util.Collections.emptyList;
@@ -66,6 +72,7 @@ public class SupplementService {
     private final BodyPartRepository bodyPartRepository;
     private final IngredientMasterRepository ingredientMasterRepository;
     private final EntityManager entityManager;
+
     public IngredientAnalyzeResponse analyzeIngredients(MultipartFile ingredientsImg) {
         validateImageFile(ingredientsImg);
         IngredientAnalyzeResponse ocrResult = runOcr(ingredientsImg);
@@ -397,5 +404,70 @@ public class SupplementService {
                 || contentType.equals("image/webp"))) {
             throw CustomException.badRequest("지원하지 않는 이미지 형식입니다. (jpeg/png/webp만 가능)");
         }
+    }
+
+    // 내 영양제 목록 조회
+    public SupplementListResponse getMySupplements(Long userId, int page, int size) {
+        // 해당 유저가 등록한 영양제를 페이징 조회
+        Page<Supplement> supplementPage =
+                supplementRepository.findByUserId(userId, PageRequest.of(page, size));
+
+        List<Supplement> supplements = supplementPage.getContent();
+
+        // 등록된 영양제가 없음
+        if (supplements.isEmpty()) {
+            return SupplementListResponse.builder()
+                    .supplements(emptyList())
+                    .page(page)
+                    .size(size)
+                    .totalElements(0)
+                    .totalPages(0)
+                    .hasNext(false)
+                    .build();
+        }
+
+        // 조회된 영양제들의 ID를 추출
+        List<Long> supplementIds = supplements.stream()
+                .map(Supplement::getUserSupplementId)
+                .collect(Collectors.toList());
+
+        // 주성분 일괄 조회 (N+1 방지)
+        List<UserSupplementIngredient> primaryIngredients =
+                userSupplementIngredientRepository.findPrimaryIngredientsBySupplementIds(supplementIds);
+
+        // supplementId → 주성분명 목록 Map
+        Map<Long, List<String>> primaryNameMap = primaryIngredients.stream()
+                .collect(Collectors.groupingBy(
+                        // key : supplementId
+                        u -> u.getSupplement().getUserSupplementId(),
+
+                        // value : 주성분 이름 리스트
+                        Collectors.mapping(
+                                u -> u.getNormalizedIngredient().getNormalizedName(),
+                                Collectors.toList()
+                        )
+                ));
+
+        // Supplement 엔티티 → 응답 DTO 변환
+        List<SupplementSummaryDto> dtos = supplements.stream()
+                .map(s -> SupplementSummaryDto.builder()
+                        .userSupplementId(s.getUserSupplementId())
+                        .pillImageUrl(s.getPillImageUrl())
+                        .alias(s.getAlias())
+                        .primaryIngredientNames(
+                                primaryNameMap.getOrDefault(s.getUserSupplementId(), emptyList()))
+                        .capacity(s.getCapacity())
+                        .build())
+                .collect(Collectors.toList());
+
+        // 최종 응답 객체 생성
+        return SupplementListResponse.builder()
+                .supplements(dtos)
+                .page(supplementPage.getNumber())
+                .size(supplementPage.getSize())
+                .totalElements(supplementPage.getTotalElements())
+                .totalPages(supplementPage.getTotalPages())
+                .hasNext(supplementPage.hasNext())
+                .build();
     }
 }
