@@ -1,26 +1,39 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, TouchableOpacity, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSupplementStore } from '@/src/store/supplementStore';
 import { colors } from '@/constants/theme/colors';
+import { ScreenContainer } from '@/src/components/common/ScreenContainer';
+import { TopHeader } from '@/src/components/common/TopHeader';
+// import { supplementApi } from '@/src/api/supplement';
+
 
 export default function SupplementsScreen() {
   const router = useRouter();
   const { supplements } = useSupplementStore();
+  // const [supplements, setSupplements] = useState<any[]>([]);
+
+  // 백 api 연동
+  // const getSupplements = async () => {
+  //   const res = await supplementApi.getSupplements(1, 10);
+  //   setSupplements(res.data.data);
+  // }
+  // useEffect(() => {
+  //   getSupplements();
+  // }, []);
 
   const renderItem = ({ item }: { item: any }) => (
-    <View 
-      className="flex-row items-center px-6 py-4 mb-2 mx-4 rounded-3xl shadow-sm"
-      style={{ backgroundColor: colors.surface }}
-    >
+    <View
+      className="flex-row items-center p-4"
+      >
       <Image
         source={{ uri: item.image_url }}
-        className="w-16 h-16 rounded-2xl"
-        style={{ backgroundColor: colors.background }}
+        className="w-20 h-20 rounded-2xl ml-4"
+        style={{ backgroundColor: colors.point }}
         resizeMode="cover"
       />
-      <View className="flex-1 ml-4 py-1">
+      <View className="flex-1 my-4 mx-8">
         <Text className="text-lg font-bold mb-1" style={{ color: colors.text }} numberOfLines={1}>
           {item.name}
         </Text>
@@ -42,17 +55,24 @@ export default function SupplementsScreen() {
   );
 
   return (
-    <View className="flex-1" style={{ backgroundColor: colors.background }}>
-      <View className="px-6 py-6 flex-row justify-between items-center">
-        <Text className="text-2xl font-bold" style={{ color: colors.text }}>새로운 영양제 등록하기</Text>
-        <TouchableOpacity
-          onPress={() => router.push('/supplements/create')}
-          className="w-12 h-12 rounded-full items-center justify-center shadow-lg"
-          style={{ backgroundColor: colors.primary }}
-        >
-          <Ionicons name="add" size={28} color="white" />
-        </TouchableOpacity>
-      </View>
+    <ScreenContainer
+      scrollable={false}
+      padding={0}
+      header={
+        <TopHeader
+          title="영양제 관리"
+          right={
+            <TouchableOpacity
+              onPress={() => router.push('/supplements/create')}
+              className="w-10 h-10 rounded-full items-center justify-center"
+              style={{ backgroundColor: colors.primary }}
+            >
+              <Ionicons name="add" size={22} color="white" />
+            </TouchableOpacity>
+          }
+        />
+      }
+    >
 
       <FlatList
         data={supplements}
@@ -65,6 +85,6 @@ export default function SupplementsScreen() {
         }
         contentContainerClassName="pt-2 pb-10"
       />
-    </View>
+    </ScreenContainer>
   );
 }

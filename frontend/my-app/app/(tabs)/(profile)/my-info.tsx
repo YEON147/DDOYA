@@ -1,4 +1,6 @@
-import { View, Text, ScrollView } from 'react-native';
+import { View, Text } from 'react-native';
+import { ScreenContainer } from '@/src/components/common/ScreenContainer';
+import { TopHeader } from '@/src/components/common/TopHeader';
 
 export default function MyInfoScreen() {
   // const { data: userInfo } = useQuery({
@@ -15,7 +17,7 @@ export default function MyInfoScreen() {
   };
 
   return (
-    <ScrollView className="flex-1 bg-white">
+    <ScreenContainer header={<TopHeader title="내 정보" />}>
       <View className="px-6 py-8">
         <View className="mb-6">
           <Text className="text-sm font-scdream text-gray-400 mb-1">닉네임</Text>
@@ -26,6 +28,6 @@ export default function MyInfoScreen() {
           <Text className="text-lg font-scdream text-black">{mockUserInfo.email}</Text>
         </View>
       </View>
-    </ScrollView>
+    </ScreenContainer>
   );
 }

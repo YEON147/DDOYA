@@ -1,4 +1,6 @@
-import { View, Text, ScrollView } from 'react-native';
+import { View, Text } from 'react-native';
+import { ScreenContainer } from '@/src/components/common/ScreenContainer';
+import { TopHeader } from '@/src/components/common/TopHeader';
 
 export default function ReportsScreen() {
   // const { data: report } = useQuery({
@@ -15,7 +17,7 @@ export default function ReportsScreen() {
   };
 
   return (
-    <ScrollView className="flex-1 bg-white">
+    <ScreenContainer header={<TopHeader title="리포트" />}>
       <View className="px-6 py-8">
         <Text className="text-sm font-scdream text-gray-400 mb-2">{mockReport.date} 리포트</Text>
         <View className="bg-gray-50 rounded-2xl p-6">
@@ -24,6 +26,6 @@ export default function ReportsScreen() {
           </Text>
         </View>
       </View>
-    </ScrollView>
+    </ScreenContainer>
   );
 }
