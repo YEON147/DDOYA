@@ -5,3 +5,9 @@ requests
 python-multipart
 boto3
 python-dotenv
+opencv-python
+numpy
+torch
+transformers
+ultralytics
+pillow
