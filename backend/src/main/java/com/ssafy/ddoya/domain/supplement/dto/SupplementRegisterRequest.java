@@ -29,6 +29,9 @@ public class SupplementRegisterRequest {
     @Min(value = 0, message = "총 용량은 양수이어야 합니다.")
     private Integer capacity;
 
+    // ── 알약 이미지 임베딩 경로 ─────────────────────
+    private String pillReferenceEmbeddingPath;
+
     // ── 성분표 분석 결과 ──────────────────────────
     @NotNull(message = "신체 부위 ID는 필수입니다.")
     private Byte bodyPartId;

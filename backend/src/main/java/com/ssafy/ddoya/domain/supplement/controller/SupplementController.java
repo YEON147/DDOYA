@@ -3,13 +3,7 @@ package com.ssafy.ddoya.domain.supplement.controller;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.ddoya.domain.auth.dto.CustomUserDetails;
-import com.ssafy.ddoya.domain.supplement.dto.IngredientAnalyzeResponse;
-import com.ssafy.ddoya.domain.supplement.dto.SupplementDetailResponse;
-import com.ssafy.ddoya.domain.supplement.dto.SupplementListResponse;
-import com.ssafy.ddoya.domain.supplement.dto.SupplementRegisterRequest;
-import com.ssafy.ddoya.domain.supplement.dto.SupplementRegisterResponse;
-import com.ssafy.ddoya.domain.supplement.dto.SupplementUpdateRequest;
-import com.ssafy.ddoya.domain.supplement.dto.SupplementUpdateResponse;
+import com.ssafy.ddoya.domain.supplement.dto.*;
 import com.ssafy.ddoya.domain.supplement.service.SupplementService;
 import com.ssafy.ddoya.global.exception.CustomException;
 import com.ssafy.ddoya.global.response.SuccessResponse;
@@ -46,6 +40,14 @@ public class SupplementController {
         return ResponseEntity.ok(SuccessResponse.of("성분표 분석이 완료되었습니다.", result));
     }
 
+    // 알약 검증
+    @PostMapping("/pill/validate")
+    public ResponseEntity<SuccessResponse<FastApiPillValidationResponse>> validatePillImage(
+                @RequestPart("pillImg") MultipartFile pillImg) {
+        FastApiPillValidationResponse result = supplementService.validatePillImage(pillImg);
+        return ResponseEntity.ok(SuccessResponse.of("알약 검증이 완료되었습니다.", result));
+    }
+
     // 내 영양제 등록
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> registerSupplement(
@@ -77,8 +79,12 @@ public class SupplementController {
             }
         }
 
+        // 알약 이미지 임베딩
+        FastApiEmbeddingResponse pillReferenceEmbeddingResult = supplementService.pillImageEmbedding(pillImg);
+
+        // 영양제 등록
         SupplementRegisterResponse result =
-                supplementService.registerSupplement(userId, pillImg, request);
+                supplementService.registerSupplement(userId, pillImg, request, pillReferenceEmbeddingResult.getPillReferenceEmbeddingPath());
 
         return ResponseEntity.ok(SuccessResponse.of("영양제 등록을 성공했습니다.", result));
     }

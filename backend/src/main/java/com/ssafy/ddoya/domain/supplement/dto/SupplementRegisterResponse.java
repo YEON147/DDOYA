@@ -24,6 +24,8 @@ public class SupplementRegisterResponse {
     private Long inventoryId;
     private Integer stockQuantity;
 
+    private String pillReferenceEmbeddingPath;
+
     private List<IngredientDto> ingredients;
 
     @Getter

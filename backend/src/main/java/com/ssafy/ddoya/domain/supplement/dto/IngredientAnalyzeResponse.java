@@ -10,8 +10,12 @@ import java.util.List;
 @Builder
 public class IngredientAnalyzeResponse {
 
+    private boolean success;
+    private String message;
     private Byte bodyPartId;
     private String bodyPartName;
+    private Integer dailyDose;
+    private Integer dosePerIntake;
     private List<IngredientDto> ingredients;
 
     @Getter
