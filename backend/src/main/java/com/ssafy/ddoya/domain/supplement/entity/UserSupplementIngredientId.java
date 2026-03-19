@@ -16,6 +16,6 @@ public class UserSupplementIngredientId implements Serializable {
     @Column(name = "user_supplement_id")
     private Long userSupplementId;
 
-    @Column(name = "ingredient_id")
-    private Long ingredientId;
+    @Column(name = "normalized_ingredient_id")
+    private Long normalizedIngredientId;
 }

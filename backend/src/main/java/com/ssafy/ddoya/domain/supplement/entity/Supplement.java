@@ -47,8 +47,8 @@ public class Supplement {
     @Column(name = "is_reflected", nullable = false)
     private boolean isReflected;
 
-    @Column(name = "supplement_image_url", nullable = false, length = 500)
-    private String supplementImageUrl;
+    @Column(name = "pill_image_url", nullable = false, length = 500)
+    private String pillImageUrl;
 
     @Column(name = "reference_embedding_path", length = 500)
     private String referenceEmbeddingPath;
@@ -63,7 +63,7 @@ public class Supplement {
     @Builder
     private Supplement(User user, BodyPart bodyPart, String alias, Integer dailyDose,
             Integer dosePerIntake, Integer capacity, Boolean isReflected,
-            String supplementImageUrl, String referenceEmbeddingPath) {
+            String pillImageUrl, String referenceEmbeddingPath) {
         this.user = user;
         this.bodyPart = bodyPart;
         this.alias = alias;
@@ -71,7 +71,14 @@ public class Supplement {
         this.dosePerIntake = dosePerIntake;
         this.capacity = capacity;
         this.isReflected = isReflected != null ? isReflected : false;
-        this.supplementImageUrl = supplementImageUrl;
+        this.pillImageUrl = pillImageUrl;
         this.referenceEmbeddingPath = referenceEmbeddingPath;
+    }
+
+    // 영양제 정보 수정
+    public void updateBasicInfo(String alias, Integer dailyDose, Integer dosePerIntake) {
+        this.alias = alias;
+        this.dailyDose = dailyDose;
+        this.dosePerIntake = dosePerIntake;
     }
 }

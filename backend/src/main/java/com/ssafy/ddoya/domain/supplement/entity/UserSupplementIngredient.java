@@ -24,9 +24,9 @@ public class UserSupplementIngredient {
     private Supplement supplement;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @MapsId("ingredientId")
-    @JoinColumn(name = "ingredient_id", nullable = false)
-    private IngredientMaster ingredient;
+    @MapsId("normalizedIngredientId")
+    @JoinColumn(name = "normalized_ingredient_id", nullable = false)
+    private IngredientMaster normalizedIngredient;
 
     @Column(name = "raw_ingredient_name", nullable = false, length = 200)
     private String rawIngredientName;
@@ -41,12 +41,12 @@ public class UserSupplementIngredient {
     private boolean isPrimary;
 
     @Builder
-    private UserSupplementIngredient(Supplement supplement, IngredientMaster ingredient,
+    private UserSupplementIngredient(Supplement supplement, IngredientMaster normalizedIngredient,
             String rawIngredientName, String unit,
             BigDecimal amount, boolean isPrimary) {
-        this.id = new UserSupplementIngredientId(supplement.getUserSupplementId(), ingredient.getIngredientId());
+        this.id = new UserSupplementIngredientId(supplement.getUserSupplementId(), normalizedIngredient.getIngredientId());
         this.supplement = supplement;
-        this.ingredient = ingredient;
+        this.normalizedIngredient = normalizedIngredient;
         this.rawIngredientName = rawIngredientName;
         this.unit = unit;
         this.amount = amount;
