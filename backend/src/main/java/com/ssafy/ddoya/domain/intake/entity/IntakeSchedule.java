@@ -58,4 +58,9 @@ public class IntakeSchedule {
         this.scheduleType = scheduleType;
         this.doseAmount = doseAmount;
     }
+
+    // 섭취 시각 수정
+    public void updateIntakeTime(LocalTime intakeTime) {
+        this.intakeTime = intakeTime;
+    }
 }

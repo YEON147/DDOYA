@@ -34,4 +34,10 @@ public class SupplementInventory {
         this.stockQuantity = stockQuantity;
         this.stockAlertEnabled = stockAlertEnabled != null ? stockAlertEnabled : true;
     }
+
+    // 재고 수량 및 알림 설정 수정
+    public void updateInventory(Integer stockQuantity, boolean stockAlertEnabled) {
+        this.stockQuantity = stockQuantity;
+        this.stockAlertEnabled = stockAlertEnabled;
+    }
 }

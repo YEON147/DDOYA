@@ -8,10 +8,13 @@ import com.ssafy.ddoya.domain.supplement.dto.SupplementDetailResponse;
 import com.ssafy.ddoya.domain.supplement.dto.SupplementListResponse;
 import com.ssafy.ddoya.domain.supplement.dto.SupplementRegisterRequest;
 import com.ssafy.ddoya.domain.supplement.dto.SupplementRegisterResponse;
+import com.ssafy.ddoya.domain.supplement.dto.SupplementUpdateRequest;
+import com.ssafy.ddoya.domain.supplement.dto.SupplementUpdateResponse;
 import com.ssafy.ddoya.domain.supplement.service.SupplementService;
 import com.ssafy.ddoya.global.exception.CustomException;
 import com.ssafy.ddoya.global.response.SuccessResponse;
 import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Valid;
 import jakarta.validation.Validator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -124,5 +127,21 @@ public class SupplementController {
 
         supplementService.deleteSupplement(userId, supplementId);
         return ResponseEntity.noContent().build();
+    }
+
+    // 내 영양제 상세 정보 수정 (최종 상태 동기화 방식)
+    @PatchMapping("/{supplementId}")
+    public ResponseEntity<SuccessResponse<SupplementUpdateResponse>> updateSupplement(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long supplementId,
+            @Valid @RequestBody SupplementUpdateRequest request) {
+
+        if (userDetails == null || userDetails.getUser() == null) {
+            throw CustomException.unauthorized("인증된 사용자 정보가 없습니다.");
+        }
+        Long userId = userDetails.getUser().getUserId();
+
+        SupplementUpdateResponse result = supplementService.updateSupplement(userId, supplementId, request);
+        return ResponseEntity.ok(SuccessResponse.of("영양제 정보를 수정했습니다.", result));
     }
 }

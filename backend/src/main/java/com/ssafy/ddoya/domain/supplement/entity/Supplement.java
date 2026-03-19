@@ -74,4 +74,11 @@ public class Supplement {
         this.pillImageUrl = pillImageUrl;
         this.referenceEmbeddingPath = referenceEmbeddingPath;
     }
+
+    // 영양제 정보 수정
+    public void updateBasicInfo(String alias, Integer dailyDose, Integer dosePerIntake) {
+        this.alias = alias;
+        this.dailyDose = dailyDose;
+        this.dosePerIntake = dosePerIntake;
+    }
 }

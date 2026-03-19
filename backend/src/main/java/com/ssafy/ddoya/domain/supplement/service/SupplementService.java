@@ -5,11 +5,16 @@ import com.ssafy.ddoya.domain.common.entity.IngredientMaster;
 import com.ssafy.ddoya.domain.common.repository.BodyPartRepository;
 import com.ssafy.ddoya.domain.common.repository.IngredientMasterRepository;
 import com.ssafy.ddoya.domain.common.util.ImageCompressUtil;
+import com.ssafy.ddoya.domain.intake.entity.IntakeSchedule;
+import com.ssafy.ddoya.domain.intake.entity.ScheduleType;
 import com.ssafy.ddoya.domain.intake.repository.IntakeScheduleRepository;
 import com.ssafy.ddoya.domain.supplement.dto.FastApiOcrResponse;
 import com.ssafy.ddoya.domain.supplement.dto.IngredientAnalyzeResponse;
 import com.ssafy.ddoya.domain.supplement.dto.SupplementDetailResponse;
 import com.ssafy.ddoya.domain.supplement.dto.SupplementDetailResponse.IntakeScheduleDto;
+import com.ssafy.ddoya.domain.supplement.dto.SupplementUpdateRequest;
+import com.ssafy.ddoya.domain.supplement.dto.SupplementUpdateRequest.IntakeScheduleUpdateDto;
+import com.ssafy.ddoya.domain.supplement.dto.SupplementUpdateResponse;
 import com.ssafy.ddoya.domain.supplement.dto.SupplementListResponse;
 import com.ssafy.ddoya.domain.supplement.dto.SupplementListResponse.SupplementSummaryDto;
 import com.ssafy.ddoya.domain.supplement.dto.SupplementRegisterRequest;
@@ -42,9 +47,12 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import static java.nio.file.Files.write;
@@ -548,5 +556,126 @@ public class SupplementService {
         userSupplementIngredientRepository.deleteBySupplementId(supplementId); // 2. 성분
         supplementInventoryRepository.deleteBySupplementIds(List.of(supplementId)); // 3. 재고
         supplementRepository.delete(supplement);                              // 4. 영양제
+    }
+
+    // 영양제 상세 정보 수정 (최종 상태 동기화 방식)
+    @Transactional
+    public SupplementUpdateResponse updateSupplement(Long userId, Long supplementId,
+            SupplementUpdateRequest request) {
+
+        // 소유권 검증 + 영양제 조회
+        Supplement supplement = supplementRepository.findByIdAndUserId(supplementId, userId)
+                .orElseThrow(() -> CustomException.notFound("해당 영양제를 찾을 수 없거나 권한이 없습니다."));
+
+        // dailyDose 와 intakeSchedules 개수 일치 검증
+        if (request.getDailyDose() != request.getIntakeSchedules().size()) {
+            throw CustomException.badRequest(
+                    "일일 섭취횟수("
+                    + request.getDailyDose() + ")와 스케줄 개수("
+                    + request.getIntakeSchedules().size() + ")가 일치하지 않습니다.");
+        }
+
+        // intakeTime 중복 검증
+        long distinctTimeCount = request.getIntakeSchedules().stream()
+                .map(IntakeScheduleUpdateDto::getIntakeTime)
+                .distinct().count();
+        if (distinctTimeCount != request.getIntakeSchedules().size()) {
+            throw CustomException.badRequest("섭취 시각이 중복됩니다.");
+        }
+
+        // scheduleId 중복 검증
+        long distinctScheduleIdCount = request.getIntakeSchedules().stream()
+                .filter(s -> s.getScheduleId() != null)
+                .map(IntakeScheduleUpdateDto::getScheduleId)
+                .distinct().count();
+        long requestedScheduleIdCount = request.getIntakeSchedules().stream()
+                .filter(s -> s.getScheduleId() != null).count();
+        if (distinctScheduleIdCount != requestedScheduleIdCount) {
+            throw CustomException.badRequest("중복된 scheduleId가 존재합니다.");
+        }
+
+        // 영양제 기본 정보 수정
+        supplement.updateBasicInfo(request.getAlias(), request.getDailyDose(), request.getDosePerIntake());
+
+        // 재고 수정
+        SupplementInventory inventory =
+                supplementInventoryRepository.findBySupplementIds(List.of(supplementId))
+                        .stream().findFirst()
+                        .orElseThrow(() -> CustomException.notFound("재고 정보를 찾을 수 없습니다."));
+        inventory.updateInventory(request.getStockQuantity(), request.getStockNotificationEnabled());
+
+        // 기존 INTAKE 스케줄 목록 조회
+        List<IntakeSchedule> existingSchedules = intakeScheduleRepository
+                .findBySupplementIdAndUserIdAndScheduleType(supplementId, userId, ScheduleType.INTAKE);
+
+        // 빠른 조회를 위해 scheduleId → IntakeSchedule Map 생성
+        Map<Long, IntakeSchedule> existingMap = existingSchedules.stream()
+                .collect(Collectors.toMap(IntakeSchedule::getScheduleId, s -> s));
+
+        // 요청에 포함된 scheduleId 집합 (삭제 대상 판단용)
+        Set<Long> requestedExistingIds = request.getIntakeSchedules().stream()
+                .filter(s -> s.getScheduleId() != null)
+                .map(IntakeScheduleUpdateDto::getScheduleId)
+                .collect(Collectors.toSet());
+
+        // 기존에는 있지만 요청에 없는 스케줄 삭제
+        List<IntakeSchedule> schedulesToDelete = existingSchedules.stream()
+                .filter(s -> !requestedExistingIds.contains(s.getScheduleId()))
+                .collect(Collectors.toList());
+        if (!schedulesToDelete.isEmpty()) {
+            intakeScheduleRepository.deleteAll(schedulesToDelete);
+        }
+
+        User userRef = entityManager.getReference(User.class, userId);
+        Supplement supplementRef = entityManager.getReference(Supplement.class, supplementId);
+
+        List<IntakeSchedule> updatedSchedules = new ArrayList<>();
+
+        for (IntakeScheduleUpdateDto dto : request.getIntakeSchedules()) {
+            LocalTime parsedTime = LocalTime.parse(dto.getIntakeTime());
+
+            if (dto.getScheduleId() != null) {
+                // scheduleId 있음 → 기존 스케줄 수정
+                IntakeSchedule existing = existingMap.get(dto.getScheduleId());
+                if (existing == null) {
+                    // 이 영양제의 INTAKE 스케줄이 아니면 scheduleId 입력 차단
+                    throw CustomException.badRequest(
+                            "scheduleId " + dto.getScheduleId() +
+                            "는 존재하지 않거나 해당 영양제의 INTAKE 스케줄이 아닙니다.");
+                }
+                existing.updateIntakeTime(parsedTime);
+                updatedSchedules.add(existing);
+            } else {
+                // scheduleId 없음 → 신규 스케줄 생성
+                IntakeSchedule newSchedule = IntakeSchedule.builder()
+                        .user(userRef)
+                        .supplement(supplementRef)
+                        .intakeTime(parsedTime)
+                        .scheduleType(ScheduleType.INTAKE)
+                        .doseAmount(supplement.getDosePerIntake())
+                        .build();
+                IntakeSchedule saved = intakeScheduleRepository.save(newSchedule);
+                updatedSchedules.add(saved);
+            }
+        }
+
+        // 응답 DTO 구성
+        List<SupplementUpdateResponse.IntakeScheduleDto> scheduleDtos = updatedSchedules.stream()
+                .sorted(Comparator.comparing(IntakeSchedule::getIntakeTime))
+                .map(s -> SupplementUpdateResponse.IntakeScheduleDto.builder()
+                        .scheduleId(s.getScheduleId())
+                        .intakeTime(s.getIntakeTime().toString().substring(0, 5))
+                        .build())
+                .collect(Collectors.toList());
+
+        return SupplementUpdateResponse.builder()
+                .userSupplementId(supplement.getUserSupplementId())
+                .alias(supplement.getAlias())
+                .dailyDose(supplement.getDailyDose())
+                .dosePerIntake(supplement.getDosePerIntake())
+                .stockQuantity(inventory.getStockQuantity())
+                .stockNotificationEnabled(inventory.isStockAlertEnabled())
+                .intakeSchedules(scheduleDtos)
+                .build();
     }
 }
