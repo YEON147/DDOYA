@@ -14,6 +14,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { TimePicker } from '@/src/components/common/TimePicker';
 import { useSupplementStore } from '@/src/store/supplementStore';
 import { colors } from '@/constants/theme/colors';
+import { ScreenContainer } from '@/src/components/common/ScreenContainer';
+import { TopHeader } from '@/src/components/common/TopHeader';
 
 export default function SupplementDetailScreen() {
   const { supplementId } = useLocalSearchParams();
@@ -97,19 +99,22 @@ export default function SupplementDetailScreen() {
   if (loading) return null;
 
   return (
-    <View className="flex-1" style={{ backgroundColor: colors.surface }}>
-      {/* Header */}
-      <View className="px-6 py-4 flex-row items-center justify-between" style={{ borderBottomWidth: 1, borderBottomColor: colors.background }}>
-        <View className="flex-row items-center">
-          <TouchableOpacity onPress={() => router.back()} className="mr-4">
-            <Ionicons name="arrow-back" size={24} color={colors.text} />
-          </TouchableOpacity>
-          <Text className="text-xl font-bold" style={{ color: colors.text }}>영양제 상세</Text>
-        </View>
-        <TouchableOpacity onPress={handleSave}>
-          <Text className="font-bold text-lg" style={{ color: colors.primary }}>저장</Text>
-        </TouchableOpacity>
-      </View>
+    <ScreenContainer
+      scrollable={false}
+      padding={0}
+      header={
+        <TopHeader
+          title="영양제 상세"
+          right={
+            <TouchableOpacity onPress={handleSave}>
+              <Text className="font-bold text-lg" style={{ color: colors.primary }}>
+                저장
+              </Text>
+            </TouchableOpacity>
+          }
+        />
+      }
+    >
 
       <ScrollView className="flex-1 px-6 pt-6">
         {/* Basic Info */}
@@ -260,6 +265,6 @@ export default function SupplementDetailScreen() {
           </View>
         </Modal>
       </ScrollView>
-    </View>
+    </ScreenContainer>
   );
 }

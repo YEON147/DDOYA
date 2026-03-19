@@ -7,4 +7,9 @@ module.exports = defineConfig([
   {
     ignores: ['dist/*'],
   },
+  {
+    extends: [
+    tanstackQuery.configs.recommended
+  ],
+  }
 ]);
