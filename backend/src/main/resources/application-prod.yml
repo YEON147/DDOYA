@@ -30,3 +30,10 @@ logging:
 cors:
   allowed-origins:
     - https://j14b202.p.ssafy.io
+
+cloud:
+  aws:
+    region:
+      static: ${AWS_REGION}
+    s3:
+      bucket: ${S3_BUCKET}
