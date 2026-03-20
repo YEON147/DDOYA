@@ -34,6 +34,7 @@ public class IntakeScheduleResponse {
         private Long intakeRecordId;
         private String status;
         private LocalDateTime actionAt;
+        private LocalDateTime plannedAt;
 
         @JsonIgnore
         private LocalTime rawIntakeTime;

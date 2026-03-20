@@ -25,12 +25,14 @@ public class IntakeService {
     private final IntakeRecordRepository intakeRecordRepository;
 
     public IntakeScheduleResponse getDailySchedules(Long userId, LocalDate targetDate) {
+        // 조회 범위: [start, end)
+        // ex) 2026-03-20 00:00 ~ 2026-03-21 00:00 (다음날 00시는 포함 안됨)
         LocalDateTime start = targetDate.atStartOfDay();
         LocalDateTime end = targetDate.plusDays(1).atStartOfDay();
 
         log.debug("[INTAKE] Query intake records - userId={}, start={}, end={}", userId, start, end);
 
-        // 해당 날짜의 Record 조회
+        // 해당 날짜의 intake_record 조회
         List<IntakeRecord> records = intakeRecordRepository
                 .findByScheduleUserUserIdAndPlannedAtBetween(userId, start, end);
 
@@ -54,6 +56,7 @@ public class IntakeService {
                             .intakeRecordId(record.getIntakeRecordId())
                             .status(record.getStatus().name())
                             .actionAt(record.getActionAt())
+                            .plannedAt(record.getPlannedAt())
                             .rawIntakeTime(schedule.getIntakeTime())
                             .build();
                 })
@@ -63,13 +66,20 @@ public class IntakeService {
         Map<LocalTime, List<IntakeScheduleResponse.IntakeItemDto>> groupedByTime = items.stream()
                 .collect(Collectors.groupingBy(IntakeScheduleResponse.IntakeItemDto::getRawIntakeTime));
 
+        // 시간 오름차순 정렬
         List<IntakeScheduleResponse.TimeSlotDto> timeSlots = groupedByTime.entrySet().stream()
-                .sorted(Map.Entry.comparingByKey())
-                .map(entry -> IntakeScheduleResponse.TimeSlotDto.builder()
-                        .intakeTime(entry.getKey().format(DateTimeFormatter.ofPattern("HH:mm")))
-                        .plannedAt(LocalDateTime.of(targetDate, entry.getKey()))
-                        .items(entry.getValue())
-                        .build())
+                .sorted(Map.Entry.comparingByKey()) // 시간 오름차순 정렬
+                .map(entry -> {
+                    // 해당 시간 그룹의 대표 plannedAt
+                    // (같은 시간대는 동일한 plannedAt을 가지므로 첫 번째 값 사용)
+                    LocalDateTime actualPlannedAt = entry.getValue().get(0).getPlannedAt();
+
+                    return IntakeScheduleResponse.TimeSlotDto.builder()
+                            .intakeTime(entry.getKey().format(DateTimeFormatter.ofPattern("HH:mm")))
+                            .plannedAt(actualPlannedAt)
+                            .items(entry.getValue())    // 해당 시간대의 섭취 목록
+                            .build();
+                })
                 .toList();
 
         return IntakeScheduleResponse.builder()

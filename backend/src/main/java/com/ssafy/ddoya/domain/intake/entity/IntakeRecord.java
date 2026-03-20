@@ -51,4 +51,8 @@ public class IntakeRecord {
         this.status = status;
         this.actionAt = actionAt;
     }
+
+    public void reschedule(LocalDateTime plannedAt) {
+        this.plannedAt = plannedAt;
+    }
 }
