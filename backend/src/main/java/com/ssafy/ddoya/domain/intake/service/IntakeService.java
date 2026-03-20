@@ -4,7 +4,6 @@ import com.ssafy.ddoya.domain.intake.dto.IntakeScheduleResponse;
 import com.ssafy.ddoya.domain.intake.entity.IntakeRecord;
 import com.ssafy.ddoya.domain.intake.entity.IntakeSchedule;
 import com.ssafy.ddoya.domain.intake.repository.IntakeRecordRepository;
-import com.ssafy.ddoya.domain.intake.repository.IntakeScheduleRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
