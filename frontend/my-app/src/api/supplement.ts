@@ -1,5 +1,5 @@
 import apiClient from './client';
-import { SupplementCreateRequest } from '../types/types';
+import type { SupplementCreateRequest } from '../types/supplement';
 
 export const supplementApi = {
     // 영양제 등록

@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
 import { View, TextInput, Text, Alert } from 'react-native';
 import { router } from 'expo-router';
-import axios from 'axios';
 import { AppButton } from '../common/AppButton';
-import { authApi } from '../../api/auth';
 import { useSignupStore } from '../../store/signupStore';
 import { SignupStep2Input } from '../../types/types';
+import { getSignupErrorMessage, useSignupMutation } from '@/hooks/useSignupMutation';
 
 export function SignupProfileForm() {
   const step1 = useSignupStore((state) => state.step1);
@@ -19,6 +18,7 @@ export function SignupProfileForm() {
   const [heightCm, setHeightCm] = useState(step2.heightCm ? String(step2.heightCm) : '');
   const [weightKg, setWeightKg] = useState(step2.weightKg ? String(step2.weightKg) : '');
   const [errorMessage, setErrorMessage] = useState('');
+  const signupMutation = useSignupMutation();
 
   const isFormValid =
     nickname.trim() !== '' &&
@@ -27,7 +27,7 @@ export function SignupProfileForm() {
     heightCm.trim() !== '' &&
     weightKg.trim() !== '';
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     const parsedHeight = Number(heightCm);
     const parsedWeight = Number(weightKg);
 
@@ -51,30 +51,19 @@ export function SignupProfileForm() {
       weightKg: parsedWeight,
     };
 
-    try {
-      const requestPayload = { ...buildPayload(), ...step2Data };
-      console.log('전송 데이터:', JSON.stringify(requestPayload));
-      await authApi.signup(requestPayload);
-      Alert.alert('회원가입 완료');
-      reset();
-      router.replace('/(auth)/login');
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        const status = error.response?.status;
-        const data = error.response?.data as
-          | { message?: string; error?: string; data?: { message?: string } }
-          | undefined;
-
-        const backendMessage =
-          data?.message || data?.data?.message || data?.error || error.message;
-
-        console.log('회원가입 API 실패:', status, backendMessage, error.response?.data);
-        setErrorMessage(backendMessage || '회원가입에 실패했습니다. 다시 시도해주세요.');
-        return;
-      }
-
-      setErrorMessage('회원가입에 실패했습니다. 다시 시도해주세요.');
-    }
+    const requestPayload = { ...buildPayload(), ...step2Data };
+    setErrorMessage('');
+    signupMutation.mutate(requestPayload, {
+      onSuccess: () => {
+        Alert.alert('회원가입 완료');
+        reset();
+        router.replace('/(auth)/login');
+      },
+      onError: (error) => {
+        console.log('회원가입 API 실패:', error);
+        setErrorMessage(getSignupErrorMessage(error));
+      },
+    });
   };
 
   return (
@@ -136,10 +125,10 @@ export function SignupProfileForm() {
         </View>
 
         <AppButton
-          title="회원가입 완료"
-          variant={isFormValid ? 'primary' : 'disabled'}
+          title={signupMutation.isPending ? '처리 중…' : '회원가입 완료'}
+          variant={isFormValid && !signupMutation.isPending ? 'primary' : 'disabled'}
           onPress={handleSubmit}
-          disabled={!isFormValid}
+          disabled={!isFormValid || signupMutation.isPending}
           className="w-full h-[56px] mt-4"
         />
       </View>

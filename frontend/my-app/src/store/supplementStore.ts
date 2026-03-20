@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 
+/** 목록·상세용 로컬 목 데이터. OCR/알약 등록 단계 상태는 `useSupplementCreateStore` 사용. */
 export interface Supplement {
   supplement_id: number;
   image_url: string;

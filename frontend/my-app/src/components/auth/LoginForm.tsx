@@ -3,36 +3,31 @@ import { View, TextInput, Text, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { AppButton } from '../common/AppButton';
 import { SocialLoginButtons } from './SocialLoginButtons';
-import { authApi } from '@/src/api/auth';
-import { useAuthStore } from '@/src/store/authStore';
+import { getLoginErrorMessage, useLoginMutation } from '@/hooks/useLoginMutation';
 
 export function LoginForm() {
   const [loginId, setLoginId] = useState('');
   const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
-  const { setToken } = useAuthStore();
+  const loginMutation = useLoginMutation();
 
   const isFormValid = loginId.trim() !== '' && password.trim() !== '';
 
-  const handleLogin = async () => {
-    try {
-      const res = await authApi.login(loginId, password);
-      const payload = res.data?.data ?? res.data;
-      const accessToken = payload?.accessToken;
-      const nickname = payload?.nickname;
-
-      if (typeof accessToken !== 'string' || accessToken.trim() === '') {
-        throw new Error('로그인 응답에 accessToken이 없습니다.');
+  const handleLogin = () => {
+    setErrorMessage('');
+    loginMutation.mutate(
+      { loginId, password },
+      {
+        onSuccess: () => {
+          Alert.alert('로그인 완료');
+          router.replace('/(tabs)/(home)');
+        },
+        onError: (error) => {
+          console.error('Login failed:', error);
+          setErrorMessage(getLoginErrorMessage(error));
+        },
       }
-
-      await setToken(accessToken, typeof nickname === 'string' ? nickname : null);
-      setErrorMessage('');
-      Alert.alert('로그인 완료');
-      router.replace('/(tabs)/(home)');
-    } catch (error) {
-      console.error('Login failed:', error);
-      setErrorMessage('로그인 처리 중 오류가 발생했습니다. 입력 정보 또는 서버 응답을 확인해주세요.');
-    }
+    );
   };
 
   return (

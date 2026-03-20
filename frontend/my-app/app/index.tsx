@@ -4,14 +4,30 @@ import { router } from 'expo-router';
 import { colors } from '../constants/theme/colors';
 import Logo from '../assets/images/ddoya_logo.svg';
 import { ScreenContainer } from '@/src/components/common/ScreenContainer';
+import { useAuthStore } from '@/src/store/authStore';
 
 export default function LoadingScreen() {
   useEffect(() => {
-    const timer = setTimeout(() => {
-      router.replace('/(auth)/login');
-    }, 1500);
+    let cancelled = false;
 
-    return () => clearTimeout(timer);
+    const initRoute = async () => {
+      await useAuthStore.getState().loadToken();
+      if (cancelled) return;
+
+      const token = useAuthStore.getState().accessToken;
+
+      if (token) {
+        router.replace('/(tabs)/(home)');
+      } else {
+        router.replace('/(auth)/login');
+      }
+    };
+
+    void initRoute();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return (

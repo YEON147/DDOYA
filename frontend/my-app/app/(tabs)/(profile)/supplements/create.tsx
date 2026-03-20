@@ -1,12 +1,30 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, Button } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer } from '@/src/components/common/ScreenContainer';
 import { TopHeader } from '@/src/components/common/TopHeader';
+import { useCameraPermissions } from 'expo-camera';
+// OCR 성공 시: useSupplementCreateStore.getState().setOcrResult(data)
 
 export default function SupplementCreateScreen() {
   const router = useRouter();
+
+  const [permission, requestPermission] = useCameraPermissions();
+  if (!permission) {
+    // Camera permissions are still loading.
+    return <View />;
+  }
+
+  if (!permission.granted) {
+    // Camera permissions are not granted yet.
+    return (
+      <View>
+        <Text>We need your permission to show the camera</Text>
+        <Button onPress={requestPermission} title="grant permission" />
+      </View>
+    );
+  }
 
   return (
     <ScreenContainer
@@ -19,9 +37,10 @@ export default function SupplementCreateScreen() {
         <View className="bg-blue-50 p-6 rounded-full mb-6">
           <Ionicons name="construct-outline" size={60} color="#3b82f6" />
         </View>
-        <Text className="text-2xl font-bold text-gray-800 mb-2">준비 중인 페이지입니다</Text>
+        <Text className="text-2xl font-bold text-gray-800 mb-2">STEP 1</Text>
+        {/* 촬영이동버튼 */}
         <Text className="text-gray-500 text-center text-lg mb-8">
-          조금만 기다려 주세요! 곧 더 좋은 기능으로 찾아뵙겠습니다.
+          성분표가 보이도록 촬영해주세요 !
         </Text>
         <TouchableOpacity
           onPress={() => router.back()}
