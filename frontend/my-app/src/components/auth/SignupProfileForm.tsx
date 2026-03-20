@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, type ReactNode } from 'react';
 import { View, TextInput, Text, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { AppButton } from '../common/AppButton';
 import { useSignupStore } from '../../store/signupStore';
 import { SignupStep2Input } from '../../types/types';
 import { getSignupErrorMessage, useSignupMutation } from '@/hooks/useSignupMutation';
+import { colors } from '@/constants/theme/colors';
+import { neuInset } from '@/constants/theme/neumorphism';
 
 export function SignupProfileForm() {
   const step1 = useSignupStore((state) => state.step1);
@@ -31,7 +33,6 @@ export function SignupProfileForm() {
     const parsedHeight = Number(heightCm);
     const parsedWeight = Number(weightKg);
 
-    // 1단계 데이터가 비어 있으면 회원가입 요청을 막고 이전 화면으로 유도
     if (!step1.email.trim() || !step1.password.trim() || !step1.confirmPassword.trim()) {
       setErrorMessage('이전 단계 정보가 없습니다. 다시 입력해주세요.');
       router.replace('/(auth)/signup');
@@ -66,57 +67,83 @@ export function SignupProfileForm() {
     });
   };
 
+  const inputShell = (child: ReactNode) => (
+    <View className="px-4" style={neuInset(16)}>
+      {child}
+    </View>
+  );
+
   return (
     <View className="flex-1 w-full px-6 pb-6 items-center">
       <View className="w-full max-w-[340px]">
         <View className="gap-3">
-          <TextInput
-            className="w-full h-[52px] bg-white border border-black rounded-xl px-4 text-sm font-scdream"
-            placeholder="닉네임을 입력해주세요"
-            value={nickname}
-            onChangeText={(text) => {
-              setNickname(text);
-              setErrorMessage('');
-            }}
-          />
-          <TextInput
-            className="w-full h-[52px] bg-white border border-black rounded-xl px-4 text-sm font-scdream"
-            placeholder="성별을 입력해주세요 (예: M/F)"
-            value={gender}
-            onChangeText={(text) => {
-              setGender(text);
-              setErrorMessage('');
-            }}
-          />
-          <TextInput
-            className="w-full h-[52px] bg-white border border-black rounded-xl px-4 text-sm font-scdream"
-            placeholder="생년월일을 입력해주세요 (YYYY-MM-DD)"
-            value={birthDate}
-            onChangeText={(text) => {
-              setBirthDate(text);
-              setErrorMessage('');
-            }}
-          />
-          <TextInput
-            className="w-full h-[52px] bg-white border border-black rounded-xl px-4 text-sm font-scdream"
-            placeholder="키(cm)를 입력해주세요"
-            keyboardType="numeric"
-            value={heightCm}
-            onChangeText={(text) => {
-              setHeightCm(text);
-              setErrorMessage('');
-            }}
-          />
-          <TextInput
-            className="w-full h-[52px] bg-white border border-black rounded-xl px-4 text-sm font-scdream"
-            placeholder="몸무게(kg)를 입력해주세요"
-            keyboardType="numeric"
-            value={weightKg}
-            onChangeText={(text) => {
-              setWeightKg(text);
-              setErrorMessage('');
-            }}
-          />
+          {inputShell(
+            <TextInput
+              className="h-[52px] w-full text-sm font-scdream"
+              style={{ color: colors.text }}
+              placeholderTextColor={colors.textMuted}
+              placeholder="닉네임을 입력해주세요"
+              value={nickname}
+              onChangeText={(text) => {
+                setNickname(text);
+                setErrorMessage('');
+              }}
+            />
+          )}
+          {inputShell(
+            <TextInput
+              className="h-[52px] w-full text-sm font-scdream"
+              style={{ color: colors.text }}
+              placeholderTextColor={colors.textMuted}
+              placeholder="성별을 입력해주세요 (예: M/F)"
+              value={gender}
+              onChangeText={(text) => {
+                setGender(text);
+                setErrorMessage('');
+              }}
+            />
+          )}
+          {inputShell(
+            <TextInput
+              className="h-[52px] w-full text-sm font-scdream"
+              style={{ color: colors.text }}
+              placeholderTextColor={colors.textMuted}
+              placeholder="생년월일을 입력해주세요 (YYYY-MM-DD)"
+              value={birthDate}
+              onChangeText={(text) => {
+                setBirthDate(text);
+                setErrorMessage('');
+              }}
+            />
+          )}
+          {inputShell(
+            <TextInput
+              className="h-[52px] w-full text-sm font-scdream"
+              style={{ color: colors.text }}
+              placeholderTextColor={colors.textMuted}
+              placeholder="키(cm)를 입력해주세요"
+              keyboardType="numeric"
+              value={heightCm}
+              onChangeText={(text) => {
+                setHeightCm(text);
+                setErrorMessage('');
+              }}
+            />
+          )}
+          {inputShell(
+            <TextInput
+              className="h-[52px] w-full text-sm font-scdream"
+              style={{ color: colors.text }}
+              placeholderTextColor={colors.textMuted}
+              placeholder="몸무게(kg)를 입력해주세요"
+              keyboardType="numeric"
+              value={weightKg}
+              onChangeText={(text) => {
+                setWeightKg(text);
+                setErrorMessage('');
+              }}
+            />
+          )}
           <View className="min-h-[16px] justify-center mt-1 ml-1">
             {errorMessage ? (
               <Text className="text-red-500 text-xs ml-1 font-scdream">{errorMessage}</Text>

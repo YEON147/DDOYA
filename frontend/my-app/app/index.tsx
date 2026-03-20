@@ -6,11 +6,19 @@ import Logo from '../assets/images/ddoya_logo.svg';
 import { ScreenContainer } from '@/src/components/common/ScreenContainer';
 import { useAuthStore } from '@/src/store/authStore';
 
+/** 개발 전용: .env.local에 EXPO_PUBLIC_DEV_SKIP_LOGIN=true 설정 시 로그인 생략 */
+const devSkipLogin = __DEV__ && process.env.EXPO_PUBLIC_DEV_SKIP_LOGIN === 'true';
+
 export default function LoadingScreen() {
   useEffect(() => {
     let cancelled = false;
 
     const initRoute = async () => {
+      if (devSkipLogin) {
+        router.replace('/(tabs)/(home)');
+        return;
+      }
+
       await useAuthStore.getState().loadToken();
       if (cancelled) return;
 

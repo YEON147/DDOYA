@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { View, TextInput, Text, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { AppButton } from '../common/AppButton';
-import { SocialLoginButtons } from './SocialLoginButtons';
 import { getLoginErrorMessage, useLoginMutation } from '@/hooks/useLoginMutation';
+import { colors } from '@/constants/theme/colors';
+import { neuInset } from '@/constants/theme/neumorphism';
 
 export function LoginForm() {
   const [loginId, setLoginId] = useState('');
@@ -34,28 +35,35 @@ export function LoginForm() {
     <View className="flex-1 w-full px-6 pb-6 items-center">
       <View className="w-full max-w-[340px]">
         <View className="gap-3">
-          <TextInput
-            className="w-full h-[52px] bg-white border border-black rounded-xl px-4 text-sm font-scdream"
-            placeholder="아이디를 입력해주세요"
-            value={loginId}
-            onChangeText={(text) => {
-              setLoginId(text);
-              setErrorMessage('');
-            }}
-            autoCapitalize="none"
-          />
-          <TextInput
-            className="w-full h-[52px] bg-white border border-black rounded-xl px-4 text-sm font-scdream"
-            placeholder="비밀번호를 입력해주세요"
-            value={password}
-            onChangeText={(text) => {
-              setPassword(text);
-              setErrorMessage('');
-            }}
-            secureTextEntry
-          />
+          <View className="px-4" style={neuInset(16)}>
+            <TextInput
+              className="w-full h-[52px] text-sm font-scdream"
+              style={{ color: colors.text }}
+              placeholder="아이디를 입력해주세요"
+              placeholderTextColor={colors.textMuted}
+              value={loginId}
+              onChangeText={(text) => {
+                setLoginId(text);
+                setErrorMessage('');
+              }}
+              autoCapitalize="none"
+            />
+          </View>
+          <View className="px-4" style={neuInset(16)}>
+            <TextInput
+              className="w-full h-[52px] text-sm font-scdream"
+              style={{ color: colors.text }}
+              placeholder="비밀번호를 입력해주세요"
+              placeholderTextColor={colors.textMuted}
+              value={password}
+              onChangeText={(text) => {
+                setPassword(text);
+                setErrorMessage('');
+              }}
+              secureTextEntry
+            />
+          </View>
 
-          {/* Error message area */}
           <View className="min-h-[16px] justify-center mt-1 ml-1">
             {errorMessage ? (
               <Text className="text-red-500 text-xs ml-1 font-scdream">{errorMessage}</Text>
@@ -64,9 +72,12 @@ export function LoginForm() {
         </View>
 
         <View className="items-center mt-3 mb-4">
-          <Text className="text-[#a5a5a5] text-md mb-1 font-scdream">계정이 없으신가요 ?</Text>
+          <Text className="text-md mb-1 font-scdream" style={{ color: colors.textMuted }}>
+            계정이 없으신가요 ?
+          </Text>
           <Text
-            className="text-black font-scdream text-sm"
+            className="font-scdream text-sm"
+            style={{ color: colors.text }}
             onPress={() => router.push('/(auth)/signup')}
           >
             회원가입
@@ -74,7 +85,6 @@ export function LoginForm() {
         </View>
       </View>
 
-      {/* Push to bottom spacer */}
       <View className="w-full max-w-[340px] mt-auto">
         <AppButton
           title="로그인"

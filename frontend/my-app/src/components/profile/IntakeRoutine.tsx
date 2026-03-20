@@ -1,72 +1,58 @@
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { colors } from '@/constants/theme/colors';
-import { CardContainer } from '../common/CardContainer';
+import { neuInset, neuRaised } from '@/constants/theme/neumorphism';
 
+/** 목업 시간 — 추후 루틴 API와 연동 */
+const MOCK_ROUTINE_TIMES = ['오전 9:30', '오후 1:30', '오후 7:30'];
+
+/** 마이페이지 — 섭취 루틴 카드 (와이어: 베이지 카드 + 시간 pill) */
 export function IntakeRoutine() {
   return (
-    <CardContainer>
-      <View className="flex-row items-center justify-between mb-4">
-        <Text
-          className="text-lg font-scdream-medium"
-          style={{ color: colors.text }}
-        >
-          섭취 루틴
-        </Text>
-        <TouchableOpacity>
-          <Text
-            className="font-scdream text-sm"
-            style={{ color: colors.text }}
-          >
-            수정
+    <View className="px-1">
+      <View className="px-5 py-5" style={neuRaised(24, colors.surface)}>
+        <View className="mb-3 flex-row items-center justify-between">
+          <Text className="text-[20px] font-scdream-medium" style={{ color: colors.text }}>
+            섭취 루틴
           </Text>
-        </TouchableOpacity>
+          <Pressable
+            onPress={() => {}}
+            hitSlop={8}
+            style={({ pressed }) => [
+              neuInset(999, colors.input),
+              {
+                paddingHorizontal: 12,
+                paddingVertical: 7,
+                opacity: pressed ? 0.88 : 1,
+              },
+            ]}
+          >
+            <Text className="text-[14px] font-scdream" style={{ color: colors.text }}>
+              수정
+            </Text>
+          </Pressable>
+        </View>
+
+        <View className="overflow-hidden rounded-2xl" style={{ borderWidth: 1, borderColor: `${colors.shadowDark}44` }}>
+          {MOCK_ROUTINE_TIMES.map((t) => (
+            <View
+              key={t}
+              className="flex-row items-center justify-between px-4 py-3.5"
+              style={{
+                backgroundColor: colors.input,
+                borderBottomWidth: t === MOCK_ROUTINE_TIMES[MOCK_ROUTINE_TIMES.length - 1] ? 0 : 1,
+                borderBottomColor: `${colors.shadowDark}33`,
+              }}
+            >
+              <Text className="text-[14px] font-scdream" style={{ color: colors.textMuted }}>
+                섭취 시간
+              </Text>
+              <Text className="text-[14px] font-scdream-medium" style={{ color: colors.text }}>
+                {t}
+              </Text>
+            </View>
+          ))}
+        </View>
       </View>
-
-        <View className="flex-row items-center mb-4">
-          <View
-            className="w-10 h-10 rounded-full items-center justify-center mr-3"
-            style={{ backgroundColor: colors.background }}
-          >
-            <Text className="font-scdream">☀️</Text>
-          </View>
-          <View>
-            <Text
-              className="text-sm font-scdream"
-              style={{ color: colors.text }}
-            >
-              아침 식후
-            </Text>
-            <Text
-              className="text-base font-scdream"
-              style={{ color: colors.text }}
-            >
-              08:30
-            </Text>
-          </View>
-        </View>
-
-        <View className="flex-row items-center">
-          <View
-            className="w-10 h-10 rounded-full items-center justify-center mr-3"
-            style={{ backgroundColor: colors.background }}
-          >
-            <Text className="font-scdream">🌙</Text>
-          </View>
-          <View>
-            <Text
-              className="text-sm font-scdream"
-              style={{ color: colors.text }}
-            >
-              취침 전
-            </Text>
-            <Text
-              className="text-base font-scdream"
-              style={{ color: colors.text }}
-            >
-              23:00
-            </Text>
-          </View>
-        </View>
-    </CardContainer>
+    </View>
   );
 }

@@ -16,6 +16,8 @@ import {
   useCreateSupplementMutation,
   getCreateSupplementErrorMessage,
 } from '@/hooks/useSupplementMutation';
+import { colors } from '@/constants/theme/colors';
+import { neuInset, neuRaised } from '@/constants/theme/neumorphism';
 
 export default function SupplementConfirmScreen() {
   const router = useRouter();
@@ -62,13 +64,19 @@ export default function SupplementConfirmScreen() {
   return (
     <ScreenContainer scrollable={false} padding={0} header={<TopHeader title="등록 확인" />}>
       <ScrollView className="flex-1 px-4 pt-2" keyboardShouldPersistTaps="handled">
-        <Text className="text-base font-scdream-medium mb-2 text-gray-800">성분표 (OCR 결과)</Text>
-        <View className="rounded-xl border border-gray-200 bg-white p-3 mb-4">
-          <Text className="text-sm text-gray-600 mb-1">
+        <Text className="text-base font-scdream-medium mb-2" style={{ color: colors.text }}>
+          성분표 (OCR 결과)
+        </Text>
+        <View className="mb-4 p-3" style={neuRaised(18, colors.surface)}>
+          <Text className="mb-1 text-sm font-scdream" style={{ color: colors.textMuted }}>
             부위: {ocrResult.bodyPartName} · 1일 권장 {ocrResult.dailyDose} · 1회 {ocrResult.dosePerIntake}
           </Text>
           {ocrResult.ingredients.map((ing) => (
-            <Text key={`${ing.normalizedIngredientId}-${ing.rawName}`} className="text-sm py-1 text-gray-800">
+            <Text
+              key={`${ing.normalizedIngredientId}-${ing.rawName}`}
+              className="py-1 text-sm font-scdream"
+              style={{ color: colors.text }}
+            >
               {ing.isPrimary ? '★ ' : '· '}
               {ing.normalizedName} {ing.amount}
               {ing.unit} ({ing.rawName})
@@ -76,22 +84,30 @@ export default function SupplementConfirmScreen() {
           ))}
         </View>
 
-        <Text className="text-base font-scdream-medium mb-2 text-gray-800">별칭</Text>
-        <TextInput
-          className="w-full h-[52px] bg-white border border-black rounded-xl px-4 text-sm font-scdream mb-4"
-          placeholder="예: 아침 비타민"
-          value={alias}
-          onChangeText={setAlias}
-        />
+        <Text className="text-base font-scdream-medium mb-2" style={{ color: colors.text }}>별칭</Text>
+        <View className="mb-4 px-4" style={neuInset(16)}>
+          <TextInput
+            className="h-[52px] w-full text-sm font-scdream"
+            style={{ color: colors.text }}
+            placeholderTextColor={colors.textMuted}
+            placeholder="예: 아침 비타민"
+            value={alias}
+            onChangeText={setAlias}
+          />
+        </View>
 
-        <Text className="text-base font-scdream-medium mb-2 text-gray-800">총량</Text>
-        <TextInput
-          className="w-full h-[52px] bg-white border border-black rounded-xl px-4 text-sm font-scdream mb-6"
-          placeholder="예: 60 (정/캡슐 개수 등)"
-          value={capacityInput}
-          onChangeText={setCapacityInput}
-          keyboardType="decimal-pad"
-        />
+        <Text className="text-base font-scdream-medium mb-2" style={{ color: colors.text }}>총량</Text>
+        <View className="mb-6 px-4" style={neuInset(16)}>
+          <TextInput
+            className="h-[52px] w-full text-sm font-scdream"
+            style={{ color: colors.text }}
+            placeholderTextColor={colors.textMuted}
+            placeholder="예: 60 (정/캡슐 개수 등)"
+            value={capacityInput}
+            onChangeText={setCapacityInput}
+            keyboardType="decimal-pad"
+          />
+        </View>
 
         {createMutation.isPending ? <ActivityIndicator className="my-4" /> : null}
         <AppButton
