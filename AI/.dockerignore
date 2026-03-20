@@ -1,0 +1,61 @@
+# Git
+.git
+.gitignore
+
+# Environments
+.env
+.env.*
+.venv/
+venv/
+env/
+
+# Python Cache & Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# OS & IDE
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Jupyter NoteBooks (실무에서는 불필요)
+.ipynb_checkpoints/
+notebooks/
+*.ipynb
+
+# Data & Logs (Docker Image에 포함되지 않아야 함. weights/는 이미지에 포함하기 위해 주석 처리)
+# weights/
+data/
+logs/
+
+# Dockerfile 자체도 컨테이너 내부에 들어갈 필요는 없음
+Dockerfile
+.dockerignore
+
+# AI 모델 가중치 및 설정 파일 예외 
+# (현재 모델을 도커 이미지 내부로 통째로 굽기(Bake) 위해 가중치 확장자 예외 처리를 주석화합니다.)
+# *.pt
+# *.pth
+# *.onnx
+# *.bin
+# *.ckpt
+# *.safetensors
+
+# 로컬 DB 및 커버리지(테스트) 파일 방지
+*.sqlite3
+*.db
+coverage/
+htmlcov/
+.coverage
+coverage.xml
+tests/
+
+# 파이썬 빌드 산출물 방지 (패키징 결과물)
+dist/
+build/
+*.egg-info/
