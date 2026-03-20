@@ -26,8 +26,8 @@ public class IntakeRecord {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "intake_status_id")
-    private Long intakeStatusId;
+    @Column(name = "intake_record_id")
+    private Long intakeRecordId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "schedule_id", nullable = false)

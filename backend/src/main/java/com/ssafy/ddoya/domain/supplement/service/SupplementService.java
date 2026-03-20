@@ -790,7 +790,7 @@ public class SupplementService {
                         .supplement(supplementRef)
                         .intakeTime(parsedTime)
                         .scheduleType(ScheduleType.INTAKE)
-                        .doseAmount(supplement.getDosePerIntake())
+                        .dosePerIntake(supplement.getDosePerIntake())
                         .build();
                 IntakeSchedule saved = intakeScheduleRepository.save(newSchedule);
                 updatedSchedules.add(saved);
