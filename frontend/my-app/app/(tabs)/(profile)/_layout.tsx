@@ -14,7 +14,13 @@ export default function ProfileLayout() {
       <Stack.Screen name="supplements/confirm" />
       <Stack.Screen name="supplements/[supplementId]" />
       <Stack.Screen name="reports" />
-      <Stack.Screen name="my-info" />
+      <Stack.Screen name="myInfo/index" />
+      <Stack.Screen name="myInfo/nickname" />
+      <Stack.Screen name="myInfo/gender" />
+      <Stack.Screen name="myInfo/birth-date" />
+      <Stack.Screen name="myInfo/height" />
+      <Stack.Screen name="myInfo/weight" />
+      <Stack.Screen name="myInfo/password-change" />
     </Stack>
   );
 }
