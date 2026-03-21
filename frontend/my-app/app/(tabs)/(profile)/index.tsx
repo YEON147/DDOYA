@@ -16,7 +16,7 @@ export default function ProfileScreen() {
           <ProfileMenuButton
             label="내 정보"
             icon={<User size={28} color={colors.text} />}
-            onPress={() => router.push('/my-info')}
+            onPress={() => router.push('/myInfo' as never)}
           />
           <ProfileMenuButton
             label="영양제 관리"
