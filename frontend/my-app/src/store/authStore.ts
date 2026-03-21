@@ -5,6 +5,7 @@ interface AuthState {
   accessToken: string | null
   isLoggedIn: boolean
   nickname: string | null
+  hasHydratedFromStorage: boolean
   setToken: (token: string, nickname?: string | null) => Promise<void>
   clearToken: () => Promise<void>
   loadToken: () => Promise<void>
@@ -14,6 +15,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   accessToken: null,
   isLoggedIn: false,
   nickname: null,
+  hasHydratedFromStorage: false,
   
   // 로그인 시 토큰 저장
   setToken: async (token, nickname) => {
@@ -21,11 +23,11 @@ export const useAuthStore = create<AuthState>((set) => ({
       throw new Error('Invalid access token format')
     }
 
-    await tokenService.save(token)
+    await tokenService.save(token, nickname)
     set({
       accessToken: token,
       isLoggedIn: true,
-      nickname: typeof nickname === 'string' ? nickname : null,
+      nickname: typeof nickname === 'string' && nickname.trim() !== '' ? nickname.trim() : null,
     })
   },
 
@@ -35,9 +37,27 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ accessToken: null, isLoggedIn: false, nickname: null })
   },
 
-  // 앱 시작 시 토큰 불러오기
+  // 앱 시작 시 토큰·닉네임 불러오기
   loadToken: async () => {
-    const token = await tokenService.get()
-    if (token) set({ accessToken: token, isLoggedIn: true })
+    try {
+      const [token, storedNickname] = await Promise.all([
+        tokenService.get(),
+        tokenService.getNickname(),
+      ])
+      if (token) {
+        set({
+          accessToken: token,
+          isLoggedIn: true,
+          nickname:
+            typeof storedNickname === 'string' && storedNickname.trim() !== ''
+              ? storedNickname.trim()
+              : null,
+        })
+      } else {
+        set({ accessToken: null, isLoggedIn: false, nickname: null })
+      }
+    } finally {
+      set({ hasHydratedFromStorage: true })
+    }
   },
 }))

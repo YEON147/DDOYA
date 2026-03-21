@@ -14,21 +14,77 @@ export interface SignupStep2Input {
 }
 export type SignupRequest = SignupStep1Input & SignupStep2Input;
 
-//type/supplements
-export interface IngredientInput {
-  normalizedName: string;
-  rawName: string;
-  unit: string;
-  amount: number;
+export type {
+  SupplementCreateRequest,
+  OcrResult,
+  OcrIngredient,
+} from './supplement';
+
+// Success Wrapper
+export interface SuccessResponse<T> {
+  message: string;
+  data: T;
 }
 
-export interface SupplementCreateRequest {
-  supplementImageUrl: string;
+// Intake Schedule
+export interface IntakeScheduleItem {
+  userSupplementScheduleId: number;
+  intakeTime: string; // HH:mm
+}
+
+/** GET /supplements 목록 행 */
+export interface SupplementSummaryDto {
+  userSupplementId: number;
+  pillImageUrl: string;
+  primaryIngredientNames?: string[];
   alias: string;
-  dailyDose?: number;        // Required: No
+  stockQuantity: number;
+}
+
+/** GET /supplements 페이징 본문 */
+export interface SupplementListResponse {
+  supplements: SupplementSummaryDto[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  hasNext: boolean;
+}
+
+// Detail Response
+export interface SupplementDetailResponse {
+  userSupplementId: number;
+  pillImageUrl: string;
+  alias: string;
+  primaryIngredientNames: string[];
+  dailyDose: number;
   dosePerIntake: number;
-  capacity: number;
-  bodyPartId: number;
-  ingredients: IngredientInput[];
+  stockQuantity: number;
+  stockNotificationEnabled: boolean;
+  intakeSchedules: IntakeScheduleItem[];
+}
+
+// Update Request
+export interface SupplementUpdateRequest {
+  alias: string;
+  dailyDose: number;
+  dosePerIntake: number;
+  stockQuantity: number;
+  stockNotificationEnabled: boolean;
+  intakeSchedules: {
+    userSupplementScheduleId?: number | null;
+    intakeTime: string;
+  }[];
+}
+
+// Update Response
+export interface SupplementUpdateResponse {
+  userSupplementId: number;
+  alias: string;
+  dailyDose: number;
+  dosePerIntake: number;
+  stockQuantity: number;
+  stockNotificationEnabled: boolean;
+  intakeSchedules: IntakeScheduleItem[];
 }
 

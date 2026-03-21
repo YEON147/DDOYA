@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -8,27 +8,42 @@ type TopHeaderProps = {
   title: string;
   right?: ReactNode;
   showBackButton?: boolean;
+  onBackPress?: () => void;
 };
 
 export function TopHeader({
   title,
   right,
   showBackButton = true,
+  onBackPress,
 }: TopHeaderProps) {
   const router = useRouter();
 
   return (
     <View
-      className="px-6 py-4 flex-row items-center justify-between"
-      style={{ borderBottomWidth: 1, borderBottomColor: 'rgba(220, 218, 218, 0.35)' }}
+      className="flex-row items-center justify-between px-6 py-4"
+      style={{
+        backgroundColor: colors.background,
+        borderBottomWidth: 1,
+        borderBottomColor: `${colors.shadowDark}55`,
+      }}
     >
-      <View className="flex-row items-center flex-1">
+      <View className="flex-1 flex-row items-center">
         {showBackButton && (
-          <Pressable onPress={() => router.back()} className="mr-3 p-1">
-            <Ionicons name="arrow-back" size={24} color={colors.text} />
+          <Pressable
+            onPress={onBackPress ?? (() => router.back())}
+            hitSlop={{ top: 16, bottom: 16, left: 12, right: 20 }}
+            style={({ pressed }) => ({
+              marginRight: 4,
+              paddingVertical: 4,
+              paddingRight: 8,
+              opacity: pressed ? 0.55 : 1,
+            })}
+          >
+            <Ionicons name="chevron-back" size={28} color={colors.text} />
           </Pressable>
         )}
-        <Text className="text-xl font-bold" style={{ color: colors.text }}>
+        <Text className="text-[21px] font-scdream-medium" style={{ color: colors.text }}>
           {title}
         </Text>
       </View>

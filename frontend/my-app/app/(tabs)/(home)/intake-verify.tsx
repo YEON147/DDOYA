@@ -6,9 +6,9 @@ import { ScreenContainer } from '@/src/components/common/ScreenContainer';
 import { TopHeader } from '@/src/components/common/TopHeader';
 import { CaptureGuideScreenLayout } from '@/src/components/common/CaptureGuideScreenLayout';
 
-const REGISTER_GUIDE_IMAGE = require('../../../../assets/images/ocr_example.jpg');
+const INTAKE_GUIDE_IMAGE = require('../../../assets/images/intake_verify_example.jpg');
 
-export default function SupplementCreateScreen() {
+export default function IntakeVerifyScreen() {
   const router = useRouter();
 
   const handleCapture = async () => {
@@ -33,23 +33,24 @@ export default function SupplementCreateScreen() {
         Alert.alert('오류', '촬영 결과를 불러오지 못했습니다.');
         return;
       }
-      router.push('/(tabs)/(profile)/supplements/pill' as never);
+      Alert.alert('완료', '촬영이 완료되었습니다.');
     } catch {
       Alert.alert('오류', '촬영에 실패했습니다. 다시 시도해 주세요.');
     }
   };
 
   return (
-    <ScreenContainer scrollable={false} padding={0} header={<TopHeader title="영양제 등록" />}>
+    <ScreenContainer scrollable={false} padding={0} header={<TopHeader title="섭취 인증 촬영" />}>
       <CaptureGuideScreenLayout
         guideLabel="촬영 가이드 (예시 이미지)"
-        guideImageSource={REGISTER_GUIDE_IMAGE}
+        guideImageSource={INTAKE_GUIDE_IMAGE}
         guideImageResizeMode="contain"
-        instructionText="성분표가 보이도록 촬영해주세요 !"
+        instructionText="영양제가 선명하게 보이도록 촬영해주세요."
         primaryLabel="촬영하기"
         onPrimary={handleCapture}
         secondaryLabel="돌아가기"
         onSecondary={() => router.back()}
+        webNote="웹에서는 카메라 촬영을 지원하지 않습니다."
       />
     </ScreenContainer>
   );

@@ -9,16 +9,16 @@
 // 색상, 폰트 등 
 import { Platform } from 'react-native';
 
-const tintColorLight = '#0a7ea4';
-const tintColorDark = '#fff';
+const tintColorLight = '#FF8A15';
+const tintColorDark = '#FF8A15';
 
 export const Colors = {
   light: {
     text: '#11181C',
-    background: '#fff',
+    background: '#F4F2EA',
     tint: tintColorLight,
-    icon: '#687076',
-    tabIconDefault: '#687076',
+    icon: '#6A6258',
+    tabIconDefault: '#6A6258',
     tabIconSelected: tintColorLight,
   },
   dark: {

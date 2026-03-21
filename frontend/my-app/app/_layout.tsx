@@ -11,6 +11,7 @@ import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 
 import { useColorScheme } from '@/hooks/theme/use-color-scheme';
+import { useAuthStore } from '@/src/store/authStore';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -39,6 +40,10 @@ export default function RootLayout() {
       SplashScreen.hideAsync();
     }
   }, [loaded]);
+
+  useEffect(() => {
+    void useAuthStore.getState().loadToken();
+  }, []);
 
   if (!loaded) {
     return null;

@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { ScrollView, StyleProp, View, ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/constants/theme/colors';
@@ -27,7 +27,7 @@ export function ScreenContainer({
     return (
       <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }}>
         {header}
-        <View className="flex-1" style={{ padding }}>
+        <View className="flex-1" style={{ padding, backgroundColor: colors.background }}>
           {children}
         </View>
       </SafeAreaView>
@@ -39,6 +39,7 @@ export function ScreenContainer({
       {header}
       <ScrollView
         className="flex-1"
+        style={{ backgroundColor: colors.background }}
         contentContainerStyle={[baseContentStyle, contentContainerStyle]}
       >
         {children}
