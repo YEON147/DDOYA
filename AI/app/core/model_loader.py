@@ -1,7 +1,12 @@
+import platform
 from dataclasses import dataclass
 from pathlib import Path
+import pathlib
 import gc
 
+# Windows에서 학습된 pt 모델을 Linux에서 로드할 때 발생하는 WindowsPath NotImplementedError 방지
+if platform.system() == "Linux":
+    pathlib.WindowsPath = pathlib.PosixPath
 import torch
 from transformers import AutoImageProcessor, AutoModel
 from ultralytics import YOLO
