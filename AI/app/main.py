@@ -26,6 +26,10 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+@app.get("/health", tags=["Health"])
+def health():
+    return {"status": "ok"}
+
 app.include_router(ocr.router, prefix="/api/ai/ocr", tags=["OCR"])
 app.include_router(report.router, prefix="/api/ai/report", tags=["Report"])
 app.include_router(register.router, prefix="/api/ai/pill", tags=["Pill Register"])

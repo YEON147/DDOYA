@@ -36,4 +36,4 @@ cloud:
     region:
       static: ${AWS_REGION}
     s3:
-      bucket: ${S3_BUCKET}
+      bucket: ${AWS_S3_BUCKET}

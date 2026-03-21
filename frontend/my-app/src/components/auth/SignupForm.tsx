@@ -4,6 +4,8 @@ import { router } from 'expo-router';
 import { AppButton } from '../common/AppButton';
 import { useSignupStore } from '../../store/signupStore';
 import { SignupStep1Input } from '../../types/types';
+import { colors } from '@/constants/theme/colors';
+import { neuInset } from '@/constants/theme/neumorphism';
 
 export const SignupForm = () => {
   const savedStep1 = useSignupStore((state) => state.step1);
@@ -39,17 +41,23 @@ export const SignupForm = () => {
     <View className="flex-1 w-full px-6 pb-6 items-center">
       <View className="w-full max-w-[340px]">
         <View className="gap-3">
-          <TextInput
-            className="w-full h-[52px] bg-white border border-black rounded-xl px-4 text-sm font-scdream"
-            placeholder="이메일을 입력해주세요"
-            value={formData.email}
-            onChangeText={(text) => handleInputChange('email', text)}
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
-          <View className="relative">
+          <View className="px-4" style={neuInset(16)}>
             <TextInput
-              className="w-full h-[52px] bg-white border border-black rounded-xl px-4 text-sm font-scdream"
+              className="h-[52px] w-full text-sm font-scdream"
+              style={{ color: colors.text }}
+              placeholderTextColor={colors.textMuted}
+              placeholder="이메일을 입력해주세요"
+              value={formData.email}
+              onChangeText={(text) => handleInputChange('email', text)}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+          </View>
+          <View className="relative px-4 pr-10" style={neuInset(16)}>
+            <TextInput
+              className="h-[52px] w-full text-sm font-scdream"
+              style={{ color: colors.text }}
+              placeholderTextColor={colors.textMuted}
               placeholder="비밀번호를 입력해주세요"
               secureTextEntry={!showPassword}
               value={formData.password}
@@ -60,13 +68,17 @@ export const SignupForm = () => {
             </Text>
           </View>
 
-          <TextInput
-            className="w-full h-[52px] bg-white border border-black rounded-xl px-4 text-sm font-scdream"
-            placeholder="비밀번호를 확인해주세요"
-            value={formData.confirmPassword}
-            onChangeText={(text) => handleInputChange('confirmPassword', text)}
-            secureTextEntry={!showPassword}
-          />
+          <View className="px-4" style={neuInset(16)}>
+            <TextInput
+              className="h-[52px] w-full text-sm font-scdream"
+              style={{ color: colors.text }}
+              placeholderTextColor={colors.textMuted}
+              placeholder="비밀번호를 확인해주세요"
+              value={formData.confirmPassword}
+              onChangeText={(text) => handleInputChange('confirmPassword', text)}
+              secureTextEntry={!showPassword}
+            />
+          </View>
 
           <View className="min-h-[16px] justify-center mt-1 ml-1">
             {errorMessage ? (

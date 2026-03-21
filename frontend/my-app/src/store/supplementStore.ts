@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 
+/** 목록·상세용 로컬 목 데이터. OCR/알약 등록 단계 상태는 `useSupplementCreateStore` 사용. */
 export interface Supplement {
   supplement_id: number;
   image_url: string;
@@ -18,6 +19,10 @@ interface SupplementStore {
   updateSupplement: (id: number, data: Partial<Supplement>) => void;
   getSupplementById: (id: number) => Supplement | undefined;
 }
+
+/** 외부 placeholder 도메인(DNS 차단 환경) 대비 — 로컬 data URI */
+const MOCK_IMAGE =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
 
 // Initial mock data
 const initialSupplements: Supplement[] = [
