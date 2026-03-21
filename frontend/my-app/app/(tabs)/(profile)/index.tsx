@@ -14,6 +14,11 @@ export default function ProfileScreen() {
 
         <View className="mt-2 gap-2.5 px-1">
           <ProfileMenuButton
+            label="내 정보"
+            icon={<User size={28} color={colors.text} />}
+            onPress={() => router.push('/my-info')}
+          />
+          <ProfileMenuButton
             label="영양제 관리"
             icon={<Pill size={28} color={colors.text} />}
             onPress={() => router.push('/supplements')}
@@ -22,11 +27,6 @@ export default function ProfileScreen() {
             label="리포트"
             icon={<FileText size={28} color={colors.text} />}
             onPress={() => router.push('/reports')}
-          />
-          <ProfileMenuButton
-            label="내 정보"
-            icon={<User size={28} color={colors.text} />}
-            onPress={() => router.push('/my-info')}
           />
         </View>
 
