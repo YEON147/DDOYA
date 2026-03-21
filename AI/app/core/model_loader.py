@@ -1,9 +1,10 @@
 from dataclasses import dataclass
 from pathlib import Path
 import gc
+
 import torch
-from ultralytics import YOLO
 from transformers import AutoImageProcessor, AutoModel
+from ultralytics import YOLO
 
 from app.core.config import settings
 
@@ -23,8 +24,16 @@ def _resolve_device() -> str:
     return "cpu"
 
 
+def _validate_file_exists(path_str: str, label: str) -> Path:
+    path = Path(path_str)
+    if not path.exists():
+        raise FileNotFoundError(f"{label} 경로를 찾을 수 없습니다: {path}")
+    return path
+
+
 def _load_yolo_model():
-    return YOLO(settings.YOLO_MODEL_PATH)
+    yolo_path = _validate_file_exists(settings.YOLO_MODEL_PATH, "YOLO 모델")
+    return YOLO(str(yolo_path))
 
 
 def _load_embedding_model(device: str):

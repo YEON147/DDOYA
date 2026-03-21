@@ -17,7 +17,8 @@ class Settings:
     AWS_DEFAULT_REGION = os.getenv("AWS_DEFAULT_REGION", "ap-northeast-2")
 
     S3_REFERENCE_PREFIX = os.getenv("S3_REFERENCE_PREFIX", "supplements/embeddings")
-        # verify bbox filtering
+
+    # verify bbox filtering
     VERIFY_MIN_W = int(os.getenv("VERIFY_MIN_W", 20))
     VERIFY_MIN_H = int(os.getenv("VERIFY_MIN_H", 20))
     VERIFY_MIN_AREA = int(os.getenv("VERIFY_MIN_AREA", 400))
@@ -35,10 +36,15 @@ class Settings:
 
     REVIEW_SCORE_THRESHOLD = float(os.getenv("REVIEW_SCORE_THRESHOLD", 0.75))
     REVIEW_MARGIN_THRESHOLD = float(os.getenv("REVIEW_MARGIN_THRESHOLD", 0.05))
+
     DEVICE = os.getenv("DEVICE", "cpu")
     YOLO_MODEL_PATH = os.getenv("YOLO_MODEL_PATH", "weights/yolo_pill_best.pt")
+
+    # 다시 원래 방식으로 복원
     EMBEDDING_MODEL_PATH = os.getenv("EMBEDDING_MODEL_PATH", "facebook/dinov2-base")
+
     EMBEDDING_DIM = int(os.getenv("EMBEDDING_DIM", 768))
     ENABLE_QUALITY_CHECK = os.getenv("ENABLE_QUALITY_CHECK", "false").lower() == "true"
+
 
 settings = Settings()

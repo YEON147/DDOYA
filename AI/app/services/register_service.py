@@ -25,9 +25,6 @@ def run_register_check(
     file_bytes: bytes,
     model_registry,
 ) -> RegisterCheckResponse:
-    """
-    /register/check 전용 로직
-    """
     image = _decode_image(file_bytes)
 
     quality_result = evaluate_register_quality(image)
@@ -57,20 +54,13 @@ def run_register_embedding(
     model_registry,
     user_supplement_id: int | None = None,
 ) -> RegisterEmbeddingResponse:
-    """
-    /register/embedding 전용 로직
-
-    주의:
-    check API를 이미 통과했더라도 직접 호출될 수 있으므로
-    최소한의 품질 및 단일 알약 검사를 다시 수행한다.
-    """
     image = _decode_image(file_bytes)
 
     quality_result = evaluate_register_quality(image)
     if not quality_result.success:
         return RegisterEmbeddingResponse(
             success=False,
-            reference_embedding_path="",
+            pillReferenceEmbeddingPath="",
             message=quality_result.message,
         )
 
@@ -80,7 +70,7 @@ def run_register_embedding(
     if not is_valid:
         return RegisterEmbeddingResponse(
             success=False,
-            reference_embedding_path="",
+            pillReferenceEmbeddingPath="",
             message=message,
         )
 
@@ -88,13 +78,13 @@ def run_register_embedding(
     crop_image = crop_by_bbox(image, bbox)
 
     bundle = build_reference_bundle(crop_image, model_registry)
-    reference_embedding_path = save_reference_bundle(
+    pill_reference_embedding_path = save_reference_bundle(
         bundle=bundle,
         user_supplement_id=user_supplement_id,
     )
 
     return RegisterEmbeddingResponse(
         success=True,
-        reference_embedding_path=reference_embedding_path,
+        pillReferenceEmbeddingPath=pill_reference_embedding_path,
         message="",
     )

@@ -16,10 +16,10 @@ dist/
 *.egg-info/
 
 # 모델 가중치
-weights/*.pt
+# weights/*.pt
 
 # 임베딩 벡터
-*.npy
+# *.npz
 
 # 주피터
 .ipynb_checkpoints/
