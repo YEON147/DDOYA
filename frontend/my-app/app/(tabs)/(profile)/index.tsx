@@ -5,6 +5,7 @@ import { ProfileMenuButton } from '@/src/components/profile/ProfileMenuButton';
 import { IntakeRoutine } from '@/src/components/profile/IntakeRoutine';
 import { colors } from '@/constants/theme/colors';
 import { ScreenContainer } from '@/src/components/common/ScreenContainer';
+import { AppIcon } from '@/src/components/common/AppIcon';
 import { View } from 'react-native';
 
 export default function ProfileScreen() {
@@ -15,17 +16,17 @@ export default function ProfileScreen() {
         <View className="mt-2 gap-2.5 px-1">
           <ProfileMenuButton
             label="내 정보"
-            icon={<User size={28} color={colors.text} />}
+            icon={<AppIcon icon={User} size={28} color={colors.text} />}
             onPress={() => router.push('/myInfo' as never)}
           />
           <ProfileMenuButton
             label="영양제 관리"
-            icon={<Pill size={28} color={colors.text} />}
+            icon={<AppIcon icon={Pill} size={28} color={colors.text} />}
             onPress={() => router.push('/supplements')}
           />
           <ProfileMenuButton
             label="리포트"
-            icon={<FileText size={28} color={colors.text} />}
+            icon={<AppIcon icon={FileText} size={28} color={colors.text} />}
             onPress={() => router.push('/reports')}
           />
         </View>

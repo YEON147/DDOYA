@@ -1,8 +1,9 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Image, type ImageSourcePropType, type ImageResizeMode } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Camera } from 'lucide-react-native';
 import { colors } from '@/constants/theme/colors';
 import { neuRaised } from '@/constants/theme/neumorphism';
+import { AppIcon } from '@/src/components/common/AppIcon';
 
 type CameraGuidePanelProps = {
   stepLabel: string;
@@ -30,7 +31,7 @@ export function CameraGuidePanel({
         {guideImageSource ? (
           <Image source={guideImageSource} resizeMode={guideImageResizeMode} style={{ width: '100%', height: '100%' }} />
         ) : (
-          <Ionicons name="camera-outline" size={60} color={colors.primary} />
+          <AppIcon icon={Camera} size={60} color={colors.primary} />
         )}
       </View>
       <Text className="mb-2 text-2xl font-bold" style={{ color: colors.text }}>

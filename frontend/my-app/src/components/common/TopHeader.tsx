@@ -1,8 +1,9 @@
 import type { ReactNode } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { ChevronLeft } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { colors } from '@/constants/theme/colors';
+import { AppIcon } from '@/src/components/common/AppIcon';
 
 type TopHeaderProps = {
   title: string;
@@ -40,7 +41,7 @@ export function TopHeader({
               opacity: pressed ? 0.55 : 1,
             })}
           >
-            <Ionicons name="chevron-back" size={28} color={colors.text} />
+            <AppIcon icon={ChevronLeft} size={28} color={colors.text} />
           </Pressable>
         )}
         <Text className="text-[21px] font-scdream-medium" style={{ color: colors.text }}>
