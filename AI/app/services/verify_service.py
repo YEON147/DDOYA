@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 
-from app.schemas.pill_schema import VerifyResponse
+from app.schemas.pill_schema import VerifyResponse, VerifyResultItem
 from app.services.aggregation_service import aggregate_verify_results
 from app.services.embedding_service import extract_dinov2_embedding
 from app.services.feature_service import extract_auxiliary_features
@@ -52,12 +52,6 @@ def _is_mostly_contained(inner_box: list[int], outer_box: list[int], thresh: flo
 
 
 def _filter_verify_detections(detections: list[dict]) -> list[dict]:
-    """
-    make_crops.py에서 사용한 bbox 후처리 아이디어를 verify용으로 옮긴 버전
-    - 너무 작은 박스 제거
-    - 이미 선택된 큰 박스 안에 대부분 포함된 박스 제거
-    - 가장 큰 박스 대비 상대적으로 너무 작은 박스 제거
-    """
     candidates = sorted(
         detections,
         key=lambda x: x["confidence"],
@@ -68,7 +62,6 @@ def _filter_verify_detections(detections: list[dict]) -> list[dict]:
 
     for det in candidates:
         box = det["bbox"]
-        conf = det["confidence"]
 
         x1, y1, x2, y2 = box
         w = x2 - x1
@@ -111,24 +104,15 @@ def run_verify(
     file_bytes: bytes,
     expected_items,
     model_registry,
-    schedule_id: int | None = None,
 ) -> VerifyResponse:
-    """
-    /verify 전체 파이프라인
-    """
     image = _decode_image(file_bytes)
 
-    # 현재는 register와 동일한 기본 품질 검사 로직을 사용
     quality_result = evaluate_register_quality(image)
     if not quality_result.success:
         return VerifyResponse(
             success=False,
-            status="RETAKE_REQUIRED",
             message=quality_result.message,
-            data={
-                "quality_reason": "low_image_quality",
-                "schedule_id": schedule_id,
-            },
+            results=None,
         )
 
     raw_detections = detect_pills(image, model_registry)
@@ -137,17 +121,13 @@ def run_verify(
     if not filtered_detections:
         return VerifyResponse(
             success=False,
-            status="RETAKE_REQUIRED",
-            message="알약이 검출되지 않았습니다. 다시 촬영해주세요.",
-            data={
-                "quality_reason": "no_pill_detected",
-                "schedule_id": schedule_id,
-            },
+            message="알약이 검출되지 않았습니다.",
+            results=None,
         )
 
     reference_candidates = []
     for item in expected_items:
-        bundle = load_reference_bundle(item.reference_embedding_path)
+        bundle = load_reference_bundle(item.pill_reference_embedding_path)
         reference_candidates.append(
             {
                 "user_supplement_id": item.user_supplement_id,
@@ -180,35 +160,25 @@ def run_verify(
                 "bbox": bbox,
                 "final_user_supplement_id": matched["final_user_supplement_id"],
                 "final_confidence": matched["final_confidence"],
-                "embedding_score": matched["embedding_score"],
-                "feature_score": matched["feature_score"],
-                "review_required": matched["review_required"],
-                "top_k": matched["top_k"],
             }
         )
 
     if not crop_results:
         return VerifyResponse(
             success=False,
-            status="RETAKE_REQUIRED",
-            message="알약 crop 생성에 실패했습니다. 다시 촬영해주세요.",
-            data={
-                "quality_reason": "empty_crop",
-                "schedule_id": schedule_id,
-            },
+            message="알약 이미지 처리에 실패했습니다.",
+            results=None,
         )
 
-    aggregated = aggregate_verify_results(expected_items, crop_results)
+    aggregated_results = aggregate_verify_results(expected_items, crop_results)
 
-    needs_review = any(item["review_required"] for item in crop_results)
+    result_items = [
+        VerifyResultItem(**item)
+        for item in aggregated_results
+    ]
 
     return VerifyResponse(
         success=True,
-        status="REVIEW_REQUIRED" if needs_review else "SUCCESS",
-        message=(
-            "복용 인증 분석이 완료되었지만 일부 결과는 검토가 필요합니다."
-            if needs_review
-            else "복용 인증 분석이 완료되었습니다."
-        ),
-        data=aggregated,
+        message="",
+        results=result_items,
     )
