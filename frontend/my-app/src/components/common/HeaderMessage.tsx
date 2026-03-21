@@ -15,7 +15,7 @@ export function NicknameHeader({
   const { nickname } = useAuthStore();
 
   return (
-    <View className="p-3">
+    <View className="mt-1 mb-2 p-3">
       <View>
         <Text
           className="mb-2 text-[26px] font-scdream-medium leading-[32px]"

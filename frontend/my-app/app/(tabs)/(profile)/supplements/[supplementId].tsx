@@ -10,12 +10,13 @@ import {
   StyleSheet,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { ChevronRight, Minus, Plus, Trash2 } from 'lucide-react-native';
 import { TimePicker } from '@/src/components/common/TimePicker';
 import { colors } from '@/constants/theme/colors';
 import { neuRaised } from '@/constants/theme/neumorphism';
 import { ScreenContainer } from '@/src/components/common/ScreenContainer';
 import { TopHeader } from '@/src/components/common/TopHeader';
+import { AppIcon } from '@/src/components/common/AppIcon';
 import {
   useSupplementDetail,
   useUpdateSupplement,
@@ -156,7 +157,7 @@ export default function SupplementDetailScreen() {
           right={
             <View className="flex-row items-center">
               <TouchableOpacity onPress={handleDelete} className="mr-4">
-                <Ionicons name="trash-outline" size={24} color="#ef4444" />
+                <AppIcon icon={Trash2} size={24} color="#ef4444" />
               </TouchableOpacity>
               <TouchableOpacity onPress={handleSave}>
                 <Text className="font-bold text-lg" style={{ color: colors.primary }}>
@@ -200,13 +201,13 @@ export default function SupplementDetailScreen() {
             activeOpacity={0.88}
             style={smallNeuBtn(dailyDose <= 1)}
           >
-            <Ionicons name="remove" size={22} color={colors.text} />
+            <AppIcon icon={Minus} size={22} color={colors.text} />
           </TouchableOpacity>
           <Text className="text-[21px] font-scdream-bold" style={{ color: colors.text }}>
             {dailyDose}회
           </Text>
           <TouchableOpacity onPress={handleIncreaseDose} activeOpacity={0.88} style={smallNeuBtn()}>
-            <Ionicons name="add" size={22} color={colors.text} />
+            <AppIcon icon={Plus} size={22} color={colors.text} />
           </TouchableOpacity>
         </View>
 
@@ -266,7 +267,7 @@ export default function SupplementDetailScreen() {
               >
                 {schedule.intakeTime || '선택'}
               </Text>
-              <Ionicons name="chevron-forward" size={16} color={colors.textMuted} style={{ opacity: 0.6 }} />
+              <AppIcon icon={ChevronRight} size={16} color={colors.textMuted} style={{ opacity: 0.6 }} />
             </View>
           </TouchableOpacity>
         ))}

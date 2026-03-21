@@ -1,10 +1,12 @@
-import { View, Text } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Bell } from 'lucide-react-native';
 import { NicknameHeader } from '@/src/components/common/HeaderMessage';
 import { ScreenContainer } from '@/src/components/common/ScreenContainer';
 import { HomeIntakeSlot } from '@/src/components/home/HomeIntakeSlot';
 import { colors } from '@/constants/theme/colors';
-import { neuInset } from '@/constants/theme/neumorphism';
+import { neuInset, neuRaised } from '@/constants/theme/neumorphism';
+import { AppIcon } from '@/src/components/common/AppIcon';
 
 /** 목업 슬롯 — API 연동 시 교체 */
 const MOCK_INTAKE_SLOTS = [
@@ -15,10 +17,31 @@ const MOCK_INTAKE_SLOTS = [
 
 export default function HomeScreen() {
   const router = useRouter();
+  const unreadCount = 3;
 
   return (
     <ScreenContainer>
-      <NicknameHeader message="잊지말고 섭취 인증을 해주세요!" messageTone="subtle" />
+      <View className="relative">
+        <NicknameHeader message="잊지말고 섭취 인증을 해주세요!" messageTone="subtle" />
+        <Pressable
+          onPress={() => router.push('/notifications' as never)}
+          hitSlop={10}
+          className="absolute right-2 top-3 h-10 w-10 items-center justify-center rounded-full"
+          style={({ pressed }) => [neuRaised(999, colors.surface), { opacity: pressed ? 0.82 : 1 }]}
+        >
+          <AppIcon icon={Bell} size={19} color={colors.text} />
+          {unreadCount > 0 && (
+            <View
+              className="absolute -right-0.5 -top-0.5 min-w-[18px] rounded-full px-1 py-[1px] items-center"
+              style={{ backgroundColor: '#EF4444' }}
+            >
+              <Text className="text-[10px] font-scdream-medium text-white">
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </Text>
+            </View>
+          )}
+        </Pressable>
+      </View>
 
       <View className="mt-1 rounded-2xl px-4 py-3" style={neuInset(18, colors.surface)}>
         <View className="flex-row items-center justify-between">

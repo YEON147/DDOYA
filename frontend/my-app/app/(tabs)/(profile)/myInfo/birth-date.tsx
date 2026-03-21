@@ -13,7 +13,7 @@ export default function MyInfoBirthDateScreen() {
 
   const handleSave = () => {
     if (!value.trim()) {
-      Alert.alert('»ı³â¿ùÀÏ', '»ı³â¿ùÀÏÀ» ÀÔ·ÂÇØÁÖ¼¼¿ä.');
+      Alert.alert('ìƒë…„ì›”ì¼', 'ìƒë…„ì›”ì¼ì„ ì…ë ¥í•´ì£¼ì„¸ìš”.');
       return;
     }
     setProfile({ birthDate: value.trim() });
@@ -21,10 +21,10 @@ export default function MyInfoBirthDateScreen() {
   };
 
   return (
-    <ScreenContainer scrollable={false} padding={0} header={<TopHeader title="»ı³â¿ùÀÏ º¯°æ" />}>
+    <ScreenContainer scrollable={false} padding={0} header={<TopHeader title="ìƒë…„ì›”ì¼ ë³€ê²½" />}>
       <View className="flex-1 px-6 pt-8">
         <Text className="mb-3 text-[13px] font-scdream" style={{ color: colors.text }}>
-          »ı³â¿ùÀÏ
+          ìƒë…„ì›”ì¼
         </Text>
         <TextInput
           value={value}
@@ -43,7 +43,7 @@ export default function MyInfoBirthDateScreen() {
             style={{ backgroundColor: colors.text }}
           >
             <Text className="text-[16px] font-scdream-medium" style={{ color: '#FFFFFF' }}>
-              ÀúÀå
+              ì €ì¥
             </Text>
           </TouchableOpacity>
         </View>
