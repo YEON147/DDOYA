@@ -1,12 +1,8 @@
 import React, { useState } from 'react';
-import {
-  Modal,
-  View,
-  Text,
-  TouchableOpacity,
-} from 'react-native';
+import { Modal, View, Text, TouchableOpacity } from 'react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { colors } from '@/constants/theme/colors';
+import { neuInset, neuRaised } from '@/constants/theme/neumorphism';
 
 interface TimePickerProps {
   isVisible: boolean;
@@ -43,50 +39,45 @@ export const TimePicker: React.FC<TimePickerProps> = ({
   };
 
   return (
-    <Modal
-      visible={isVisible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-    >
+    <Modal visible={isVisible} transparent animationType="fade" onRequestClose={onClose}>
       <View className="flex-1 justify-end bg-black/50">
-        <TouchableOpacity
-          className="flex-1"
-          activeOpacity={1}
-          onPress={onClose}
-        />
-        <View className="bg-white rounded-t-[32px] px-8 pb-12 pt-6 shadow-2xl">
-          {/* Header */}
-          <View className="flex-row justify-between items-center mb-6">
+        <TouchableOpacity className="flex-1" activeOpacity={1} onPress={onClose} />
+        <View
+          className="rounded-t-[32px] px-8 pb-12 pt-6"
+          style={{
+            backgroundColor: colors.surface,
+            borderTopWidth: 1,
+            borderColor: `${colors.shadowDark}44`,
+          }}
+        >
+          <View className="mb-6 flex-row items-center justify-between">
             <Text className="text-xl font-bold" style={{ color: colors.text }}>알람 설정</Text>
-            <TouchableOpacity onPress={onClose}>
+            <TouchableOpacity onPress={onClose} hitSlop={8}>
               <Text className="text-base font-semibold" style={{ color: colors.primary }}>취소</Text>
             </TouchableOpacity>
           </View>
 
-          {/* Picker Area */}
-          <View
-            className="items-center justify-center rounded-2xl py-2 mb-10 overflow-hidden"
-            style={{ backgroundColor: colors.background }}
-          >
-            <DateTimePicker
-              value={date}
-              mode="time"
-              display="spinner"
-              onChange={onChange}
-              locale="ko-KR"
-              textColor="#000000"
-              style={{ width: '100%', height: 180 }}
-            />
+          <View className="mb-10 py-2" style={neuInset(20)}>
+            <View className="items-center justify-center">
+              <DateTimePicker
+                value={date}
+                mode="time"
+                display="spinner"
+                onChange={onChange}
+                locale="ko-KR"
+                textColor={colors.text}
+                style={{ width: '100%', height: 180 }}
+              />
+            </View>
           </View>
 
-          {/* Confirm Button */}
           <TouchableOpacity
             onPress={handleConfirm}
-            className="py-4 rounded-3xl items-center justify-center shadow-lg"
-            style={{ backgroundColor: colors.text }}
+            activeOpacity={0.9}
+            className="items-center justify-center rounded-3xl py-4"
+            style={neuRaised(24, colors.primary)}
           >
-            <Text className="text-white text-lg font-bold">확인</Text>
+            <Text className="text-lg font-bold text-white">확인</Text>
           </TouchableOpacity>
         </View>
       </View>

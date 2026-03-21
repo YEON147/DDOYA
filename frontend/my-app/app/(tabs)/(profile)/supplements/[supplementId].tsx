@@ -8,14 +8,30 @@ import {
   Switch,
   Alert,
   Modal,
+  StyleSheet,
+  Pressable,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { TimePicker } from '@/src/components/common/TimePicker';
 import { useSupplementStore } from '@/src/store/supplementStore';
 import { colors } from '@/constants/theme/colors';
+import { neuRaised } from '@/constants/theme/neumorphism';
 import { ScreenContainer } from '@/src/components/common/ScreenContainer';
 import { TopHeader } from '@/src/components/common/TopHeader';
+
+const line = `${colors.shadowDark}44`;
+
+const smallNeuBtn = (disabled?: boolean) => [
+  neuRaised(14, colors.input),
+  {
+    width: 44,
+    height: 44,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    opacity: disabled ? 0.38 : 1,
+  },
+];
 
 export default function SupplementDetailScreen() {
   const { supplementId } = useLocalSearchParams();
@@ -23,7 +39,6 @@ export default function SupplementDetailScreen() {
   const { getSupplementById, updateSupplement } = useSupplementStore();
   const [loading, setLoading] = useState(true);
 
-  // States
   const [name, setName] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [dailyDose, setDailyDose] = useState(1);
@@ -39,7 +54,7 @@ export default function SupplementDetailScreen() {
 
   useEffect(() => {
     if (supplementId) {
-      const data = getSupplementById(parseInt(supplementId as string));
+      const data = getSupplementById(parseInt(supplementId as string, 10));
       if (data) {
         setName(data.name);
         setImageUrl(data.image_url);
@@ -66,7 +81,6 @@ export default function SupplementDetailScreen() {
   };
 
   const handleSave = () => {
-    // Validation
     if (intakeTimes.some((time) => time === '')) {
       Alert.alert('알림', '모든 섭취 시점을 선택해 주세요.');
       return;
@@ -78,17 +92,15 @@ export default function SupplementDetailScreen() {
       return;
     }
 
-    // Sort times
     const sortedTimes = [...intakeTimes].sort((a, b) => a.localeCompare(b));
 
-    // Persist to store
     if (supplementId) {
-      updateSupplement(parseInt(supplementId as string), {
+      updateSupplement(parseInt(supplementId as string, 10), {
         daily_dose: dailyDose,
         stock_quantity: stockQuantity,
         stock_alert_enabled: stockAlertEnabled,
         intake_times: sortedTimes,
-        unit: unit,
+        unit,
       });
     }
 
@@ -106,165 +118,229 @@ export default function SupplementDetailScreen() {
         <TopHeader
           title="영양제 상세"
           right={
-            <TouchableOpacity onPress={handleSave}>
-              <Text className="font-bold text-lg" style={{ color: colors.primary }}>
-                저장
-              </Text>
-            </TouchableOpacity>
+            <Pressable onPress={handleSave} hitSlop={12}>
+              {({ pressed }) => (
+                <Text
+                  className="text-[14px] font-scdream-medium"
+                  style={{ color: colors.primary, opacity: pressed ? 0.55 : 1 }}
+                >
+                  저장
+                </Text>
+              )}
+            </Pressable>
           }
         />
       }
     >
-
-      <ScrollView className="flex-1 px-6 pt-6">
-        {/* Basic Info */}
-        <View className="items-center mb-10">
+      <ScrollView
+        className="flex-1"
+        style={{ backgroundColor: colors.background }}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View className="mb-1 items-center pb-6">
           <Image
             source={{ uri: imageUrl }}
-            className="w-36 h-36 rounded-3xl mb-4"
-            style={{ backgroundColor: colors.background }}
+            className="mb-3 h-[104px] w-[104px] rounded-2xl"
+            style={{ backgroundColor: colors.input }}
             resizeMode="cover"
           />
-          <Text className="text-2xl font-bold" style={{ color: colors.text }}>{name}</Text>
+          <Text
+            className="px-4 text-center text-[16px] font-scdream-medium leading-6"
+            style={{ color: colors.text }}
+            numberOfLines={2}
+          >
+            {name}
+          </Text>
         </View>
 
-        {/* Daily Dose */}
-        <View className="mb-8">
-          <Text className="text-gray-400 mb-3 font-bold">일일 섭취 횟수</Text>
-          <View className="flex-row items-center justify-between p-5 rounded-3xl" style={{ backgroundColor: colors.background }}>
-            <TouchableOpacity
-              onPress={handleDecreaseDose}
-              disabled={dailyDose <= 1}
-              className={`w-12 h-12 rounded-2xl items-center justify-center shadow-sm ${dailyDose <= 1 ? 'opacity-30' : ''}`}
-              style={{ backgroundColor: colors.surface }}
-            >
-              <Ionicons name="remove" size={24} color={colors.text} />
-            </TouchableOpacity>
-            <Text className="text-2xl font-bold" style={{ color: colors.text }}>{dailyDose}회</Text>
-            <TouchableOpacity
-              onPress={handleIncreaseDose}
-              className="w-12 h-12 rounded-2xl items-center justify-center shadow-sm"
-              style={{ backgroundColor: colors.surface }}
-            >
-              <Ionicons name="add" size={24} color={colors.text} />
-            </TouchableOpacity>
-          </View>
+        <Text className="mb-1.5 text-[12px] font-scdream tracking-wide" style={{ color: colors.textMuted }}>
+          일일 섭취 횟수
+        </Text>
+        <View className="flex-row items-center justify-between border-b py-3.5" style={{ borderColor: line }}>
+          <TouchableOpacity
+            onPress={handleDecreaseDose}
+            disabled={dailyDose <= 1}
+            activeOpacity={0.88}
+            style={smallNeuBtn(dailyDose <= 1)}
+          >
+            <Ionicons name="remove" size={22} color={colors.text} />
+          </TouchableOpacity>
+          <Text className="text-[21px] font-scdream-bold" style={{ color: colors.text }}>
+            {dailyDose}회
+          </Text>
+          <TouchableOpacity onPress={handleIncreaseDose} activeOpacity={0.88} style={smallNeuBtn()}>
+            <Ionicons name="add" size={22} color={colors.text} />
+          </TouchableOpacity>
         </View>
 
-        {/* Inventory */}
-        <View className="mb-8">
-          <Text className="text-gray-400 mb-3 font-bold">재고 관리</Text>
-          <View className="p-5 rounded-3xl" style={{ backgroundColor: colors.background }}>
-            <View className="flex-row justify-between items-center mb-6">
-              <Text className="text-lg font-medium" style={{ color: colors.text }}>현재 재고</Text>
-              <View className="flex-row items-center">
-                <Text className="text-2xl font-bold mr-2" style={{ color: colors.text }}>{stockQuantity}</Text>
-                <TouchableOpacity
-                  onPress={() => setUnitPickerVisible(true)}
-                  className="flex-row items-center bg-white px-3 py-1 rounded-xl shadow-sm"
-                  style={{ backgroundColor: colors.surface }}
-                >
-                  <Text className="text-gray-500 font-bold mr-1">{unit}</Text>
-                  <Ionicons name="chevron-down" size={16} color="#999" />
-                </TouchableOpacity>
-              </View>
-            </View>
-            <View className="flex-row justify-between items-center">
-              <Text className="text-lg font-medium" style={{ color: colors.text }}>재고 알림</Text>
-              <Switch
-                value={stockAlertEnabled}
-                onValueChange={setStockAlertEnabled}
-                trackColor={{ false: '#d1d5db', true: colors.primary }}
-              />
-            </View>
-          </View>
-        </View>
-
-        {/* Intake Times */}
-        <View className="mb-12">
-          <Text className="text-gray-400 mb-3 font-bold">섭취 시점</Text>
-          {intakeTimes.map((time, index) => (
-            <TouchableOpacity
-              key={index}
-              className="flex-row justify-between items-center p-5 rounded-3xl mb-3 shadow-sm"
-              style={{ backgroundColor: colors.background }}
-              onPress={() => {
-                setActiveTimeIndex(index);
-                setPickerVisible(true);
-              }}
-            >
-              <Text className="text-lg font-medium" style={{ color: colors.text }}>{index + 1}회차 섭취 시간</Text>
-              <View className="flex-row items-center">
-                <Text className={`text-xl font-bold mr-2 ${!time ? 'text-gray-300' : ''}`} style={{ color: time ? colors.text : undefined }}>
-                  {time || '미선택'}
-                </Text>
-                <Ionicons name="chevron-forward" size={20} color="#ccc" />
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <TimePicker
-          isVisible={pickerVisible}
-          onClose={() => setPickerVisible(false)}
-          onConfirm={(selectedTime) => {
-            if (activeTimeIndex !== null) {
-              const newTimes = [...intakeTimes];
-              newTimes[activeTimeIndex] = selectedTime;
-              setIntakeTimes(newTimes);
-            }
-          }}
-          initialTime={(activeTimeIndex !== null && intakeTimes[activeTimeIndex]) ? intakeTimes[activeTimeIndex] : undefined}
-        />
-
-        {/* Unit Picker Modal */}
-        <Modal
-          visible={unitPickerVisible}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setUnitPickerVisible(false)}
+        <Text
+          className="mb-1.5 mt-7 text-[12px] font-scdream tracking-wide"
+          style={{ color: colors.textMuted }}
         >
-          <View className="flex-1 justify-end bg-black/50">
-            <TouchableOpacity
-              className="flex-1"
-              activeOpacity={1}
-              onPress={() => setUnitPickerVisible(false)}
-            />
-            <View className="bg-white rounded-t-[32px] px-8 pb-12 pt-6 shadow-2xl">
-              <View className="flex-row justify-between items-center mb-6">
-                <Text className="text-xl font-bold" style={{ color: colors.text }}>단위 선택</Text>
-                <TouchableOpacity onPress={() => setUnitPickerVisible(false)}>
-                  <Text className="text-base font-semibold" style={{ color: colors.primary }}>취소</Text>
-                </TouchableOpacity>
-              </View>
-
-              <View className="flex-row flex-wrap justify-between">
-                {units.map((u) => (
-                  <TouchableOpacity
-                    key={u}
-                    onPress={() => {
-                      setUnit(u);
-                      setUnitPickerVisible(false);
-                    }}
-                    className="w-[30%] py-4 rounded-2xl mb-4 items-center justify-center border"
-                    style={{
-                      backgroundColor: unit === u ? colors.primary : colors.background,
-                      borderColor: unit === u ? colors.primary : colors.background,
-                    }}
-                  >
-                    <Text
-                      className="text-lg font-bold"
-                      style={{ color: unit === u ? 'white' : colors.text }}
-                    >
-                      {u}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+          재고 관리
+        </Text>
+        <View className="border-b py-3.5" style={{ borderColor: line }}>
+          <View className="flex-row items-center justify-between">
+            <Text className="text-[14px] font-scdream" style={{ color: colors.text }}>
+              현재 재고
+            </Text>
+            <View className="flex-row items-center gap-2">
+              <Text className="text-[21px] font-scdream-bold" style={{ color: colors.text }}>
+                {stockQuantity}
+              </Text>
+              <TouchableOpacity
+                onPress={() => setUnitPickerVisible(true)}
+                activeOpacity={0.88}
+                style={[
+                  neuRaised(999, colors.input),
+                  {
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    paddingHorizontal: 12,
+                    paddingVertical: 8,
+                    gap: 4,
+                  },
+                ]}
+              >
+                <Text className="text-[14px] font-scdream" style={{ color: colors.textMuted }}>
+                  {unit}
+                </Text>
+                <Ionicons name="chevron-down" size={14} color={colors.textMuted} />
+              </TouchableOpacity>
             </View>
           </View>
-        </Modal>
+        </View>
+        <View className="flex-row items-center justify-between border-b py-3.5" style={{ borderColor: line }}>
+          <Text className="text-[14px] font-scdream" style={{ color: colors.text }}>
+            재고 알림
+          </Text>
+          <Switch
+            value={stockAlertEnabled}
+            onValueChange={setStockAlertEnabled}
+            trackColor={{ false: '#d1d5db', true: colors.primary }}
+          />
+        </View>
+
+        <Text
+          className="mb-1 mt-7 text-[12px] font-scdream tracking-wide"
+          style={{ color: colors.textMuted }}
+        >
+          섭취 시점
+        </Text>
+        {intakeTimes.map((time, index) => (
+          <TouchableOpacity
+            key={index}
+            activeOpacity={0.65}
+            className="flex-row items-center justify-between border-b py-3.5"
+            style={{ borderColor: line }}
+            onPress={() => {
+              setActiveTimeIndex(index);
+              setPickerVisible(true);
+            }}
+          >
+            <Text className="text-[14px] font-scdream" style={{ color: colors.text }}>
+              {index + 1}회차
+            </Text>
+            <View className="flex-row items-center">
+              <Text
+                className="mr-1 text-[14px] font-scdream-medium"
+                style={{ color: time ? colors.text : `${colors.textMuted}99` }}
+              >
+                {time || '선택'}
+              </Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.textMuted} style={{ opacity: 0.6 }} />
+            </View>
+          </TouchableOpacity>
+        ))}
+
+        <View className="h-8" />
       </ScrollView>
+
+      <TimePicker
+        isVisible={pickerVisible}
+        onClose={() => setPickerVisible(false)}
+        onConfirm={(selectedTime) => {
+          if (activeTimeIndex !== null) {
+            const newTimes = [...intakeTimes];
+            newTimes[activeTimeIndex] = selectedTime;
+            setIntakeTimes(newTimes);
+          }
+        }}
+        initialTime={
+          activeTimeIndex !== null && intakeTimes[activeTimeIndex]
+            ? intakeTimes[activeTimeIndex]
+            : undefined
+        }
+      />
+
+      <Modal
+        visible={unitPickerVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setUnitPickerVisible(false)}
+      >
+        <View className="flex-1 justify-end bg-black/40">
+          <TouchableOpacity className="flex-1" activeOpacity={1} onPress={() => setUnitPickerVisible(false)} />
+          <View
+            className="rounded-t-3xl px-5 pb-10 pt-4"
+            style={{
+              backgroundColor: colors.surface,
+              borderTopWidth: StyleSheet.hairlineWidth,
+              borderTopColor: line,
+            }}
+          >
+            <View className="mb-4 flex-row items-center justify-between">
+              <Text className="text-[16px] font-scdream-medium" style={{ color: colors.text }}>
+                단위
+              </Text>
+              <Pressable onPress={() => setUnitPickerVisible(false)} hitSlop={12}>
+                {({ pressed }) => (
+                  <Text
+                    className="text-[14px] font-scdream-medium"
+                    style={{ color: colors.primary, opacity: pressed ? 0.55 : 1 }}
+                  >
+                    닫기
+                  </Text>
+                )}
+              </Pressable>
+            </View>
+
+            <View className="flex-row flex-wrap gap-2">
+              {units.map((u) => (
+                <TouchableOpacity
+                  key={u}
+                  onPress={() => {
+                    setUnit(u);
+                    setUnitPickerVisible(false);
+                  }}
+                  activeOpacity={0.88}
+                  className="min-w-[29%] flex-1 basis-[29%] items-center justify-center py-2.5"
+                  style={[
+                    neuRaised(12, unit === u ? colors.primary : colors.surface),
+                    unit === u ? {} : { borderWidth: StyleSheet.hairlineWidth, borderColor: line },
+                  ]}
+                >
+                  <Text
+                    className="text-[14px] font-scdream-medium"
+                    style={{ color: unit === u ? '#fff' : colors.text }}
+                  >
+                    {u}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScreenContainer>
   );
 }
+
+const styles = StyleSheet.create({
+  scrollContent: {
+    paddingHorizontal: 22,
+    paddingTop: 34,
+    paddingBottom: 24,
+  },
+});
