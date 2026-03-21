@@ -58,6 +58,13 @@
           "recordAudioAndroid": true,
           "barcodeScannerEnabled": true
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow $(PRODUCT_NAME) to access your photos when you choose images.",
+          "cameraPermission": "Allow $(PRODUCT_NAME) to use the camera to photograph supplement labels."
+        }
       ]
     ],
     "experiments": {
