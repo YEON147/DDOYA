@@ -1,23 +1,24 @@
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { router } from 'expo-router';
-import { User } from 'lucide-react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { User, Users, CalendarDays, Ruler, Dumbbell, type LucideIcon } from 'lucide-react-native';
 import { ScreenContainer } from '@/src/components/common/ScreenContainer';
 import { TopHeader } from '@/src/components/common/TopHeader';
 import { colors } from '@/constants/theme/colors';
 import { useAuthStore } from '@/src/store/authStore';
 import { useUserProfileStore } from '@/src/store/userProfileStore';
+import { authApi } from '@/src/api/auth';
+import { AppIcon } from '@/src/components/common/AppIcon';
 
 const line = `${colors.shadowDark}44`;
 
 type InfoRowProps = {
   label: string;
   value: string;
-  iconName: keyof typeof Ionicons.glyphMap;
+  Icon: LucideIcon;
   onPress: () => void;
 };
 
-function InfoRow({ label, value, iconName, onPress }: InfoRowProps) {
+function InfoRow({ label, value, Icon, onPress }: InfoRowProps) {
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -26,7 +27,7 @@ function InfoRow({ label, value, iconName, onPress }: InfoRowProps) {
       style={{ borderColor: line }}
     >
       <View className="flex-row items-center">
-        <Ionicons name={iconName} size={16} color={colors.textMuted} />
+        <AppIcon icon={Icon} size={16} color={colors.textMuted} />
         <Text className="pl-2 pr-4 text-[14px] font-scdream" style={{ color: colors.textMuted }}>
           {label}
         </Text>
@@ -83,6 +84,11 @@ export default function MyInfoScreen() {
         text: '로그아웃',
         style: 'destructive',
         onPress: async () => {
+          try {
+            await authApi.logout();
+          } catch {
+            // 서버 로그아웃 실패 시에도 로컬 세션은 종료한다.
+          }
           await clearToken();
           router.replace('/(auth)/login');
         },
@@ -107,7 +113,7 @@ export default function MyInfoScreen() {
             className="h-[76px] w-[76px] items-center justify-center rounded-full"
             style={{ backgroundColor: colors.surfaceWarm }}
           >
-            <User size={34} color={colors.textMuted} strokeWidth={1.75} />
+            <AppIcon icon={User} size={34} color={colors.textMuted} />
           </View>
           <Text
             className="mt-4 text-center text-[30px] font-scdream-bold tracking-tight"
@@ -127,31 +133,31 @@ export default function MyInfoScreen() {
         <InfoRow
           label="닉네임"
           value={profile.nickname}
-          iconName="person-outline"
+          Icon={User}
           onPress={() => router.push('/(tabs)/(profile)/myInfo/nickname')}
         />
         <InfoRow
           label="성별"
           value={profile.gender}
-          iconName="male-female-outline"
+          Icon={Users}
           onPress={() => router.push('/(tabs)/(profile)/myInfo/gender')}
         />
         <InfoRow
           label="생년월일"
           value={profile.birthDate}
-          iconName="calendar-outline"
+          Icon={CalendarDays}
           onPress={() => router.push('/(tabs)/(profile)/myInfo/birth-date')}
         />
         <InfoRow
           label="키"
           value={`${profile.heightCm} cm`}
-          iconName="resize-outline"
+          Icon={Ruler}
           onPress={() => router.push('/(tabs)/(profile)/myInfo/height')}
         />
         <InfoRow
           label="몸무게"
           value={`${profile.weightKg} kg`}
-          iconName="barbell-outline"
+          Icon={Dumbbell}
           onPress={() => router.push('/(tabs)/(profile)/myInfo/weight')}
         />
 

@@ -2,6 +2,7 @@ import { View, Text, Pressable } from 'react-native';
 import { Camera } from 'lucide-react-native';
 import { colors } from '@/constants/theme/colors';
 import { neuInset, neuRaised } from '@/constants/theme/neumorphism';
+import { AppIcon } from '@/src/components/common/AppIcon';
 
 export type HomeIntakeSlotProps = {
   timeLabel: string;
@@ -46,7 +47,7 @@ export function HomeIntakeSlot({ timeLabel, placeholderCount, onPressCamera }: H
               opacity: pressed ? 0.82 : 1,
             })}
           >
-            <Camera size={15} color={colors.text} />
+            <AppIcon icon={Camera} size={15} color={colors.text} />
           </Pressable>
         </View>
 

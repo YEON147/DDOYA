@@ -2,6 +2,7 @@ import { Pressable, Text, View } from 'react-native';
 import { ChevronRight } from 'lucide-react-native';
 import { colors } from '@/constants/theme/colors';
 import { neuRaised } from '@/constants/theme/neumorphism';
+import { AppIcon } from '@/src/components/common/AppIcon';
 
 type ProfileMenuButtonProps = {
   label: string;
@@ -26,7 +27,7 @@ export function ProfileMenuButton({ label, icon, onPress }: ProfileMenuButtonPro
           <Text className="flex-1 text-[14px] font-scdream-medium" style={{ color: colors.text }}>
             {label}
           </Text>
-          <ChevronRight size={18} color={colors.textMuted} />
+          <AppIcon icon={ChevronRight} size={18} color={colors.textMuted} />
         </View>
       )}
     </Pressable>
