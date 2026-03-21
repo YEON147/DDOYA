@@ -32,3 +32,52 @@ export interface SupplementCreateRequest {
   ingredients: IngredientInput[];
 }
 
+// Success Wrapper
+export interface SuccessResponse<T> {
+  message: string;
+  data: T;
+}
+
+// Intake Schedule
+export interface IntakeScheduleItem {
+  userSupplementScheduleId: number;
+  intakeTime: string; // HH:mm
+}
+
+// Detail Response
+export interface SupplementDetailResponse {
+  userSupplementId: number;
+  pillImageUrl: string;
+  alias: string;
+  primaryIngredientNames: string[];
+  dailyDose: number;
+  dosePerIntake: number;
+  stockQuantity: number;
+  stockNotificationEnabled: boolean;
+  intakeSchedules: IntakeScheduleItem[];
+}
+
+// Update Request
+export interface SupplementUpdateRequest {
+  alias: string;
+  dailyDose: number;
+  dosePerIntake: number;
+  stockQuantity: number;
+  stockNotificationEnabled: boolean;
+  intakeSchedules: {
+    userSupplementScheduleId?: number | null;
+    intakeTime: string;
+  }[];
+}
+
+// Update Response
+export interface SupplementUpdateResponse {
+  userSupplementId: number;
+  alias: string;
+  dailyDose: number;
+  dosePerIntake: number;
+  stockQuantity: number;
+  stockNotificationEnabled: boolean;
+  intakeSchedules: IntakeScheduleItem[];
+}
+
