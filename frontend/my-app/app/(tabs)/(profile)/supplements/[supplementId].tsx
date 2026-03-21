@@ -20,7 +20,7 @@ import {
   useSupplementDetail,
   useUpdateSupplement,
   useDeleteSupplement
-} from '@/src/hooks/useSupplement';
+} from '@/hooks/useSupplement';
 const line = `${colors.shadowDark}44`;
 
 const smallNeuBtn = (disabled?: boolean) => [

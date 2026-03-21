@@ -32,6 +32,25 @@ export interface IntakeScheduleItem {
   intakeTime: string; // HH:mm
 }
 
+/** GET /supplements 목록 행 */
+export interface SupplementSummaryDto {
+  userSupplementId: number;
+  pillImageUrl: string;
+  primaryIngredientNames?: string[];
+  alias: string;
+  stockQuantity: number;
+}
+
+/** GET /supplements 페이징 본문 */
+export interface SupplementListResponse {
+  supplements: SupplementSummaryDto[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  hasNext: boolean;
+}
+
 // Detail Response
 export interface SupplementDetailResponse {
   userSupplementId: number;

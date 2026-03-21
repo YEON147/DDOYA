@@ -6,10 +6,11 @@ import { neuInset, neuRaised } from '@/constants/theme/neumorphism';
 export type HomeIntakeSlotProps = {
   timeLabel: string;
   placeholderCount: number;
+  onPressCamera?: () => void;
 };
 
 /** 홈 — 시간대별 섭취 인증 카드 (와이어프레임, 동작은 추후 연결) */
-export function HomeIntakeSlot({ timeLabel, placeholderCount }: HomeIntakeSlotProps) {
+export function HomeIntakeSlot({ timeLabel, placeholderCount, onPressCamera }: HomeIntakeSlotProps) {
   return (
     <View>
       <View
@@ -35,7 +36,7 @@ export function HomeIntakeSlot({ timeLabel, placeholderCount }: HomeIntakeSlotPr
             </Text>
           </View>
           <Pressable
-            onPress={() => {}}
+            onPress={onPressCamera}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             className="h-8 w-8 items-center justify-center rounded-full"
             style={({ pressed }) => ({

@@ -8,12 +8,14 @@ type TopHeaderProps = {
   title: string;
   right?: ReactNode;
   showBackButton?: boolean;
+  onBackPress?: () => void;
 };
 
 export function TopHeader({
   title,
   right,
   showBackButton = true,
+  onBackPress,
 }: TopHeaderProps) {
   const router = useRouter();
 
@@ -29,7 +31,7 @@ export function TopHeader({
       <View className="flex-1 flex-row items-center">
         {showBackButton && (
           <Pressable
-            onPress={() => router.back()}
+            onPress={onBackPress ?? (() => router.back())}
             hitSlop={{ top: 16, bottom: 16, left: 12, right: 20 }}
             style={({ pressed }) => ({
               marginRight: 4,

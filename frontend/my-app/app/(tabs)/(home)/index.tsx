@@ -1,4 +1,5 @@
 import { View, Text } from 'react-native';
+import { useRouter } from 'expo-router';
 import { NicknameHeader } from '@/src/components/common/HeaderMessage';
 import { ScreenContainer } from '@/src/components/common/ScreenContainer';
 import { HomeIntakeSlot } from '@/src/components/home/HomeIntakeSlot';
@@ -13,6 +14,8 @@ const MOCK_INTAKE_SLOTS = [
 ];
 
 export default function HomeScreen() {
+  const router = useRouter();
+
   return (
     <ScreenContainer>
       <NicknameHeader message="잊지말고 섭취 인증을 해주세요!" messageTone="subtle" />
@@ -51,6 +54,7 @@ export default function HomeScreen() {
             key={slot.timeLabel}
             timeLabel={slot.timeLabel}
             placeholderCount={slot.placeholderCount}
+            onPressCamera={() => router.push('/intake-verify' as never)}
           />
         ))}
       </View>
