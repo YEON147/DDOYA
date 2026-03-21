@@ -33,6 +33,9 @@ export const authApi = {
   login: (email: string, password: string) =>
     apiClient.post('/auth/login', { email, password }),
 
+  checkEmail: (email: string) =>
+    apiClient.get('/auth/check-email', { params: { email } }),
+
   logout: () =>
     apiClient.post('/auth/logout'),
 };
