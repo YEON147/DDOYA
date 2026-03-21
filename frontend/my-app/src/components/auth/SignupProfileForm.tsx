@@ -1,12 +1,15 @@
 import React, { useState, type ReactNode } from 'react';
-import { View, TextInput, Text, Alert } from 'react-native';
+import { View, TextInput, Text, Alert, Pressable, TouchableOpacity, Platform } from 'react-native';
 import { router } from 'expo-router';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { CalendarDays } from 'lucide-react-native';
 import { AppButton } from '../common/AppButton';
 import { useSignupStore } from '../../store/signupStore';
 import { SignupStep2Input } from '../../types/types';
 import { getSignupErrorMessage, useSignupMutation } from '@/hooks/useSignupMutation';
 import { colors } from '@/constants/theme/colors';
 import { neuInset } from '@/constants/theme/neumorphism';
+import { AppIcon } from '@/src/components/common/AppIcon';
 
 export function SignupProfileForm() {
   const step1 = useSignupStore((state) => state.step1);
@@ -15,12 +18,24 @@ export function SignupProfileForm() {
   const reset = useSignupStore((state) => state.reset);
 
   const [nickname, setNickname] = useState(step2.nickname);
-  const [gender, setGender] = useState(step2.gender);
+  const [gender, setGender] = useState(
+    step2.gender === 'FEAMALE' ? 'FEMALE' : step2.gender
+  );
   const [birthDate, setBirthDate] = useState(step2.birthDate);
   const [heightCm, setHeightCm] = useState(step2.heightCm ? String(step2.heightCm) : '');
   const [weightKg, setWeightKg] = useState(step2.weightKg ? String(step2.weightKg) : '');
   const [errorMessage, setErrorMessage] = useState('');
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  const [tempBirthDate, setTempBirthDate] = useState<Date>(() => {
+    if (step2.birthDate) {
+      const parsed = new Date(step2.birthDate);
+      if (!Number.isNaN(parsed.getTime())) return parsed;
+    }
+    return new Date(2000, 0, 1);
+  });
   const signupMutation = useSignupMutation();
+  const isMaleSelected = gender === 'MALE';
+  const isFemaleSelected = gender === 'FEMALE';
 
   const isFormValid =
     nickname.trim() !== '' &&
@@ -67,6 +82,31 @@ export function SignupProfileForm() {
     });
   };
 
+  const formatBirthDate = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const openBirthDatePicker = () => {
+    if (birthDate) {
+      const parsed = new Date(birthDate);
+      if (!Number.isNaN(parsed.getTime())) setTempBirthDate(parsed);
+    }
+    setIsDatePickerOpen((prev) => !prev);
+  };
+
+  const handleBirthDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
+    if (!selectedDate) return;
+    setTempBirthDate(selectedDate);
+    setBirthDate(formatBirthDate(selectedDate));
+    setErrorMessage('');
+    if (Platform.OS === 'android') {
+      setIsDatePickerOpen(false);
+    }
+  };
+
   const inputShell = (child: ReactNode) => (
     <View className="px-4" style={neuInset(16)}>
       {child}
@@ -90,59 +130,129 @@ export function SignupProfileForm() {
               }}
             />
           )}
-          {inputShell(
-            <TextInput
-              className="h-[52px] w-full text-sm font-scdream"
-              style={{ color: colors.text }}
-              placeholderTextColor={colors.textMuted}
-              placeholder="성별을 입력해주세요 (예: M/F)"
-              value={gender}
-              onChangeText={(text) => {
-                setGender(text);
+          <View className="flex-row gap-2 px-1">
+            <TouchableOpacity
+              activeOpacity={0.86}
+              className="h-[52px] flex-1 items-center justify-center rounded-2xl"
+              style={{
+                backgroundColor: isMaleSelected ? colors.point : colors.input,
+                borderRadius: 16,
+                borderWidth: 1,
+                borderColor: isMaleSelected ? `${colors.point}CC` : `${colors.shadowDark}52`,
+              }}
+              onPress={() => {
+                setGender('MALE');
                 setErrorMessage('');
               }}
-            />
+            >
+              <Text
+                className="text-[14px] font-scdream-medium"
+                style={{ color: isMaleSelected ? '#FFFFFF' : colors.text }}
+              >
+                남성
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              activeOpacity={0.86}
+              className="h-[52px] flex-1 items-center justify-center rounded-2xl"
+              style={{
+                backgroundColor: isFemaleSelected ? colors.point : colors.input,
+                borderRadius: 16,
+                borderWidth: 1,
+                borderColor: isFemaleSelected ? `${colors.point}CC` : `${colors.shadowDark}52`,
+              }}
+              onPress={() => {
+                setGender('FEMALE');
+                setErrorMessage('');
+              }}
+            >
+              <Text
+                className="text-[14px] font-scdream-medium"
+                style={{
+                  color: isFemaleSelected ? '#FFFFFF' : colors.text,
+                }}
+              >
+                여성
+              </Text>
+            </TouchableOpacity>
+          </View>
+          <Pressable onPress={openBirthDatePicker} className="px-4" style={neuInset(16)}>
+            <View className="h-[52px] flex-row items-center justify-between">
+              <Text
+                className="text-sm font-scdream"
+                style={{ color: birthDate ? colors.text : colors.textMuted }}
+              >
+                {birthDate || '생년월일을 선택해주세요'}
+              </Text>
+              <AppIcon icon={CalendarDays} size={16} color={colors.textMuted} />
+            </View>
+          </Pressable>
+          {isDatePickerOpen && (
+            <View className="px-4 pt-1">
+              <View className="items-center rounded-2xl py-2" style={neuInset(16, colors.input)}>
+                <DateTimePicker
+                  value={tempBirthDate}
+                  mode="date"
+                  display="spinner"
+                  onChange={handleBirthDateChange}
+                  maximumDate={new Date()}
+                  locale="ko-KR"
+                  style={{ width: '100%', height: 180 }}
+                  textColor={colors.text}
+                />
+              </View>
+              {Platform.OS === 'ios' && (
+                <View className="mt-2 flex-row justify-end">
+                  <TouchableOpacity
+                    className="rounded-xl px-4 py-2"
+                    style={neuInset(12, colors.surface)}
+                    onPress={() => setIsDatePickerOpen(false)}
+                  >
+                    <Text className="text-[14px] font-scdream-medium" style={{ color: colors.textMuted }}>
+                      닫기
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
           )}
           {inputShell(
-            <TextInput
-              className="h-[52px] w-full text-sm font-scdream"
-              style={{ color: colors.text }}
-              placeholderTextColor={colors.textMuted}
-              placeholder="생년월일을 입력해주세요 (YYYY-MM-DD)"
-              value={birthDate}
-              onChangeText={(text) => {
-                setBirthDate(text);
-                setErrorMessage('');
-              }}
-            />
+            <View className="relative">
+              <TextInput
+                className="h-[52px] w-full pr-11 text-sm font-scdream"
+                style={{ color: colors.text }}
+                placeholderTextColor={colors.textMuted}
+                placeholder="키를 입력해주세요"
+                keyboardType="numeric"
+                value={heightCm}
+                onChangeText={(text) => {
+                  setHeightCm(text);
+                  setErrorMessage('');
+                }}
+              />
+              <Text className="absolute right-1 top-[16px] text-[14px] font-scdream" style={{ color: colors.textMuted }}>
+                cm
+              </Text>
+            </View>
           )}
           {inputShell(
-            <TextInput
-              className="h-[52px] w-full text-sm font-scdream"
-              style={{ color: colors.text }}
-              placeholderTextColor={colors.textMuted}
-              placeholder="키(cm)를 입력해주세요"
-              keyboardType="numeric"
-              value={heightCm}
-              onChangeText={(text) => {
-                setHeightCm(text);
-                setErrorMessage('');
-              }}
-            />
-          )}
-          {inputShell(
-            <TextInput
-              className="h-[52px] w-full text-sm font-scdream"
-              style={{ color: colors.text }}
-              placeholderTextColor={colors.textMuted}
-              placeholder="몸무게(kg)를 입력해주세요"
-              keyboardType="numeric"
-              value={weightKg}
-              onChangeText={(text) => {
-                setWeightKg(text);
-                setErrorMessage('');
-              }}
-            />
+            <View className="relative">
+              <TextInput
+                className="h-[52px] w-full pr-11 text-sm font-scdream"
+                style={{ color: colors.text }}
+                placeholderTextColor={colors.textMuted}
+                placeholder="몸무게를 입력해주세요"
+                keyboardType="numeric"
+                value={weightKg}
+                onChangeText={(text) => {
+                  setWeightKg(text);
+                  setErrorMessage('');
+                }}
+              />
+              <Text className="absolute right-1 top-[16px] text-[14px] font-scdream" style={{ color: colors.textMuted }}>
+                kg
+              </Text>
+            </View>
           )}
           <View className="min-h-[16px] justify-center mt-1 ml-1">
             {errorMessage ? (
@@ -159,6 +269,7 @@ export function SignupProfileForm() {
           className="w-full h-[56px] mt-4"
         />
       </View>
+
     </View>
   );
 }
