@@ -14,11 +14,16 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { TimePicker } from '@/src/components/common/TimePicker';
-import { useSupplementStore } from '@/src/store/supplementStore';
 import { colors } from '@/constants/theme/colors';
 import { neuRaised } from '@/constants/theme/neumorphism';
 import { ScreenContainer } from '@/src/components/common/ScreenContainer';
 import { TopHeader } from '@/src/components/common/TopHeader';
+import {
+  useSupplementDetail,
+  useUpdateSupplement,
+  useDeleteSupplement
+} from '@/src/hooks/useSupplement';
+import { IntakeScheduleItem } from '@/src/types/types';
 
 const line = `${colors.shadowDark}44`;
 
@@ -36,79 +41,114 @@ const smallNeuBtn = (disabled?: boolean) => [
 export default function SupplementDetailScreen() {
   const { supplementId } = useLocalSearchParams();
   const router = useRouter();
-  const { getSupplementById, updateSupplement } = useSupplementStore();
-  const [loading, setLoading] = useState(true);
 
-  const [name, setName] = useState('');
-  const [imageUrl, setImageUrl] = useState('');
+  const id = parseInt(supplementId as string);
+  const { data: supplement, isLoading: detailLoading } = useSupplementDetail(id);
+  const updateMutation = useUpdateSupplement();
+  const deleteMutation = useDeleteSupplement();
+
+  // States
+  const [alias, setAlias] = useState('');
+  const [pillImageUrl, setPillImageUrl] = useState('');
   const [dailyDose, setDailyDose] = useState(1);
+  const [dosePerIntake, setDosePerIntake] = useState(1);
   const [stockQuantity, setStockQuantity] = useState(0);
-  const [stockAlertEnabled, setStockAlertEnabled] = useState(false);
-  const [intakeTimes, setIntakeTimes] = useState<string[]>([]);
-  const [unit, setUnit] = useState('정');
+  const [stockNotificationEnabled, setStockNotificationEnabled] = useState(false);
+  const [intakeSchedules, setIntakeSchedules] = useState<{ userSupplementScheduleId?: number | null; intakeTime: string }[]>([]);
+
   const [pickerVisible, setPickerVisible] = useState(false);
-  const [unitPickerVisible, setUnitPickerVisible] = useState(false);
   const [activeTimeIndex, setActiveTimeIndex] = useState<number | null>(null);
 
-  const units = ['정', '캡슐', '포', '개', 'g', 'ml'];
-
   useEffect(() => {
-    if (supplementId) {
-      const data = getSupplementById(parseInt(supplementId as string, 10));
-      if (data) {
-        setName(data.name);
-        setImageUrl(data.image_url);
-        setDailyDose(data.daily_dose);
-        setStockQuantity(data.stock_quantity);
-        setStockAlertEnabled(data.stock_alert_enabled);
-        setIntakeTimes([...data.intake_times]);
-        setUnit(data.unit || '정');
-      }
-      setLoading(false);
+    if (supplement) {
+      setAlias(supplement.alias);
+      setPillImageUrl(supplement.pillImageUrl);
+      setDailyDose(supplement.dailyDose);
+      setDosePerIntake(supplement.dosePerIntake);
+      setStockQuantity(supplement.stockQuantity);
+      setStockNotificationEnabled(supplement.stockNotificationEnabled);
+      setIntakeSchedules(supplement.intakeSchedules.map(s => ({
+        userSupplementScheduleId: s.userSupplementScheduleId,
+        intakeTime: s.intakeTime,
+      })));
     }
-  }, [supplementId, getSupplementById]);
+  }, [supplement]);
 
   const handleIncreaseDose = () => {
     setDailyDose((prev) => prev + 1);
-    setIntakeTimes((prev) => [...prev, '']);
+    setIntakeSchedules((prev) => [...prev, { userSupplementScheduleId: null, intakeTime: '' }]);
   };
 
   const handleDecreaseDose = () => {
     if (dailyDose > 1) {
       setDailyDose((prev) => prev - 1);
-      setIntakeTimes((prev) => prev.slice(0, -1));
+      setIntakeSchedules((prev) => prev.slice(0, -1));
     }
   };
 
   const handleSave = () => {
-    if (intakeTimes.some((time) => time === '')) {
+    // Validation
+    if (intakeSchedules.some((s) => s.intakeTime === '')) {
       Alert.alert('알림', '모든 섭취 시점을 선택해 주세요.');
       return;
     }
 
-    const uniqueTimes = new Set(intakeTimes);
-    if (uniqueTimes.size !== intakeTimes.length) {
+    const uniqueTimes = new Set(intakeSchedules.map(s => s.intakeTime));
+    if (uniqueTimes.size !== intakeSchedules.length) {
       Alert.alert('알림', '중복된 섭취 시간이 있습니다.');
       return;
     }
 
-    const sortedTimes = [...intakeTimes].sort((a, b) => a.localeCompare(b));
+    // Sort schedules by time
+    const sortedSchedules = [...intakeSchedules].sort((a, b) => a.intakeTime.localeCompare(b.intakeTime));
 
-    if (supplementId) {
-      updateSupplement(parseInt(supplementId as string, 10), {
-        daily_dose: dailyDose,
-        stock_quantity: stockQuantity,
-        stock_alert_enabled: stockAlertEnabled,
-        intake_times: sortedTimes,
-        unit,
-      });
-    }
-
-    Alert.alert('성공', '수정사항이 저장되었습니다.');
-    router.back();
+    updateMutation.mutate({
+      id,
+      data: {
+        alias,
+        dailyDose,
+        dosePerIntake,
+        stockQuantity,
+        stockNotificationEnabled,
+        intakeSchedules: sortedSchedules,
+      }
+    }, {
+      onSuccess: () => {
+        Alert.alert('성공', '수정사항이 저장되었습니다.');
+        router.back();
+      },
+      onError: () => {
+        Alert.alert('오류', '저장에 실패했습니다.');
+      }
+    });
   };
 
-  if (loading) return null;
+  const handleDelete = () => {
+    Alert.alert(
+      '영양제 삭제',
+      '정말로 삭제하시겠습니까?',
+      [
+        { text: '아니요', style: 'cancel' },
+        {
+          text: '예',
+          style: 'destructive',
+          onPress: () => {
+            deleteMutation.mutate(id, {
+              onSuccess: () => {
+                Alert.alert('성공', '삭제되었습니다.');
+                router.replace('/(tabs)/(profile)/supplements');
+              },
+              onError: () => {
+                Alert.alert('오류', '삭제에 실패했습니다.');
+              }
+            });
+          }
+        },
+      ]
+    );
+  };
+
+  if (detailLoading || !supplement) return null;
 
   return (
     <ScreenContainer
@@ -118,16 +158,16 @@ export default function SupplementDetailScreen() {
         <TopHeader
           title="영양제 상세"
           right={
-            <Pressable onPress={handleSave} hitSlop={12}>
-              {({ pressed }) => (
-                <Text
-                  className="text-[14px] font-scdream-medium"
-                  style={{ color: colors.primary, opacity: pressed ? 0.55 : 1 }}
-                >
+            <View className="flex-row items-center">
+              <TouchableOpacity onPress={handleDelete} className="mr-4">
+                <Ionicons name="trash-outline" size={24} color="#ef4444" />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleSave}>
+                <Text className="font-bold text-lg" style={{ color: colors.primary }}>
                   저장
                 </Text>
-              )}
-            </Pressable>
+              </TouchableOpacity>
+            </View>
           }
         />
       }

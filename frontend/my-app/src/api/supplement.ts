@@ -1,5 +1,11 @@
 import apiClient from './client';
-import type { SupplementCreateRequest } from '../types/supplement';
+import { 
+    SupplementCreateRequest, 
+    SupplementUpdateRequest,
+    SuccessResponse,
+    SupplementDetailResponse,
+    SupplementUpdateResponse
+} from '../types/types';
 
 export const supplementApi = {
     // 영양제 등록
@@ -12,13 +18,13 @@ export const supplementApi = {
 
     // 영양제 상세 조회
     getSupplementById: (id: number) =>
-        apiClient.get(`/supplements/${id}`),
+        apiClient.get<SuccessResponse<SupplementDetailResponse>>(`/supplements/${id}`),
 
     // 영양제 수정
-    updateSupplement: (id: number, data: SupplementCreateRequest) =>
-        apiClient.put(`/supplements/${id}`, data),
+    updateSupplement: (id: number, data: SupplementUpdateRequest) =>
+        apiClient.patch<SuccessResponse<SupplementUpdateResponse>>(`/supplements/${id}`, data),
 
     // 영양제 삭제
     deleteSupplement: (id: number) =>
         apiClient.delete(`/supplements/${id}`),
-}
+};
