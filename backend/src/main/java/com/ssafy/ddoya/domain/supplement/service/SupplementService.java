@@ -8,6 +8,7 @@ import com.ssafy.ddoya.domain.common.util.ImageCompressUtil;
 import com.ssafy.ddoya.domain.intake.entity.IntakeSchedule;
 import com.ssafy.ddoya.domain.intake.entity.ScheduleType;
 import com.ssafy.ddoya.domain.intake.repository.IntakeScheduleRepository;
+import com.ssafy.ddoya.domain.intake.service.IntakeRecordSyncService;
 import com.ssafy.ddoya.domain.supplement.dto.*;
 import com.ssafy.ddoya.domain.supplement.dto.SupplementDetailResponse.IntakeScheduleDto;
 import com.ssafy.ddoya.domain.supplement.dto.SupplementUpdateRequest.IntakeScheduleUpdateDto;
@@ -74,6 +75,7 @@ public class SupplementService {
     private final UserSupplementIngredientRepository userSupplementIngredientRepository;
     private final SupplementInventoryRepository supplementInventoryRepository;
     private final IntakeScheduleRepository intakeScheduleRepository;
+    private final IntakeRecordSyncService intakeRecordSyncService;
     private final BodyPartRepository bodyPartRepository;
     private final IngredientMasterRepository ingredientMasterRepository;
     private final EntityManager entityManager;
@@ -692,10 +694,14 @@ public class SupplementService {
         }
 
         // FK 제약 순서에 맞게 삭제
-        intakeScheduleRepository.deleteBySupplementId(supplementId); // 1. 스케줄
-        userSupplementIngredientRepository.deleteBySupplementId(supplementId); // 2. 성분
-        supplementInventoryRepository.deleteBySupplementIds(List.of(supplementId)); // 3. 재고
-        supplementRepository.delete(supplement); // 4. 영양제
+        List<IntakeSchedule> schedules = intakeScheduleRepository.findBySupplementId(supplementId);
+        for (IntakeSchedule s : schedules) {
+            intakeRecordSyncService.syncOnDelete(s.getScheduleId()); // 1. 섭취 기록
+        }
+        intakeScheduleRepository.deleteBySupplementId(supplementId); // 2. 스케줄
+        userSupplementIngredientRepository.deleteBySupplementId(supplementId); // 3. 성분
+        supplementInventoryRepository.deleteBySupplementIds(List.of(supplementId)); // 4. 재고
+        supplementRepository.delete(supplement); // 5. 영양제
     }
 
     /**
@@ -761,6 +767,9 @@ public class SupplementService {
                 .filter(s -> !requestedExistingIds.contains(s.getScheduleId()))
                 .collect(Collectors.toList());
         if (!schedulesToDelete.isEmpty()) {
+            for (IntakeSchedule s : schedulesToDelete) {
+                intakeRecordSyncService.syncOnDelete(s.getScheduleId());
+            }
             intakeScheduleRepository.deleteAll(schedulesToDelete);
         }
 
@@ -783,6 +792,7 @@ public class SupplementService {
                 }
                 existing.updateIntakeTime(parsedTime);
                 updatedSchedules.add(existing);
+                intakeRecordSyncService.syncOnUpsert(existing);
             } else {
                 // scheduleId 없음 → 신규 스케줄 생성
                 IntakeSchedule newSchedule = IntakeSchedule.builder()
@@ -790,10 +800,11 @@ public class SupplementService {
                         .supplement(supplementRef)
                         .intakeTime(parsedTime)
                         .scheduleType(ScheduleType.INTAKE)
-                        .doseAmount(supplement.getDosePerIntake())
+                        .dosePerIntake(supplement.getDosePerIntake())
                         .build();
                 IntakeSchedule saved = intakeScheduleRepository.save(newSchedule);
                 updatedSchedules.add(saved);
+                intakeRecordSyncService.syncOnUpsert(saved);
             }
         }
 

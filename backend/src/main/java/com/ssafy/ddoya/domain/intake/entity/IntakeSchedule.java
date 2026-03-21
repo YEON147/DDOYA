@@ -46,17 +46,17 @@ public class IntakeSchedule {
     @Column(name = "schedule_type", nullable = false)
     private ScheduleType scheduleType;
 
-    @Column(name = "dose_amount")
-    private Integer doseAmount;
+    @Column(name = "dose_per_intake")
+    private Integer dosePerIntake;
 
     @Builder
     private IntakeSchedule(User user, Supplement supplement, LocalTime intakeTime,
-            ScheduleType scheduleType, Integer doseAmount) {
+            ScheduleType scheduleType, Integer dosePerIntake) {
         this.user = user;
         this.supplement = supplement;
         this.intakeTime = intakeTime;
         this.scheduleType = scheduleType;
-        this.doseAmount = doseAmount;
+        this.dosePerIntake = dosePerIntake;
     }
 
     // 섭취 시각 수정
