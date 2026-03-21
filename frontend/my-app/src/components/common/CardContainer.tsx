@@ -1,6 +1,7 @@
-import { ReactNode } from 'react';
-import { View, StyleProp, ViewStyle } from 'react-native';
+import type { ReactNode } from 'react';
+import { View, type StyleProp, type ViewStyle } from 'react-native';
 import { colors } from '@/constants/theme/colors';
+import { neuRaised } from '@/constants/theme/neumorphism';
 
 type CardContainerProps = {
   children: ReactNode;
@@ -12,21 +13,7 @@ export function CardContainer({ children, className = '', style }: CardContainer
   return (
     <View
       className={`rounded-3xl ${className}`.trim()}
-      style={[
-        {
-          padding: 20,
-          position: 'relative',
-          backgroundColor: colors.background,
-          borderWidth: 2,
-          borderColor: 'rgba(220, 218, 218, 0.2)',
-          shadowColor: '#C8B89A',
-          shadowOffset: { width: 6, height: 6 },
-          shadowOpacity: 0.2,
-          shadowRadius: 12,
-          elevation: 10,
-        },
-        style,
-      ]}
+      style={[{ ...neuRaised(26, colors.surface), padding: 20 }, style]}
     >
       {children}
     </View>

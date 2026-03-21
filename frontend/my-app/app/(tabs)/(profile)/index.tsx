@@ -5,15 +5,19 @@ import { ProfileMenuButton } from '@/src/components/profile/ProfileMenuButton';
 import { IntakeRoutine } from '@/src/components/profile/IntakeRoutine';
 import { colors } from '@/constants/theme/colors';
 import { ScreenContainer } from '@/src/components/common/ScreenContainer';
-import { CardContainer } from '@/src/components/common/CardContainer';
 import { View } from 'react-native';
 
 export default function ProfileScreen() {
   return (
     <ScreenContainer>
-        <NicknameHeader message="오늘도 건강한 하루 보내세요!" />
-        
-        <View className="flex-row justify-around py-8">
+        <NicknameHeader message="오늘도 건강한 하루를 보내세요!" messageTone="subtle" />
+
+        <View className="mt-2 gap-2.5 px-1">
+          <ProfileMenuButton
+            label="내 정보"
+            icon={<User size={28} color={colors.text} />}
+            onPress={() => router.push('/my-info')}
+          />
           <ProfileMenuButton
             label="영양제 관리"
             icon={<Pill size={28} color={colors.text} />}
@@ -24,14 +28,11 @@ export default function ProfileScreen() {
             icon={<FileText size={28} color={colors.text} />}
             onPress={() => router.push('/reports')}
           />
-          <ProfileMenuButton
-            label="내 정보"
-            icon={<User size={28} color={colors.text} />}
-            onPress={() => router.push('/my-info')}
-          />
         </View>
 
-        <IntakeRoutine />
+        <View className="mt-7">
+          <IntakeRoutine />
+        </View>
     </ScreenContainer>
   );
 }

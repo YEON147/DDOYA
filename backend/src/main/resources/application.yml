@@ -30,7 +30,7 @@ spring:
 app:
   s3:
     enabled: ${S3_ENABLED:false}      # S3 준비 완료 시 true로 변경
-    bucket: ${S3_BUCKET:ddoya-image-bucket}
+    bucket: ${AWS_S3_BUCKET:ddoya-image-bucket}
     prefix: ${S3_PREFIX:ddoya/image/}
   fastapi:
     url: ${FASTAPI_URL:http://localhost:8000}
