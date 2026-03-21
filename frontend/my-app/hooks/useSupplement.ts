@@ -1,6 +1,23 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supplementApi } from '../api/supplement';
-import { SupplementUpdateRequest } from '../types/types';
+import { supplementApi } from '@/src/api/supplement';
+import { SupplementUpdateRequest } from '@/src/types/types';
+import { useAuthStore } from '@/src/store/authStore';
+
+const SUPPLEMENTS_LIST_KEY = ['supplements'] as const;
+
+export const useSupplementsList = (page = 0, size = 50) => {
+  const hasHydrated = useAuthStore((s) => s.hasHydratedFromStorage);
+  const accessToken = useAuthStore((s) => s.accessToken);
+
+  return useQuery({
+    queryKey: [...SUPPLEMENTS_LIST_KEY, page, size],
+    queryFn: async () => {
+      const response = await supplementApi.getSupplements(page, size);
+      return response.data.data;
+    },
+    enabled: hasHydrated && !!accessToken,
+  });
+};
 
 export const useSupplementDetail = (supplementId: number) => {
   return useQuery({
@@ -21,7 +38,7 @@ export const useUpdateSupplement = () => {
       supplementApi.updateSupplement(id, data),
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: ['supplement', id] });
-      queryClient.invalidateQueries({ queryKey: ['supplements'] });
+      queryClient.invalidateQueries({ queryKey: SUPPLEMENTS_LIST_KEY });
     },
   });
 };
@@ -32,7 +49,7 @@ export const useDeleteSupplement = () => {
   return useMutation({
     mutationFn: (id: number) => supplementApi.deleteSupplement(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['supplements'] });
+      queryClient.invalidateQueries({ queryKey: SUPPLEMENTS_LIST_KEY });
     },
   });
 };

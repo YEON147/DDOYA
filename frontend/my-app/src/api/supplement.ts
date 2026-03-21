@@ -1,10 +1,11 @@
 import apiClient from './client';
-import { 
-    SupplementCreateRequest, 
+import {
+    SupplementCreateRequest,
     SupplementUpdateRequest,
     SuccessResponse,
     SupplementDetailResponse,
-    SupplementUpdateResponse
+    SupplementListResponse,
+    SupplementUpdateResponse,
 } from '../types/types';
 
 export const supplementApi = {
@@ -12,9 +13,11 @@ export const supplementApi = {
     createSupplement: (data: SupplementCreateRequest) =>
         apiClient.post('/supplements', data),
 
-    // 영양제 목록 조회 
-    getSupplements: (page: number, size: number=10) => 
-        apiClient.get('/supplements', { params: { page, size } }),
+    // 영양제 목록 조회
+    getSupplements: (page: number, size: number = 10) =>
+        apiClient.get<SuccessResponse<SupplementListResponse>>('/supplements', {
+            params: { page, size },
+        }),
 
     // 영양제 상세 조회
     getSupplementById: (id: number) =>
