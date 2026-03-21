@@ -10,8 +10,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { ChevronRight } from 'lucide-react-native';
+import { ChevronRight, Plus } from 'lucide-react-native';
 import type { SupplementSummaryDto } from '@/src/types/types';
 import { useSupplementsList } from '@/hooks/useSupplement';
 import { useAuthStore } from '@/src/store/authStore';
@@ -19,6 +18,7 @@ import { colors } from '@/constants/theme/colors';
 import { neuRaised } from '@/constants/theme/neumorphism';
 import { ScreenContainer } from '@/src/components/common/ScreenContainer';
 import { TopHeader } from '@/src/components/common/TopHeader';
+import { AppIcon } from '@/src/components/common/AppIcon';
 
 export default function SupplementsScreen() {
   const router = useRouter();
@@ -46,7 +46,7 @@ export default function SupplementsScreen() {
         <Text className="text-[10px] font-scdream leading-4" style={{ color: colors.textMuted }}>
           SUPPLEMENT CARD
         </Text>
-        <ChevronRight size={18} color={colors.textMuted} />
+        <AppIcon icon={ChevronRight} size={18} color={colors.textMuted} />
       </View>
 
       <View
@@ -124,7 +124,7 @@ export default function SupplementsScreen() {
                 { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
               ]}
             >
-              <Ionicons name="add" size={22} color="white" />
+              <AppIcon icon={Plus} size={22} color="white" />
             </TouchableOpacity>
           }
         />
