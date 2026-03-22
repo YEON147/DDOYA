@@ -17,6 +17,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * 섭취 기록을 배치 방식으로 생성하고 관리하는 서비스 클래스입니다.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -29,6 +32,8 @@ public class IntakeBatchService {
      * 지정된 날짜의 기본 섭취 기록(IntakeRecord)을 자동 생성합니다. (기본값 MISSED)
      * 중복 생성을 방지하기 위해 해당 날짜의 기존 record를 한 번에 조회한 뒤
      * 메모리에서 scheduleId 기준으로 비교합니다.
+     *
+     * @param targetDate 섭취 기록을 생성할 대상 날짜
      */
     @Transactional
     public void createDailyIntakeRecords(LocalDate targetDate) {

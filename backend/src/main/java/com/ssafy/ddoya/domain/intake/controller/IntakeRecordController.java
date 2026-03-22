@@ -20,6 +20,9 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * 사용자의 섭취 기록 및 인증과 관련된 API를 제공하는 컨트롤러 클래스입니다.
+ */
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/intake-records")
@@ -30,7 +33,13 @@ public class IntakeRecordController {
     private final Validator validator;
 
     /**
-     * 복용 사진 인증 API
+     * 복용 사진을 업로드하여 영양제 복용 인증을 수행합니다.
+     *
+     * @param userDetails 인증된 사용자의 정보
+     * @param image       사용자가 촬영한 복용 인증 사진
+     * @param requestJson 예상 영양제 목록 등이 포함된 JSON 문자열 (RequestPart)
+     * @return AI 분석 결과가 포함된 인증 성공 응답
+     * @throws JsonProcessingException JSON 파싱 실패 시 발생
      */
     @PostMapping(value = "/verify", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<SuccessResponse<FastApiPillVerifyResponse>> verifyPillIntake(

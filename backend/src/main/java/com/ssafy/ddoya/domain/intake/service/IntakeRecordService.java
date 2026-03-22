@@ -19,6 +19,9 @@ import java.lang.reflect.Field;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * 사용자의 영양제 복용 인증 및 AI 분석 관련 로직을 담당하는 서비스 클래스입니다.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -35,6 +38,10 @@ public class IntakeRecordService {
 
     /**
      * 복용 인증 사진을 FastAPI 서버로 분석 요청합니다.
+     *
+     * @param image   복용 인증 사진 (MultipartFile)
+     * @param request 예상되는 영양제 목록 등 정보
+     * @return FastAPI의 분석 결과 응답
      */
     public FastApiPillVerifyResponse verifyPillIntake(MultipartFile image, PillVerifyRequest request) {
         validateRequest(image, request);
@@ -58,6 +65,11 @@ public class IntakeRecordService {
     /**
      * 이미지를 FastAPI 서버로 전송합니다.
      * Multi-Value Map을 활용하여 Multipart 요청을 수행합니다.
+     *
+     * @param url       FastAPI 엔드포인트 URL
+     * @param imageFile 전송할 이미지 파일
+     * @param request   요청 메타데이터
+     * @return 전송 성공 시 FastAPI의 분석 결과
      */
     private FastApiPillVerifyResponse postVerifyToFastApi(String url, MultipartFile imageFile, PillVerifyRequest request) {
         // HTTP 요청 헤더 생성
@@ -102,6 +114,12 @@ public class IntakeRecordService {
         }
     }
 
+    /**
+     * 요청 파라미터의 유효성을 검증합니다.
+     *
+     * @param image   검증할 이미지
+     * @param request 검증할 요청 DTO
+     */
     private void validateRequest(MultipartFile image, PillVerifyRequest request) {
         if (image == null || image.isEmpty()) {
             throw CustomException.badRequest("복용 인증 이미지가 누락되었습니다.");
@@ -114,6 +132,9 @@ public class IntakeRecordService {
     /**
      * fastApi 준비 완료 시 제거
      * 알약 복용 인증 결과 생성 (테스트용)
+     *
+     * @param request 요청 데이터
+     * @return 생성된 모의 결과 응답
      */
     private FastApiPillVerifyResponse generateMockResponse(PillVerifyRequest request) {
         FastApiPillVerifyResponse response = new FastApiPillVerifyResponse();

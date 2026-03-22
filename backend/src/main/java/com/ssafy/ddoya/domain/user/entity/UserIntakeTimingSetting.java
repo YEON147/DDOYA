@@ -39,4 +39,8 @@ public class UserIntakeTimingSetting {
         this.intakeTiming = intakeTiming;
         this.intakeTime = intakeTime;
     }
+
+    public void updateIntakeTime(LocalTime intakeTime) {
+        this.intakeTime = intakeTime;
+    }
 }

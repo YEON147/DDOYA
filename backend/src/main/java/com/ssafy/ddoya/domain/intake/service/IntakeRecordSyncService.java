@@ -16,6 +16,9 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Optional;
 
+/**
+ * 섭취 일정 변경 또는 삭제 시 섭취 기록을 동기화하는 서비스 클래스입니다.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -29,6 +32,8 @@ public class IntakeRecordSyncService {
     /**
      * 스케줄 등록 또는 수정(시간 변경) 시 오늘의 섭취 기록을 동기화합니다.
      * 이미 기록이 있고 상태가 MISSED 가 아니면 기존 기록을 보존합니다.
+     *
+     * @param schedule 등록 또는 수정된 섭취 일정
      */
     @Transactional
     public void syncOnUpsert(IntakeSchedule schedule) {
@@ -59,6 +64,8 @@ public class IntakeRecordSyncService {
 
     /**
      * 스케줄 삭제 시 오늘 날짜의 미수정 기본 기록(MISSED)만 삭제하고, 이미 사용자가 행동한 기록은 보존한다.
+     *
+     * @param scheduleId 삭제된 일정 ID
      */
     @Transactional
     public void syncOnDelete(Long scheduleId) {
@@ -69,6 +76,12 @@ public class IntakeRecordSyncService {
         intakeRecordRepository.deleteMissedRecordByScheduleIdAndPlannedAtRange(scheduleId, start, end);
     }
 
+    /**
+     * 새로운 '미섭취(MISSED)' 상태의 기록을 저장합니다.
+     *
+     * @param schedule  연결할 일정
+     * @param plannedAt 계획된 시간
+     */
     private void saveNewMissedRecord(IntakeSchedule schedule, LocalDateTime plannedAt) {
         intakeRecordRepository.save(IntakeRecord.builder()
                 .schedule(schedule)

@@ -27,6 +27,9 @@ spring:
     multipart:
       max-file-size: 10MB
 
+  config:
+    import: optional:file:.env[.properties]
+
 app:
   s3:
     enabled: ${S3_ENABLED:false}      # S3 준비 완료 시 true로 변경

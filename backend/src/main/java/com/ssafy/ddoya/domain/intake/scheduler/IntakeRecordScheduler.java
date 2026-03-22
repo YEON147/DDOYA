@@ -9,6 +9,9 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDate;
 import java.time.ZoneId;
 
+/**
+ * 주기적으로 섭취 기록 생성 업무를 수행하는 스케줄러 클래스입니다.
+ */
 @Component
 @RequiredArgsConstructor
 public class IntakeRecordScheduler {
