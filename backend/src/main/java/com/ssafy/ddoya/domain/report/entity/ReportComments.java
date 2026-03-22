@@ -16,11 +16,14 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
+/**
+ * 리포트의 요약 의견 및 코멘트를 관리하는 엔티티 클래스입니다.
+ */
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
-@Table(name = "report_text")
-public class ReportText {
+@Table(name = "report_comments")
+public class ReportComments {
 
     @Id
     private Long reportId;
@@ -30,21 +33,25 @@ public class ReportText {
     @JoinColumn(name = "report_id", nullable = false)
     private Report report;
 
+    /** 과잉 섭취 관련 코멘트 */
     @Lob
-    @Column(name = "excess_summary_text", nullable = false)
-    private String excessSummaryText;
+    @Column(name = "excess_comment", nullable = false)
+    private String excessComment;
 
+    /** 부족 섭취 관련 코멘트 */
     @Lob
-    @Column(name = "deficiency_summary_text", nullable = false)
-    private String deficiencySummaryText;
+    @Column(name = "deficiency_comment", nullable = false)
+    private String deficiencyComment;
 
+    /** 추천 제품 관련 코멘트 */
     @Lob
-    @Column(name = "product_recommendation_text", nullable = false)
-    private String productRecommendationText;
+    @Column(name = "product_comment", nullable = false)
+    private String productComment;
 
+    /** 섭취 일정/타이밍 관련 코멘트 */
     @Lob
-    @Column(name = "intake_timing_summary_text", nullable = false)
-    private String intakeTimingSummaryText;
+    @Column(name = "schedule_comment", nullable = false)
+    private String scheduleComment;
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
@@ -53,14 +60,14 @@ public class ReportText {
     private LocalDateTime updatedAt;
 
     @Builder
-    private ReportText(Report report, String excessSummaryText, String deficiencySummaryText,
-            String productRecommendationText, String intakeTimingSummaryText,
+    private ReportComments(Report report, String excessComment, String deficiencyComment,
+            String productComment, String scheduleComment,
             LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.report = report;
-        this.excessSummaryText = excessSummaryText;
-        this.deficiencySummaryText = deficiencySummaryText;
-        this.productRecommendationText = productRecommendationText;
-        this.intakeTimingSummaryText = intakeTimingSummaryText;
+        this.excessComment = excessComment;
+        this.deficiencyComment = deficiencyComment;
+        this.productComment = productComment;
+        this.scheduleComment = scheduleComment;
         this.createdAt = createdAt != null ? createdAt : LocalDateTime.now();
         this.updatedAt = updatedAt;
     }
