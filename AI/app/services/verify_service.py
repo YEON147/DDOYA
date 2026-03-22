@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 
+from app.core.config import settings
 from app.schemas.pill_schema import VerifyResponse, VerifyResultItem
 from app.services.aggregation_service import aggregate_verify_results
 from app.services.embedding_service import extract_dinov2_embedding
@@ -9,7 +10,6 @@ from app.services.quality_service import evaluate_register_quality
 from app.services.s3_service import load_reference_bundle
 from app.services.similarity_service import match_crop_against_expected_items
 from app.services.yolo_service import crop_by_bbox, detect_pills
-from app.core.config import settings
 
 
 def _decode_image(file_bytes: bytes) -> np.ndarray:
@@ -139,7 +139,11 @@ def run_verify(
 
     for crop_id, det in enumerate(filtered_detections):
         bbox = det["bbox"]
-        crop_image = crop_by_bbox(image, bbox)
+        crop_image = crop_by_bbox(
+            image,
+            bbox,
+            pad_ratio=settings.VERIFY_CROP_PAD_RATIO,
+        )
 
         if crop_image is None or crop_image.size == 0:
             continue
