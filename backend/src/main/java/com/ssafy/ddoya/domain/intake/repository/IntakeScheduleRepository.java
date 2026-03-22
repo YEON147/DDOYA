@@ -10,17 +10,39 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
+/**
+ * 섭취 일정(IntakeSchedule) 엔티티에 대한 데이터 액세스 처리를 담당하는 레포지토리 인터페이스입니다.
+ */
 @Repository
 public interface IntakeScheduleRepository extends JpaRepository<IntakeSchedule, Long> {
 
+    /**
+     * 특정 영양제와 연관된 모든 섭취 일정을 조회합니다.
+     *
+     * @param supplementId 영양제 ID
+     * @return 섭취 일정 리스트
+     */
     @Query("SELECT s FROM IntakeSchedule s WHERE s.supplement.userSupplementId = :supplementId")
     List<IntakeSchedule> findBySupplementId(@Param("supplementId") Long supplementId);
 
+    /**
+     * 영양제 삭제 시 연관된 모든 섭취 일정을 일괄 삭제합니다.
+     *
+     * @param supplementId 영양제 ID
+     */
     // 영양제 삭제 시 연관 스케줄 일괄 삭제
     @Modifying(clearAutomatically = true)
     @Query("DELETE FROM IntakeSchedule s WHERE s.supplement.userSupplementId = :supplementId")
     void deleteBySupplementId(@Param("supplementId") Long supplementId);
 
+    /**
+     * 특정 사용자, 특정 영양제, 특정 일정 유형에 해당하는 일정을 시간 순으로 조회합니다.
+     *
+     * @param supplementId 영양제 ID
+     * @param userId       사용자 ID
+     * @param scheduleType 일정 유형
+     * @return 정렬된 섭취 일정 리스트
+     */
     // 영양제 수정 API용: supplementId + userId + scheduleType = INTAKE 기준 조회
     @Query("SELECT s FROM IntakeSchedule s " +
             "WHERE s.supplement.userSupplementId = :supplementId " +
@@ -32,5 +54,11 @@ public interface IntakeScheduleRepository extends JpaRepository<IntakeSchedule, 
             @Param("userId") Long userId,
             @Param("scheduleType") ScheduleType scheduleType);
 
+    /**
+     * 특정 일정 유형을 가진 모든 일정을 조회합니다.
+     *
+     * @param scheduleType 일정 유형
+     * @return 섭취 일정 리스트
+     */
     List<IntakeSchedule> findAllByScheduleType(ScheduleType scheduleType);
 }

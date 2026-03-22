@@ -17,6 +17,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * 사용자의 영양제 섭취 관련 일반 업무를 담당하는 서비스 클래스입니다.
+ */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -24,6 +27,14 @@ import java.util.stream.Collectors;
 public class IntakeService {
     private final IntakeRecordRepository intakeRecordRepository;
 
+    /**
+     * 특정 사용자의 특정 날짜에 해당하는 일일 섭취 일정 목록을 조회합니다.
+     * 결과는 시간대별로 그룹화되어 반환됩니다.
+     *
+     * @param userId     사용자 ID
+     * @param targetDate 조회할 대상 날짜
+     * @return 시간대별로 그룹화된 섭취 일정 응답 DTO
+     */
     public IntakeScheduleResponse getDailySchedules(Long userId, LocalDate targetDate) {
         // 조회 범위: [start, end)
         // ex) 2026-03-20 00:00 ~ 2026-03-21 00:00 (다음날 00시는 포함 안됨)

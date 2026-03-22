@@ -1,6 +1,11 @@
 package com.ssafy.ddoya.domain.intake.entity;
 
+/**
+ * 일정의 유형을 나타내는 Enum 클래스입니다.
+ */
 public enum ScheduleType {
-    INTAKE, // 영양제 섭취
-    CARRY // 챙김 알림
+    /** 영양제 섭취 일정 */
+    INTAKE,
+    /** 챙김 알림 일정 */
+    CARRY
 }

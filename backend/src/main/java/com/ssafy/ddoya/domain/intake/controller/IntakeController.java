@@ -15,6 +15,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
 
+/**
+ * 사용자의 영양제 섭취 일정과 관련된 API를 제공하는 컨트롤러 클래스입니다.
+ */
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/intake-schedules")
@@ -22,6 +25,14 @@ public class IntakeController {
 
     private final IntakeService intakeService;
 
+    /**
+     * 일별 섭취 스케줄 정보를 조회합니다.
+     * 날짜 파라미터가 없는 경우 오늘 날짜를 기준으로 조회합니다.
+     *
+     * @param userDetails 인증된 사용자의 정보
+     * @param date        조회할 대상 날짜 (Optional, 기본값: 오늘)
+     * @return 섭취 일정 응답 데이터
+     */
     @GetMapping
     public ResponseEntity<SuccessResponse<IntakeScheduleResponse>> getDailyIntakeSchedules(
             @AuthenticationPrincipal CustomUserDetails userDetails,

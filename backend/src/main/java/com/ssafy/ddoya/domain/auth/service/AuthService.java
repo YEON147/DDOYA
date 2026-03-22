@@ -7,6 +7,7 @@ import com.ssafy.ddoya.domain.auth.entity.RefreshToken;
 import com.ssafy.ddoya.domain.auth.repository.RefreshTokenRepository;
 import com.ssafy.ddoya.domain.user.entity.User;
 import com.ssafy.ddoya.domain.user.repository.UserRepository;
+import com.ssafy.ddoya.domain.user.service.UserIntakeTimingSettingService;
 import com.ssafy.ddoya.global.exception.CustomException;
 import com.ssafy.ddoya.global.jwt.JwtUtil;
 import jakarta.validation.Valid;
@@ -24,6 +25,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final RefreshTokenRepository refreshTokenRepository;
     private final JwtUtil jwtUtil;
+    private final UserIntakeTimingSettingService userIntakeTimingSettingService;
 
     @Transactional
     public void logout(Long  userId) {
@@ -110,6 +112,9 @@ public class AuthService {
 
         // 저장
         User savedUser = userRepository.save(user);
+
+        // 기본 섭취 시점 데이터 자동 생성 (BEFORE_BREAKFAST ~ BEFORE_SLEEP)
+        userIntakeTimingSettingService.createDefaultSettings(savedUser);
 
         return SignUpResponseDto.from(savedUser);
     }
