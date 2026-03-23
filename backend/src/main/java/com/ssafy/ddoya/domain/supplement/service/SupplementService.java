@@ -1,5 +1,7 @@
 package com.ssafy.ddoya.domain.supplement.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.ddoya.domain.common.entity.BodyPart;
 import com.ssafy.ddoya.domain.common.entity.IngredientMaster;
 import com.ssafy.ddoya.domain.common.repository.BodyPartRepository;
@@ -58,6 +60,7 @@ import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class SupplementService {
+    private final ObjectMapper objectMapper;
 
     @Value("${spring.servlet.multipart.max-file-size}")
     private DataSize maxFileSize;
@@ -66,7 +69,7 @@ public class SupplementService {
     private String fastApiUrl;
 
     // fastApi 준비 완료 시 제거
-    @Value("${app.fastapi.mock_enabled:true}")
+    @Value("${app.fastapi.mock_enabled}")
     private boolean isFastApiMockEnabled;
 
     // S3 준비 완료 시 주석 해제
@@ -95,7 +98,8 @@ public class SupplementService {
         if (!ocrResult.isSuccess()) {
             return ocrResult;
         }
-        return resolveBodyPartName(ocrResult);
+        log.debug("[analyzeIngredients] ocrResult.bodyPartName: {}", ocrResult.getBodyPartName());
+        return ocrResult;
     }
 
     /**
@@ -158,91 +162,315 @@ public class SupplementService {
     private IngredientAnalyzeResponse runOcr(MultipartFile ingredientsImg) {
         // fastApi 준비 완료 시 제거
         if (isFastApiMockEnabled) {
+            log.debug("[runOcr] FastAPI mock enabled");
             return generateMockOcrResponse();
         }
 
+        // 1. FastAPI OCR 서버 호출
         String url = fastApiUrl + "/api/ai/ocr/analyze";
-        FastApiOcrResponse ocrResponse = postImageToFastApi(url, ingredientsImg, FastApiOcrResponse.class);
+        log.debug("[runOcr] calling FastAPI OCR url={}", url);
 
-        // 서버 오류 (응답 본문 없음)
+        FastApiOcrResponse ocrResponse = postImageToFastApi(url, ingredientsImg, "file", FastApiOcrResponse.class);
+
+        // 2. 서버 응답이 정상적으로 내려왔는지 검증
         if (ocrResponse == null) {
+            log.error("[runOcr] FastAPI OCR response is null");
             throw new CustomException(HttpStatus.INTERNAL_SERVER_ERROR, "FastAPI OCR 서버 응답 없음");
         }
 
-        // 비즈니스 실패 (ex. 낮은 OCR 신뢰도 -> 사용자 재촬영 유도)
+        // 3. OCR 응답 로그 출력 (디버깅 및 추적용)
+        logOcrResponse(ocrResponse);
+
+        // 4. 비즈니스 실패 처리 (ex. OCR 신뢰도 부족 → 재촬영 유도)
         if (!ocrResponse.isSuccess()) {
-            return IngredientAnalyzeResponse.builder()
-                    .success(false)
-                    .message(ocrResponse.getMessage() != null ? ocrResponse.getMessage() : "성분표 재촬영이 필요합니다.")
-                    .bodyPartId(null)
-                    .bodyPartName(null)
-                    .dailyDose(null)
-                    .dosePerIntake(null)
-                    .ingredients(Collections.emptyList())
-                    .build();
+            return buildBusinessFailureResponse(ocrResponse);
         }
 
-        // 서버 오류 (success는 true인데 data가 없음)
-        if (ocrResponse.getData() == null) {
-            throw new CustomException(HttpStatus.INTERNAL_SERVER_ERROR, "FastAPI OCR 응답 데이터(data)가 누락되었습니다.");
+        // 5. OCR 데이터 추출 (data 필드 필수)
+        FastApiOcrResponse.OcrData data = ocrResponse.getData();
+        if (data == null) {
+            throw new CustomException(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "FastAPI OCR 응답 데이터(data)가 누락되었습니다."
+            );
         }
 
-        // 일괄 조회를 위해 ingredientId 목록 수집 (null 제외, 중복 제거)
-        List<Long> ingredientIds = ocrResponse.getData().getIngredients() != null
-                ? ocrResponse.getData().getIngredients().stream()
-                        .map(FastApiOcrResponse.OcrIngredient::getIngredientId)
-                        .filter(Objects::nonNull)
-                        .distinct()
-                        .collect(Collectors.toList())
-                : Collections.emptyList();
+        // 6. 성분 ID 기반으로 DB에서 정규화된 이름 조회 (N+1 방지)
+        Map<Long, String> masterNameMap = loadMasterNameMap(data);
 
-        // IngredientMaster 일괄 조회 (N+1 방지)
-        Map<Long, String> masterNameMap = Collections.emptyMap();
-        if (!ingredientIds.isEmpty()) {
-            masterNameMap = ingredientMasterRepository.findAllById(ingredientIds).stream()
-                    .collect(Collectors.toMap(
-                            IngredientMaster::getIngredientId,
-                            IngredientMaster::getNormalizedName));
-        }
+        // 7. OCR 성분 데이터를 응답 DTO로 변환
+        List<IngredientAnalyzeResponse.IngredientDto> mappedIngredients = mapIngredients(data, masterNameMap);
 
-        // OCR 결과 성분을 응답 DTO로 변환할 리스트 생성
-        List<IngredientAnalyzeResponse.IngredientDto> mappedIngredients = new ArrayList<>();
-        if (ocrResponse.getData().getIngredients() != null) {
-            for (FastApiOcrResponse.OcrIngredient aiItem : ocrResponse.getData().getIngredients()) {
-                Long id = aiItem.getIngredientId();
-
-                // 일괄 조회된 Map 에서 이름 매핑 (조회되지 않았거나 id 가 null 이면 null)
-                String normalizedName = (id != null) ? masterNameMap.get(id) : null;
-                boolean isPrimary = (aiItem.getIsPrimary() != null && aiItem.getIsPrimary() == 1);
-
-                mappedIngredients.add(IngredientAnalyzeResponse.IngredientDto.builder()
-                        .normalizedIngredientId(id)
-                        .normalizedName(normalizedName)
-                        .rawName(aiItem.getOriginalName())
-                        .unit(aiItem.getUnit())
-                        .amount(aiItem.getAmount())
-                        .isPrimary(isPrimary)
-                        .build());
-            }
-        }
-
-        // 섭취 정보 매핑 (daily_dose, dose_per_intake)
+        // 8. 섭취 정보 추출 (없으면 null)
         Integer dailyDose = null;
         Integer dosePerIntake = null;
-        if (ocrResponse.getData().getServingInfo() != null) {
-            dailyDose = ocrResponse.getData().getServingInfo().getDailyDose();
-            dosePerIntake = ocrResponse.getData().getServingInfo().getDosePerIntake();
+
+        if (data.getServingInfo() != null) {
+            dailyDose = data.getServingInfo().getDailyDose();
+            dosePerIntake = data.getServingInfo().getDosePerIntake();
         }
 
-        // 최종 성공 응답 반환
+        // 9. 신체 부위 ID → 이름 매핑
+        Byte bodyPartId = data.getBodyPartId();
+        String bodyPartName = resolveBodyPartName(bodyPartId);
+
+        // 디버깅 로그
+        log.debug("[runOcr] bodyPartId={}", bodyPartId);
+        log.debug("[runOcr] bodyPartName={}", bodyPartName);
+        log.info("[runOcr] mappedIngredients={}", toJsonSafe(mappedIngredients));
+
+        // 10. 최종 성공 응답 생성
+        return buildSuccessResponse(
+                ocrResponse,
+                bodyPartId,
+                bodyPartName,
+                dailyDose,
+                dosePerIntake,
+                mappedIngredients
+        );
+    }
+
+    /**
+     * FastAPI OCR 응답 내용을 로그로 출력합니다.
+     * - 전체 성공 여부 및 메시지
+     * - OCR 신뢰도, 신체 부위 정보
+     * - 섭취 정보 및 성분 리스트 상세
+     *
+     * @param ocrResponse FastAPI OCR 응답 객체
+     */
+    private void logOcrResponse(FastApiOcrResponse ocrResponse) {
+        log.info("[runOcr] response summary - success={}, message={}",
+                ocrResponse.isSuccess(),
+                ocrResponse.getMessage());
+
+        FastApiOcrResponse.OcrData data = ocrResponse.getData();
+        if (data == null) {
+            log.warn("[runOcr] data is null");
+            return;
+        }
+
+        log.info("[runOcr] data summary - ocrConfidence={}, bodyPartId={}, bodyPartName={}",
+                data.getOcrConfidence(),
+                data.getBodyPartId(),
+                data.getBodyPartName());
+
+        logServingInfo(data);
+        logIngredients(data);
+    }
+
+    /**
+     * OCR 응답의 섭취 정보(servingInfo)를 로그로 출력합니다.
+     *
+     * @param data OCR 데이터 객체
+     */
+    private void logServingInfo(FastApiOcrResponse.OcrData data) {
+        if (data.getServingInfo() == null) {
+            log.info("[runOcr] servingInfo is null");
+            return;
+        }
+
+        log.info("[runOcr] servingInfo - dailyDose={}, dosePerIntake={}",
+                data.getServingInfo().getDailyDose(),
+                data.getServingInfo().getDosePerIntake());
+    }
+
+    /**
+     * OCR 응답의 성분 리스트를 로그로 출력합니다.
+     * 각 성분의 ID, 원본 이름, 용량, 단위, 대표 여부 등을 기록합니다.
+     *
+     * @param data OCR 데이터 객체
+     */
+    private void logIngredients(FastApiOcrResponse.OcrData data) {
+        List<FastApiOcrResponse.OcrIngredient> ingredients = data.getIngredients();
+
+        if (ingredients == null) {
+            log.info("[runOcr] ingredients is null");
+            return;
+        }
+
+        log.info("[runOcr] ingredients count={}", ingredients.size());
+
+        for (int i = 0; i < ingredients.size(); i++) {
+            FastApiOcrResponse.OcrIngredient ing = ingredients.get(i);
+
+            log.info("[runOcr] ingredient[{}] - ingredientId={}, originalName={}, amount={}, unit={}, isPrimary={}",
+                    i,
+                    ing.getIngredientId(),
+                    ing.getOriginalName(),
+                    ing.getAmount(),
+                    ing.getUnit(),
+                    ing.getIsPrimary());
+
+            if (ing.getIngredientId() == null) {
+                log.warn("[runOcr] ingredient[{}] ingredientId is null - originalName={}",
+                        i, ing.getOriginalName());
+            }
+        }
+    }
+
+    /**
+     * OCR 비즈니스 실패 응답을 생성합니다.
+     * (예: OCR 신뢰도 부족, 재촬영 필요 등)
+     *
+     * @param ocrResponse FastAPI OCR 응답 객체
+     * @return 실패 상태의 IngredientAnalyzeResponse
+     */
+    private IngredientAnalyzeResponse buildBusinessFailureResponse(FastApiOcrResponse ocrResponse) {
+        return IngredientAnalyzeResponse.builder()
+                .success(false)
+                .message(ocrResponse.getMessage() != null
+                        ? ocrResponse.getMessage()
+                        : "성분표 재촬영이 필요합니다.")
+                .bodyPartId(null)
+                .bodyPartName(null)
+                .dailyDose(null)
+                .dosePerIntake(null)
+                .ingredients(Collections.emptyList())
+                .build();
+    }
+
+    /**
+     * OCR 결과에 포함된 성분 ID 목록을 기반으로
+     * IngredientMaster 테이블에서 정규화된 성분 이름을 조회합니다.
+     *
+     * @param data OCR 데이터 객체
+     * @return ingredientId -> normalizedName 매핑 Map
+     */
+    private Map<Long, String> loadMasterNameMap(FastApiOcrResponse.OcrData data) {
+        List<Long> ingredientIds = extractIngredientIds(data);
+
+        if (ingredientIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        Map<Long, String> masterNameMap = ingredientMasterRepository.findAllById(ingredientIds).stream()
+                .collect(Collectors.toMap(
+                        IngredientMaster::getIngredientId,
+                        IngredientMaster::getNormalizedName
+                ));
+
+        log.info("[runOcr] masterNameMap={}", masterNameMap);
+        return masterNameMap;
+    }
+
+    /**
+     * OCR 결과에서 성분 ID 목록을 추출합니다.
+     * - null 값 제거
+     * - 중복 제거
+     *
+     * @param data OCR 데이터 객체
+     * @return 성분 ID 리스트
+     */
+    private List<Long> extractIngredientIds(FastApiOcrResponse.OcrData data) {
+        if (data.getIngredients() == null) {
+            return Collections.emptyList();
+        }
+
+        return data.getIngredients().stream()
+                .map(FastApiOcrResponse.OcrIngredient::getIngredientId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * OCR 성분 데이터를 IngredientAnalyzeResponse DTO 형태로 변환합니다.
+     *
+     * @param data OCR 데이터 객체
+     * @param masterNameMap ingredientId 기반 정규화 이름 Map
+     * @return 변환된 성분 DTO 리스트
+     */
+    private List<IngredientAnalyzeResponse.IngredientDto> mapIngredients(
+            FastApiOcrResponse.OcrData data,
+            Map<Long, String> masterNameMap
+    ) {
+        if (data.getIngredients() == null) {
+            return Collections.emptyList();
+        }
+
+        List<IngredientAnalyzeResponse.IngredientDto> mappedIngredients = new ArrayList<>();
+
+        for (FastApiOcrResponse.OcrIngredient aiItem : data.getIngredients()) {
+            Long normalizedIngredientId = aiItem.getIngredientId();
+            String normalizedName = normalizedIngredientId != null
+                    ? masterNameMap.get(normalizedIngredientId)
+                    : null;
+
+            boolean isPrimary = aiItem.getIsPrimary() != null && aiItem.getIsPrimary() == 1;
+
+            mappedIngredients.add(IngredientAnalyzeResponse.IngredientDto.builder()
+                    .normalizedIngredientId(normalizedIngredientId)
+                    .normalizedName(normalizedName)
+                    .rawName(aiItem.getOriginalName())
+                    .unit(aiItem.getUnit())
+                    .amount(aiItem.getAmount())
+                    .isPrimary(isPrimary)
+                    .build());
+        }
+
+        return mappedIngredients;
+    }
+
+    /**
+     * bodyPartId를 기반으로 신체 부위 이름을 조회합니다.
+     *
+     * @param bodyPartId 신체 부위 ID
+     * @return 신체 부위 이름 (없으면 null)
+     */
+    private String resolveBodyPartName(Byte bodyPartId) {
+        if (bodyPartId == null) {
+            return null;
+        }
+
+        return bodyPartRepository.findById(bodyPartId)
+                .map(BodyPart::getBodyPartName)
+                .orElse(null);
+    }
+
+    /**
+     * OCR 성공 응답을 생성합니다.
+     *
+     * @param ocrResponse FastAPI OCR 응답 객체
+     * @param bodyPartId 신체 부위 ID
+     * @param bodyPartName 신체 부위 이름
+     * @param dailyDose 하루 섭취량
+     * @param dosePerIntake 1회 섭취량
+     * @param mappedIngredients 변환된 성분 리스트
+     * @return 성공 상태의 IngredientAnalyzeResponse
+     */
+    private IngredientAnalyzeResponse buildSuccessResponse(
+            FastApiOcrResponse ocrResponse,
+            Byte bodyPartId,
+            String bodyPartName,
+            Integer dailyDose,
+            Integer dosePerIntake,
+            List<IngredientAnalyzeResponse.IngredientDto> mappedIngredients
+    ) {
         return IngredientAnalyzeResponse.builder()
                 .success(true)
-                .message(ocrResponse.getMessage() != null ? ocrResponse.getMessage() : "OCR 분석이 완료되었습니다.")
-                .bodyPartId(ocrResponse.getData().getBodyPartId())
+                .message(ocrResponse.getMessage() != null
+                        ? ocrResponse.getMessage()
+                        : "OCR 분석이 완료되었습니다.")
+                .bodyPartId(bodyPartId)
+                .bodyPartName(bodyPartName)
                 .dailyDose(dailyDose)
                 .dosePerIntake(dosePerIntake)
                 .ingredients(mappedIngredients)
                 .build();
+    }
+
+    // 디버깅용
+    private String toJsonSafe(Object obj) {
+        if (obj == null) {
+            return "null";
+        }
+        try {
+            return objectMapper.writeValueAsString(obj);
+        } catch (JsonProcessingException e) {
+            log.warn("[runOcr] json serialize failed - class={}, message={}",
+                    obj.getClass().getSimpleName(), e.getMessage());
+            return String.valueOf(obj);
+        }
     }
 
     /**
@@ -255,7 +483,7 @@ public class SupplementService {
         }
 
         String url = fastApiUrl + "/api/ai/pills/register/check";
-        FastApiPillValidationResponse validationResponse = postImageToFastApi(url, pillImg,
+        FastApiPillValidationResponse validationResponse = postImageToFastApi(url, pillImg, "image_file",
                 FastApiPillValidationResponse.class);
 
         // 서버 오류 (응답 본문 없음)
@@ -287,7 +515,7 @@ public class SupplementService {
         }
 
         String url = fastApiUrl + "/api/ai/pills/register/embedding";
-        FastApiEmbeddingResponse fastApiEmbeddingResponse = postImageToFastApi(url, pillImg,
+        FastApiEmbeddingResponse fastApiEmbeddingResponse = postImageToFastApi(url, pillImg, "image_file",
                 FastApiEmbeddingResponse.class);
 
         // 서버 오류 (응답 본문 없음)
@@ -313,7 +541,7 @@ public class SupplementService {
      * 이미지를 FastAPI 서버로 전송합니다.
      * Multi-Value Map을 활용하여 Multipart 요청을 수행합니다.
      */
-    private <T> T postImageToFastApi(String url, MultipartFile imageFile, Class<T> responseType) {
+    private <T> T postImageToFastApi(String url, MultipartFile imageFile, String fieldName, Class<T> responseType) {
         // HTTP 요청 헤더 생성
         HttpHeaders headers = new HttpHeaders();
         // Content-Type 설정
@@ -334,8 +562,8 @@ public class SupplementService {
             };
 
             // multipart body에 파일 추가
-            // FastAPI에서 받을 필드명이 "image" 이므로 동일하게 설정
-            body.add("image", resource);
+            // FastAPI에서 받을 필드명을 파라미터로 받은 fieldName으로 설정
+            body.add(fieldName, resource);
         } catch (IOException e) {
             throw new CustomException(INTERNAL_SERVER_ERROR, "이미지 파일 읽기 실패");
         }
@@ -400,27 +628,6 @@ public class SupplementService {
                 .success(true)
                 .pillReferenceEmbeddingPath("임베딩 경로 (Mock)")
                 .message("임베딩 성공하였습니다. (Mock)")
-                .build();
-    }
-
-    // OCR 결과의 bodyPartId로 bodyPartName 조회 (기존 success, message 정보 유지)
-    private IngredientAnalyzeResponse resolveBodyPartName(IngredientAnalyzeResponse ocrResult) {
-        if (ocrResult.getBodyPartId() == null) {
-            return ocrResult;
-        }
-
-        String bodyPartName = bodyPartRepository.findById(ocrResult.getBodyPartId())
-                .map(BodyPart::getBodyPartName)
-                .orElse(null);
-
-        return IngredientAnalyzeResponse.builder()
-                .success(ocrResult.isSuccess())
-                .message(ocrResult.getMessage())
-                .bodyPartId(ocrResult.getBodyPartId())
-                .bodyPartName(bodyPartName)
-                .dailyDose(ocrResult.getDailyDose())
-                .dosePerIntake(ocrResult.getDosePerIntake())
-                .ingredients(ocrResult.getIngredients())
                 .build();
     }
 
