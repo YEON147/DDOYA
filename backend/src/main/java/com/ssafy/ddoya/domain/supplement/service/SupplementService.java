@@ -66,7 +66,7 @@ public class SupplementService {
     private String fastApiUrl;
 
     // fastApi 준비 완료 시 제거
-    @Value("${app.fastapi.mock_enabled:false}")
+    @Value("${app.fastapi.mock_enabled:true}")
     private boolean isFastApiMockEnabled;
 
     // S3 준비 완료 시 주석 해제
