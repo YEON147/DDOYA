@@ -14,6 +14,7 @@ export default function ProfileLayout() {
       <Stack.Screen name="supplements/confirm" />
       <Stack.Screen name="supplements/[supplementId]" />
       <Stack.Screen name="reports" />
+      <Stack.Screen name="intake-routine-edit" />
       <Stack.Screen name="myInfo/index" />
       <Stack.Screen name="myInfo/nickname" />
       <Stack.Screen name="myInfo/gender" />
