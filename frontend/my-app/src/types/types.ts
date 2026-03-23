@@ -31,7 +31,7 @@ export interface SuccessResponse<T> {
 
 // Intake Schedule
 export interface IntakeScheduleItem {
-  userSupplementScheduleId: number;
+  scheduleId: number | null;
   intakeTime: string; // HH:mm
 }
 
@@ -75,7 +75,7 @@ export interface SupplementUpdateRequest {
   stockQuantity: number;
   stockNotificationEnabled: boolean;
   intakeSchedules: {
-    userSupplementScheduleId?: number | null;
+    scheduleId?: number | null;
     intakeTime: string;
   }[];
 }

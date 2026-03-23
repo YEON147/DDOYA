@@ -9,6 +9,7 @@ interface TimePickerProps {
   onClose: () => void;
   onConfirm: (time: string) => void;
   initialTime?: string;
+  title?: string;
 }
 
 export const TimePicker: React.FC<TimePickerProps> = ({
@@ -16,14 +17,22 @@ export const TimePicker: React.FC<TimePickerProps> = ({
   onClose,
   onConfirm,
   initialTime = '09:00',
+  title = '알람 설정',
 }) => {
-  const [date, setDate] = useState(() => {
-    const [hours, minutes] = (initialTime || '09:00').split(':').map(Number);
-    const d = new Date();
-    d.setHours(hours || 9);
-    d.setMinutes(minutes || 0);
-    return d;
-  });
+  const [date, setDate] = React.useState(new Date());
+
+  // Sync internal date state when modal opens or initialTime changes
+  React.useEffect(() => {
+    if (isVisible) {
+      const [hours, minutes] = (initialTime || '09:00').split(':').map(Number);
+      const d = new Date();
+      d.setHours(hours || 9);
+      d.setMinutes(minutes || 0);
+      d.setSeconds(0);
+      d.setMilliseconds(0);
+      setDate(d);
+    }
+  }, [isVisible, initialTime]);
 
   const onChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
     if (selectedDate) {
@@ -51,7 +60,7 @@ export const TimePicker: React.FC<TimePickerProps> = ({
           }}
         >
           <View className="mb-6 flex-row items-center justify-between">
-            <Text className="text-xl font-bold" style={{ color: colors.text }}>알람 설정</Text>
+            <Text className="text-xl font-bold" style={{ color: colors.text }}>{title}</Text>
             <TouchableOpacity onPress={onClose} hitSlop={8}>
               <Text className="text-base font-semibold" style={{ color: colors.primary }}>취소</Text>
             </TouchableOpacity>
