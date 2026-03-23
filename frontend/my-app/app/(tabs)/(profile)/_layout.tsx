@@ -10,6 +10,8 @@ export default function ProfileLayout() {
       <Stack.Screen name="index" />
       <Stack.Screen name="supplements/index" />
       <Stack.Screen name="supplements/create" />
+      <Stack.Screen name="supplements/label-preview" />
+      <Stack.Screen name="supplements/pill-guide" />
       <Stack.Screen name="supplements/pill" />
       <Stack.Screen name="supplements/confirm" />
       <Stack.Screen name="supplements/[supplementId]" />

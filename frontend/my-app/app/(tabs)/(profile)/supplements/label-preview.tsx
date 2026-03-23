@@ -2,8 +2,6 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Image,
-  StyleSheet,
   Text,
   TouchableOpacity,
   View,
@@ -17,6 +15,7 @@ import { ingredientAnalyzeToOcrResult } from '@/src/types/supplement';
 import axios from 'axios';
 import { getBackendErrorMessage } from '@/hooks/apiErrorMessage';
 import { prepareLabelImageForOcr } from '@/src/utils/labelImageForUpload';
+import { OcrResultSummary } from '@/src/components/supplement/OcrResultSummary';
 import { colors } from '@/constants/theme/colors';
 import { neuRaised } from '@/constants/theme/neumorphism';
 
@@ -37,12 +36,13 @@ export default function SupplementLabelPreviewScreen() {
   const ingredientLabelUri = useSupplementCreateStore((s) => s.ingredientLabelUri);
   const setIngredientLabelUri = useSupplementCreateStore((s) => s.setIngredientLabelUri);
   const setOcrResult = useSupplementCreateStore((s) => s.setOcrResult);
+  const ocrResult = useSupplementCreateStore((s) => s.ocrResult);
 
   const [ocrPhase, setOcrPhase] = useState<OcrPhase>('analyzing');
 
   useEffect(() => {
     if (!ingredientLabelUri) {
-      router.replace('/(tabs)/(profile)/supplements/create' as never);
+      router.replace('/supplements/create' as never);
     }
   }, [ingredientLabelUri, router]);
 
@@ -109,11 +109,10 @@ export default function SupplementLabelPreviewScreen() {
     };
   }, [ingredientLabelUri, setOcrResult]);
 
-  const handleUsePhoto = useCallback(() => {
+  const handleNext = useCallback(() => {
     if (ocrPhase !== 'success') return;
-    setIngredientLabelUri(null);
-    router.push('/(tabs)/(profile)/supplements/pill' as never);
-  }, [ocrPhase, setIngredientLabelUri, router]);
+    router.push('/(tabs)/(profile)/supplements/pill-guide' as never);
+  }, [ocrPhase, router]);
 
   const handleRetake = () => {
     setIngredientLabelUri(null);
@@ -129,54 +128,50 @@ export default function SupplementLabelPreviewScreen() {
     ocrPhase === 'analyzing'
       ? '촬영한 사진에서 성분표를 분석하고 있어요.'
       : ocrPhase === 'success'
-        ? '분석이 완료되었어요. 알약을 촬영하려면 사진 사용을 눌러 주세요.'
+        ? '분석이 완료되었어요. 알약 촬영 가이드로 이동하려면 다음을 눌러 주세요.'
         : '분석에 실패했어요. 다시 촬영해 주세요.';
 
   return (
-    <ScreenContainer scrollable={false} padding={0} header={<TopHeader title="성분표 확인" />}>
-      <View className="flex-1 px-6 pt-2" style={{ backgroundColor: colors.background }}>
-        <Text className="mb-3 text-center font-scdream" style={{ color: colors.textMuted }}>
-          {instruction}
-        </Text>
+    <ScreenContainer
+      scrollable
+      padding={0}
+      contentContainerStyle={{ flexGrow: 1 }}
+      header={<TopHeader title="성분표 확인" />}
+    >
+      <View className="flex-1 px-6 pt-2 pb-8" style={{ backgroundColor: colors.background }}>
+        {/* 성공 시: 촬영 원본은 표시하지 않고 OCR 결과 데이터만 우선 노출 */}
+        {ocrPhase === 'success' && ocrResult ? (
+          <>
+            <OcrResultSummary ocrResult={ocrResult} title="성분표 (OCR 결과)" />
+            <Text className="mb-4 mt-1 text-center text-sm font-scdream" style={{ color: colors.textMuted }}>
+              알약 촬영으로 넘어가려면 아래 「다음」을 눌러 주세요.
+            </Text>
+          </>
+        ) : (
+          <>
+            <Text className="mb-3 text-center font-scdream" style={{ color: colors.textMuted }}>
+              {instruction}
+            </Text>
 
-        <View
-          className="mb-6 w-full max-w-[360px] self-center overflow-hidden rounded-3xl"
-          style={[neuRaised(24, colors.surface), { aspectRatio: 1 }]}
-        >
-          <Image source={{ uri: ingredientLabelUri }} style={{ width: '100%', height: '100%' }} resizeMode="contain" />
-
-          {ocrPhase === 'analyzing' ? (
-            <View
-              style={[
-                StyleSheet.absoluteFillObject,
-                {
-                  backgroundColor: 'rgba(0, 0, 0, 0.42)',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  paddingHorizontal: 16,
-                },
-              ]}
-              pointerEvents="none"
-            >
-              <ActivityIndicator size="large" color="#FCFBF8" />
-              <Text
-                className="mt-3 text-center text-sm font-scdream-medium"
-                style={{ color: '#FCFBF8' }}
-              >
-                OCR 분석 중…
-              </Text>
-            </View>
-          ) : null}
-        </View>
+            {ocrPhase === 'analyzing' ? (
+              <View className="mb-6 items-center rounded-3xl px-5 py-8" style={neuRaised(24, colors.surface)}>
+                <ActivityIndicator size="large" color={colors.point} />
+                <Text className="mt-3 text-center text-sm font-scdream-medium" style={{ color: colors.text }}>
+                  OCR 분석 중…
+                </Text>
+              </View>
+            ) : null}
+          </>
+        )}
 
         <TouchableOpacity
-          onPress={handleUsePhoto}
+          onPress={handleNext}
           disabled={ocrPhase !== 'success'}
           activeOpacity={0.9}
           className="items-center px-6 py-3"
           style={[neuRaised(999, colors.point), ocrPhase !== 'success' && { opacity: 0.45 }]}
         >
-          <Text className="font-semibold text-white">사진 사용</Text>
+          <Text className="font-semibold text-white">다음</Text>
         </TouchableOpacity>
 
         <TouchableOpacity

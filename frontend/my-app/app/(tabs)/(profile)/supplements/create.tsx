@@ -6,7 +6,7 @@ import { ScreenContainer } from '@/src/components/common/ScreenContainer';
 import { TopHeader } from '@/src/components/common/TopHeader';
 import { CaptureGuideScreenLayout } from '@/src/components/common/CaptureGuideScreenLayout';
 import { useSupplementCreateStore } from '@/src/store/supplementCreateStore';
-
+ 
 const REGISTER_GUIDE_IMAGE = require('../../../../assets/images/ocr_example.jpg');
 
 export default function SupplementCreateScreen() {
@@ -39,7 +39,7 @@ export default function SupplementCreateScreen() {
       }
       setOcrResult(null);
       setIngredientLabelUri(uri, asset.mimeType ?? null);
-      router.push('/(tabs)/(profile)/supplements/label-preview' as never);
+      router.push('/supplements/label-preview' as never);
     } catch {
       Alert.alert('오류', '촬영에 실패했습니다. 다시 시도해 주세요.');
     }
