@@ -483,7 +483,7 @@ public class SupplementService {
         }
 
         String url = fastApiUrl + "/api/ai/pills/register/check";
-        FastApiPillValidationResponse validationResponse = postImageToFastApi(url, pillImg, "image_file",
+        FastApiPillValidationResponse validationResponse = postImageToFastApi(url, pillImg, "file",
                 FastApiPillValidationResponse.class);
 
         // 서버 오류 (응답 본문 없음)
