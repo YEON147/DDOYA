@@ -18,7 +18,10 @@ export type {
   SupplementCreateRequest,
   OcrResult,
   OcrIngredient,
+  IngredientAnalyzePayload,
+  IngredientAnalyzeIngredientDto,
 } from './supplement';
+export { ingredientAnalyzeToOcrResult } from './supplement';
 
 // Success Wrapper
 export interface SuccessResponse<T> {

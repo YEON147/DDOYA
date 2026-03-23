@@ -16,8 +16,9 @@ import {
   useCreateSupplementMutation,
   getCreateSupplementErrorMessage,
 } from '@/hooks/useSupplementMutation';
+import { OcrResultSummary } from '@/src/components/supplement/OcrResultSummary';
 import { colors } from '@/constants/theme/colors';
-import { neuInset, neuRaised } from '@/constants/theme/neumorphism';
+import { neuInset } from '@/constants/theme/neumorphism';
 
 export default function SupplementConfirmScreen() {
   const router = useRouter();
@@ -64,25 +65,7 @@ export default function SupplementConfirmScreen() {
   return (
     <ScreenContainer scrollable={false} padding={0} header={<TopHeader title="등록 확인" />}>
       <ScrollView className="flex-1 px-4 pt-2" keyboardShouldPersistTaps="handled">
-        <Text className="text-base font-scdream-medium mb-2" style={{ color: colors.text }}>
-          성분표 (OCR 결과)
-        </Text>
-        <View className="mb-4 p-3" style={neuRaised(18, colors.surface)}>
-          <Text className="mb-1 text-sm font-scdream" style={{ color: colors.textMuted }}>
-            부위: {ocrResult.bodyPartName} · 1일 권장 {ocrResult.dailyDose} · 1회 {ocrResult.dosePerIntake}
-          </Text>
-          {ocrResult.ingredients.map((ing) => (
-            <Text
-              key={`${ing.normalizedIngredientId}-${ing.rawName}`}
-              className="py-1 text-sm font-scdream"
-              style={{ color: colors.text }}
-            >
-              {ing.isPrimary ? '★ ' : '· '}
-              {ing.normalizedName} {ing.amount}
-              {ing.unit} ({ing.rawName})
-            </Text>
-          ))}
-        </View>
+        <OcrResultSummary ocrResult={ocrResult} />
 
         <Text className="text-base font-scdream-medium mb-2" style={{ color: colors.text }}>별칭</Text>
         <View className="mb-4 px-4" style={neuInset(16)}>

@@ -7,13 +7,18 @@ import type { OcrResult, SupplementCreateRequest } from '@/src/types/supplement'
  */
 type SupplementCreateStore = {
   ocrResult: OcrResult | null;
+  /** STEP1 성분표 촬영 직후 미리보기·OCR 전까지 로컬 URI */
+  ingredientLabelUri: string | null;
+  /** 촬영 에셋의 MIME (multipart type 필드, 없으면 uri 확장자로 추정) */
+  ingredientLabelMimeType: string | null;
   pillImageUri: string | null;
   /** 사용자 입력: 영양제 별칭 */
   alias: string;
   /** 사용자 입력: 총량(용기 기준 수량 등), 제출 시 숫자로 파싱 */
   capacityInput: string;
 
-  setOcrResult: (result: OcrResult) => void;
+  setOcrResult: (result: OcrResult | null) => void;
+  setIngredientLabelUri: (uri: string | null, mimeType?: string | null) => void;
   setPillImageUri: (uri: string) => void;
   setAlias: (alias: string) => void;
   setCapacityInput: (text: string) => void;
@@ -24,6 +29,8 @@ type SupplementCreateStore = {
 
 const initial = {
   ocrResult: null as OcrResult | null,
+  ingredientLabelUri: null as string | null,
+  ingredientLabelMimeType: null as string | null,
   pillImageUri: null as string | null,
   alias: '',
   capacityInput: '',
@@ -33,6 +40,11 @@ export const useSupplementCreateStore = create<SupplementCreateStore>((set, get)
   ...initial,
 
   setOcrResult: (result) => set({ ocrResult: result }),
+  setIngredientLabelUri: (uri, mimeType = null) =>
+    set({
+      ingredientLabelUri: uri,
+      ingredientLabelMimeType: uri ? mimeType ?? null : null,
+    }),
   setPillImageUri: (uri) => set({ pillImageUri: uri }),
   setAlias: (alias) => set({ alias }),
   setCapacityInput: (text) => set({ capacityInput: text }),

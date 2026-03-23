@@ -6,9 +6,16 @@ import {
     SupplementDetailResponse,
     SupplementListResponse,
     SupplementUpdateResponse,
+    IngredientAnalyzePayload,
 } from '../types/types';
 
 export const supplementApi = {
+    /** 성분표 이미지 OCR (서버가 FastAPI `/api/ai/ocr/analyze` 호출) — `ingredientsImg` 필드로 multipart 전송 */
+    analyzeIngredientsOcr: (formData: FormData) =>
+        apiClient.post<SuccessResponse<IngredientAnalyzePayload>>('/supplements/ingredients/ocr', formData, {
+            timeout: 120000,
+        }),
+
     // 영양제 등록
     createSupplement: (data: SupplementCreateRequest) =>
         apiClient.post('/supplements', data),
