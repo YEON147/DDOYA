@@ -27,6 +27,10 @@ logging:
     root: WARN
     com.ssafy.ddoya: INFO
 
+app:
+  fastapi:
+    mock_enabled: true  # fastApi 준비 완료 시 제거
+
 cors:
   allowed-origins:
     - https://j14b202.p.ssafy.io
