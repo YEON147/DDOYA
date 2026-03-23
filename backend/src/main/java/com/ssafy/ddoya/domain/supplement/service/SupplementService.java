@@ -515,8 +515,11 @@ public class SupplementService {
         }
 
         String url = fastApiUrl + "/api/ai/pills/register/embedding";
-        FastApiEmbeddingResponse fastApiEmbeddingResponse = postImageToFastApi(url, pillImg, "image_file",
+        log.debug("[pillImageEmbedding] url={}", url);
+        FastApiEmbeddingResponse fastApiEmbeddingResponse = postImageToFastApi(url, pillImg, "file",
                 FastApiEmbeddingResponse.class);
+        log.debug("[pillImageEmbedding] fastApiEmbeddingResponse.getPillReferenceEmbeddingPath={}", fastApiEmbeddingResponse.getPillReferenceEmbeddingPath());
+        log.debug("[pillImageEmbedding] fastApiEmbeddingResponse.getMessage={}", fastApiEmbeddingResponse.getMessage());
 
         // 서버 오류 (응답 본문 없음)
         if (fastApiEmbeddingResponse == null) {
@@ -533,6 +536,7 @@ public class SupplementService {
 
         return FastApiEmbeddingResponse.builder()
                 .success(isSuccess)
+                .pillReferenceEmbeddingPath(fastApiEmbeddingResponse.getPillReferenceEmbeddingPath())
                 .message(message)
                 .build();
     }
