@@ -22,6 +22,8 @@ import {
   useUpdateSupplement,
   useDeleteSupplement
 } from '@/hooks/useSupplement';
+import { useReport } from '@/hooks/useReport';
+
 const line = `${colors.shadowDark}44`;
 
 const smallNeuBtn = (disabled?: boolean) => [
@@ -41,6 +43,7 @@ export default function SupplementDetailScreen() {
 
   const id = parseInt(supplementId as string);
   const { data: supplement, isLoading: detailLoading } = useSupplementDetail(id);
+  const { data: report } = useReport();
   const updateMutation = useUpdateSupplement();
   const deleteMutation = useDeleteSupplement();
 
@@ -51,42 +54,76 @@ export default function SupplementDetailScreen() {
   const [dosePerIntake, setDosePerIntake] = useState(1);
   const [stockQuantity, setStockQuantity] = useState(0);
   const [stockNotificationEnabled, setStockNotificationEnabled] = useState(false);
-  const [intakeSchedules, setIntakeSchedules] = useState<{ userSupplementScheduleId?: number | null; intakeTime: string }[]>([]);
+  const [intakeSchedules, setIntakeSchedules] = useState<{ scheduleId?: number | null; intakeTime: string }[]>([]);
 
   const [pickerVisible, setPickerVisible] = useState(false);
   const [activeTimeIndex, setActiveTimeIndex] = useState<number | null>(null);
 
+  // Sync with Supplement data and Report recommendations
   useEffect(() => {
     if (supplement) {
       setAlias(supplement.alias);
       setPillImageUrl(supplement.pillImageUrl);
-      setDailyDose(supplement.dailyDose);
+      
+      // Determine daily dose: Priority to Report if specified
+      let initialDose = supplement.dailyDose;
+      if (report?.intakeTimeRecommendations) {
+        const recommendations = report.intakeTimeRecommendations.filter(r => r.userSupplementId === id);
+        if (recommendations.length > 0) {
+          initialDose = recommendations.length;
+        }
+      }
+      setDailyDose(initialDose);
+      
       setDosePerIntake(supplement.dosePerIntake);
       setStockQuantity(supplement.stockQuantity);
       setStockNotificationEnabled(supplement.stockNotificationEnabled);
-      setIntakeSchedules(supplement.intakeSchedules.map(s => ({
-        userSupplementScheduleId: s.userSupplementScheduleId,
+      
+      // Process schedules: ensure length matches initialDose
+      let schedules = supplement.intakeSchedules.map(s => ({
+        scheduleId: s.scheduleId,
         intakeTime: s.intakeTime,
-      })));
+      }));
+
+      // Pad if less than daily dose
+      if (schedules.length < initialDose) {
+        const diff = initialDose - schedules.length;
+        for (let i = 0; i < diff; i++) {
+          schedules.push({ scheduleId: null, intakeTime: '' });
+        }
+      } else if (schedules.length > initialDose) {
+        schedules = schedules.slice(0, initialDose);
+      }
+      
+      setIntakeSchedules(schedules);
     }
-  }, [supplement]);
+  }, [supplement, report, id]);
 
   const handleIncreaseDose = () => {
-    setDailyDose((prev) => prev + 1);
-    setIntakeSchedules((prev) => [...prev, { userSupplementScheduleId: null, intakeTime: '' }]);
+    setDailyDose((prev) => {
+      const nextDose = prev + 1;
+      setIntakeSchedules((prevSchedules) => [
+        ...prevSchedules, 
+        { scheduleId: null, intakeTime: '' }
+      ]);
+      return nextDose;
+    });
   };
 
   const handleDecreaseDose = () => {
     if (dailyDose > 1) {
-      setDailyDose((prev) => prev - 1);
-      setIntakeSchedules((prev) => prev.slice(0, -1));
+      setDailyDose((prev) => {
+        const nextDose = prev - 1;
+        setIntakeSchedules((prevSchedules) => prevSchedules.slice(0, -1));
+        return nextDose;
+      });
     }
   };
 
   const handleSave = () => {
     // Validation
     if (intakeSchedules.some((s) => s.intakeTime === '')) {
-      Alert.alert('알림', '모든 섭취 시점을 선택해 주세요.');
+      Alert.alert('알림', '모든 섭취 시점의 시간을 선택해 주세요.');
       return;
     }
 
@@ -112,7 +149,7 @@ export default function SupplementDetailScreen() {
     }, {
       onSuccess: () => {
         Alert.alert('성공', '수정사항이 저장되었습니다.');
-        router.back();
+        router.replace('/(tabs)/(profile)/supplements' as any);
       },
       onError: () => {
         Alert.alert('오류', '저장에 실패했습니다.');
@@ -277,6 +314,7 @@ export default function SupplementDetailScreen() {
 
       <TimePicker
         isVisible={pickerVisible}
+        title="섭취 시각 설정"
         onClose={() => setPickerVisible(false)}
         onConfirm={(selectedTime) => {
           if (activeTimeIndex !== null) {
@@ -286,7 +324,12 @@ export default function SupplementDetailScreen() {
               if (cur) {
                 next[activeTimeIndex] = { ...cur, intakeTime: selectedTime };
               }
-              return next;
+              // Sort by time, keeping empty times at the bottom
+              return next.sort((a, b) => {
+                if (!a.intakeTime) return 1;
+                if (!b.intakeTime) return -1;
+                return a.intakeTime.localeCompare(b.intakeTime);
+              });
             });
           }
         }}
