@@ -1,10 +1,11 @@
 import { Platform } from 'react-native';
-import { Tabs, usePathname } from 'expo-router';
+import { Redirect, Tabs, usePathname } from 'expo-router';
 
 import { HapticTab } from '@/src/components/common/haptic-tab';
 import { IconSymbol } from '@/src/components/ui/icon-symbol';
 import { colors } from '@/constants/theme/colors';
 import { useColorScheme } from '@/hooks/theme/use-color-scheme';
+import { useAuthStore } from '@/src/store/authStore';
 
 const tabBarShadow = Platform.select({
   ios: {
@@ -33,6 +34,16 @@ export default function TabLayout() {
   useColorScheme();
   const pathname = usePathname();
   const showTabBar = isMainTabPath(pathname);
+  const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
+  const hasHydratedFromStorage = useAuthStore((s) => s.hasHydratedFromStorage);
+
+  if (!hasHydratedFromStorage) {
+    return null;
+  }
+
+  if (!isLoggedIn) {
+    return <Redirect href="/(auth)/login" />;
+  }
 
   return (
     <Tabs
