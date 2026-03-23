@@ -9,6 +9,11 @@ import {
     IngredientAnalyzePayload,
 } from '../types/types';
 
+export type PillValidationPayload = {
+    success: boolean;
+    message: string;
+};
+
 /** `POST /api/supplements` — `pillImg` + `register`(JSON 문자열) */
 export function buildSupplementRegisterFormData(
     pillUri: string,
@@ -30,6 +35,25 @@ export function buildSupplementRegisterFormData(
     return formData;
 }
 
+/** `POST /api/supplements/pill/validate` — `pillImg` */
+export function buildPillValidateFormData(
+    pillUri: string,
+    pillMimeType: string | null | undefined
+): FormData {
+    const formData = new FormData();
+    const lower = pillUri.toLowerCase();
+    const name = lower.endsWith('.png')
+        ? 'pill.png'
+        : lower.endsWith('.webp')
+          ? 'pill.webp'
+          : 'pill.jpg';
+    const type =
+        pillMimeType ||
+        (lower.endsWith('.png') ? 'image/png' : lower.endsWith('.webp') ? 'image/webp' : 'image/jpeg');
+    formData.append('pillImg', { uri: pillUri, name, type } as unknown as Blob);
+    return formData;
+}
+
 export const supplementApi = {
     /** 성분표 이미지 OCR (서버가 FastAPI `/api/ai/ocr/analyze` 호출) — `ingredientsImg` 필드로 multipart 전송 */
     analyzeIngredientsOcr: (formData: FormData) =>
@@ -41,6 +65,12 @@ export const supplementApi = {
     createSupplementMultipart: (formData: FormData) =>
         apiClient.post<SuccessResponse<unknown>>('/supplements', formData, {
             timeout: 180000,
+        }),
+
+    /** 알약 등록 가능 여부 검사 — multipart(`pillImg`) */
+    validatePillForRegister: (formData: FormData) =>
+        apiClient.post<SuccessResponse<PillValidationPayload>>('/supplements/pill/validate', formData, {
+            timeout: 120000,
         }),
 
     // 영양제 목록 조회
