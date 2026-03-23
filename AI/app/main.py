@@ -8,10 +8,6 @@ from app.routers import ocr, report, register, verify
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """
-    FastAPI 서버 시작 시 1회 실행.
-    YOLO / DINOv2 같은 무거운 모델을 여기서 미리 로드한다.
-    """
     app.state.model_registry = load_models()
     try:
         yield
@@ -34,5 +30,7 @@ def health():
 
 app.include_router(ocr.router, prefix="/api/ai/ocr", tags=["OCR"])
 app.include_router(report.router, prefix="/api/ai/report", tags=["Report"])
+
+# 전부 pills로 통일
 app.include_router(register.router, prefix="/api/ai/pills", tags=["Pill Register"])
 app.include_router(verify.router, prefix="/api/ai/pills", tags=["Pill Verify"])

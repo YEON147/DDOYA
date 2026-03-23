@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 
+from app.core.config import settings
 from app.schemas.pill_schema import RegisterCheckResponse, RegisterEmbeddingResponse
 from app.services.embedding_service import build_reference_bundle
 from app.services.quality_service import (
@@ -75,7 +76,11 @@ def run_register_embedding(
         )
 
     bbox = detections[0]["bbox"]
-    crop_image = crop_by_bbox(image, bbox)
+    crop_image = crop_by_bbox(
+        image,
+        bbox,
+        pad_ratio=settings.REGISTER_CROP_PAD_RATIO,
+    )
 
     bundle = build_reference_bundle(crop_image, model_registry)
     pill_reference_embedding_path = save_reference_bundle(

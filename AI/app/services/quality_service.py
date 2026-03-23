@@ -17,10 +17,9 @@ class QualityCheckResult:
 
 def evaluate_register_quality(image: np.ndarray) -> QualityCheckResult:
     """
-    등록용 이미지의 기본 품질을 검사한다.
-    - blur
-    - brightness
-    - contrast
+    등록/인증 공용 기본 품질 검사
+    너무 타이트하지 않게 완화했고,
+    ENABLE_QUALITY_CHECK=false면 품질 검사 자체를 통과시킨다.
     """
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
@@ -28,10 +27,19 @@ def evaluate_register_quality(image: np.ndarray) -> QualityCheckResult:
     brightness = float(gray.mean())
     contrast = float(gray.std())
 
+    if not settings.ENABLE_QUALITY_CHECK:
+        return QualityCheckResult(
+            success=True,
+            message="",
+            blur_score=blur_score,
+            brightness=brightness,
+            contrast=contrast,
+        )
+
     if blur_score < settings.BLUR_THRESHOLD:
         return QualityCheckResult(
             success=False,
-            message="이미지 품질이 낮아 재촬영이 필요합니다.",
+            message="촬영 품질이 낮아 재촬영이 필요합니다.",
             blur_score=blur_score,
             brightness=brightness,
             contrast=contrast,
@@ -40,7 +48,7 @@ def evaluate_register_quality(image: np.ndarray) -> QualityCheckResult:
     if brightness < settings.BRIGHTNESS_MIN:
         return QualityCheckResult(
             success=False,
-            message="이미지가 너무 어두워 재촬영이 필요합니다.",
+            message="촬영 품질이 낮아 재촬영이 필요합니다.",
             blur_score=blur_score,
             brightness=brightness,
             contrast=contrast,
@@ -49,7 +57,7 @@ def evaluate_register_quality(image: np.ndarray) -> QualityCheckResult:
     if brightness > settings.BRIGHTNESS_MAX:
         return QualityCheckResult(
             success=False,
-            message="이미지가 너무 밝아 재촬영이 필요합니다.",
+            message="촬영 품질이 낮아 재촬영이 필요합니다.",
             blur_score=blur_score,
             brightness=brightness,
             contrast=contrast,
@@ -58,7 +66,7 @@ def evaluate_register_quality(image: np.ndarray) -> QualityCheckResult:
     if contrast < settings.CONTRAST_MIN:
         return QualityCheckResult(
             success=False,
-            message="이미지 대비가 낮아 재촬영이 필요합니다.",
+            message="촬영 품질이 낮아 재촬영이 필요합니다.",
             blur_score=blur_score,
             brightness=brightness,
             contrast=contrast,
@@ -79,12 +87,11 @@ def validate_single_pill_detection(
 ) -> tuple[bool, str]:
     """
     등록용 사진은 알약 1개만 있어야 한다.
-    또한 너무 작게 촬영된 경우도 막는다.
     """
     detected_count = len(detections)
 
     if detected_count == 0:
-        return False, "등록용 이미지는 알약이 1개 보이도록 촬영해야 합니다."
+        return False, "알약이 검출되지 않았습니다."
 
     if detected_count != 1:
         return False, "등록용 이미지는 알약 1개만 촬영해야 합니다."

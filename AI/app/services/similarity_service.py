@@ -32,37 +32,45 @@ def _distance_to_similarity(distance_value: float, scale: float = 1.0) -> float:
     return float(1.0 / (1.0 + (distance_value / max(scale, 1e-12))))
 
 
-def compute_feature_score(
+def _normalize_weights(*weights: float) -> list[float]:
+    total = float(sum(weights))
+    if total < 1e-12:
+        return [1.0 / len(weights)] * len(weights)
+    return [float(w / total) for w in weights]
+
+
+def compute_color_score(
     query_features: dict[str, np.ndarray],
     reference_bundle: dict[str, np.ndarray],
 ) -> float:
-    """
-    색상/모양 보조 특징 점수 계산
-    """
     mean_hsv_q = query_features["mean_hsv"]
     mean_hsv_r = reference_bundle["mean_hsv"]
 
     hue_hist_q = query_features["hue_hist"]
     hue_hist_r = reference_bundle["hue_hist"]
 
-    shape_q = query_features["shape_vector"]
-    shape_r = reference_bundle["shape_vector"]
-
     hsv_distance = float(np.linalg.norm(mean_hsv_q - mean_hsv_r))
     hsv_score = _distance_to_similarity(hsv_distance, scale=60.0)
 
     hist_score = _hist_intersection(hue_hist_q, hue_hist_r)
 
-    shape_distance = float(np.linalg.norm(shape_q - shape_r))
-    shape_score = _distance_to_similarity(shape_distance, scale=1.0)
-
-    final_feature_score = (
-        settings.FEATURE_HSV_WEIGHT * hsv_score
-        + settings.FEATURE_HIST_WEIGHT * hist_score
-        + settings.FEATURE_SHAPE_WEIGHT * shape_score
+    wm, wh = _normalize_weights(
+        settings.COLOR_MEAN_WEIGHT,
+        settings.COLOR_HIST_WEIGHT,
     )
 
-    return float(final_feature_score)
+    return float(wm * hsv_score + wh * hist_score)
+
+
+def compute_shape_score(
+    query_features: dict[str, np.ndarray],
+    reference_bundle: dict[str, np.ndarray],
+) -> float:
+    shape_q = query_features["shape_vector"]
+    shape_r = reference_bundle["shape_vector"]
+
+    shape_distance = float(np.linalg.norm(shape_q - shape_r))
+    return _distance_to_similarity(shape_distance, scale=1.0)
 
 
 def match_crop_against_expected_items(
@@ -72,22 +80,17 @@ def match_crop_against_expected_items(
     top_k: int = 3,
 ) -> dict:
     """
-    reference_candidates 예시:
-    [
-        {
-            "user_supplement_id": 201,
-            "bundle": {
-                "embedding": ...,
-                "mean_hsv": ...,
-                "hue_hist": ...,
-                "shape_vector": ...
-            }
-        },
-        ...
-    ]
+    점수 결합 방식:
+    final_score = w1 * dino_score + w2 * color_score + w3 * shape_score
     """
     if not reference_candidates:
         raise ValueError("reference_candidates가 비어 있습니다.")
+
+    wd, wc, ws = _normalize_weights(
+        settings.DINO_SCORE_WEIGHT,
+        settings.COLOR_SCORE_WEIGHT,
+        settings.SHAPE_SCORE_WEIGHT,
+    )
 
     scored_candidates = []
 
@@ -95,19 +98,22 @@ def match_crop_against_expected_items(
         user_supplement_id = candidate["user_supplement_id"]
         bundle = candidate["bundle"]
 
-        embedding_score = safe_cosine_similarity(query_embedding, bundle["embedding"])
-        feature_score = compute_feature_score(query_features, bundle)
+        dino_score = safe_cosine_similarity(query_embedding, bundle["embedding"])
+        color_score = compute_color_score(query_features, bundle)
+        shape_score = compute_shape_score(query_features, bundle)
 
         final_score = (
-            settings.EMBEDDING_SCORE_WEIGHT * embedding_score
-            + settings.AUX_FEATURE_SCORE_WEIGHT * feature_score
+            wd * dino_score
+            + wc * color_score
+            + ws * shape_score
         )
 
         scored_candidates.append(
             {
                 "user_supplement_id": user_supplement_id,
-                "embedding_score": float(embedding_score),
-                "feature_score": float(feature_score),
+                "dino_score": float(dino_score),
+                "color_score": float(color_score),
+                "shape_score": float(shape_score),
                 "final_score": float(final_score),
             }
         )
@@ -127,13 +133,17 @@ def match_crop_against_expected_items(
     return {
         "final_user_supplement_id": top1["user_supplement_id"],
         "final_confidence": float(top1["final_score"]),
-        "embedding_score": float(top1["embedding_score"]),
-        "feature_score": float(top1["feature_score"]),
+        "dino_score": float(top1["dino_score"]),
+        "color_score": float(top1["color_score"]),
+        "shape_score": float(top1["shape_score"]),
         "review_required": review_required,
         "top_k": [
             {
                 "user_supplement_id": item["user_supplement_id"],
                 "score": float(item["final_score"]),
+                "dino_score": float(item["dino_score"]),
+                "color_score": float(item["color_score"]),
+                "shape_score": float(item["shape_score"]),
             }
             for item in top_candidates
         ],

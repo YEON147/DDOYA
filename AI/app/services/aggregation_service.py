@@ -4,7 +4,7 @@ from collections import defaultdict
 def aggregate_verify_results(expected_items, crop_results: list[dict]) -> list[dict]:
     """
     crop별 결과를 user_supplement_id 기준으로 집계하여
-    최신 verify 응답 명세(results 직결) 형태로 반환한다.
+    verify 응답 results 형태로 반환한다.
     """
     detected_amount_map = defaultdict(int)
 
