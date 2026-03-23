@@ -38,4 +38,19 @@ public class UserNotificationSetting {
         this.carryNotificationEnabled = carryNotificationEnabled != null ? carryNotificationEnabled : true;
         this.stockNotificationEnabled = stockNotificationEnabled != null ? stockNotificationEnabled : true;
     }
+
+    /** 섭취 알림 설정 업데이트 */
+    public void updateIntakeNotificationEnabled(boolean enabled) {
+        this.intakeNotificationEnabled = enabled;
+    }
+
+    /** 휴대 알림 설정 업데이트 */
+    public void updateCarryNotificationEnabled(boolean enabled) {
+        this.carryNotificationEnabled = enabled;
+    }
+
+    /** 재고 알림 설정 업데이트 */
+    public void updateStockNotificationEnabled(boolean enabled) {
+        this.stockNotificationEnabled = enabled;
+    }
 }

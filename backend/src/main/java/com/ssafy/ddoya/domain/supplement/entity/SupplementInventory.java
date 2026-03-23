@@ -58,4 +58,13 @@ public class SupplementInventory {
         this.stockQuantity = stockQuantity;
         this.stockAlertEnabled = stockAlertEnabled;
     }
+
+    /**
+     * 재고 알림 설정 여부를 수정합니다.
+     *
+     * @param enabled 수신 여부
+     */
+    public void updateStockAlertEnabled(boolean enabled) {
+        this.stockAlertEnabled = enabled;
+    }
 }
