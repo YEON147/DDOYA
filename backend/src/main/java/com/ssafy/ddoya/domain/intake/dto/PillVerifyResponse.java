@@ -23,5 +23,6 @@ public class PillVerifyResponse {
         private Boolean matched;
         private IntakeStatus beforeStatus;
         private IntakeStatus afterStatus;
+        private Boolean stockAdjusted;
     }
 }

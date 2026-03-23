@@ -8,6 +8,8 @@ import com.ssafy.ddoya.domain.intake.entity.IntakeStatus;
 import com.ssafy.ddoya.domain.intake.entity.ScheduleType;
 import com.ssafy.ddoya.domain.intake.repository.IntakeRecordRepository;
 import com.ssafy.ddoya.domain.supplement.entity.Supplement;
+import com.ssafy.ddoya.domain.supplement.entity.SupplementInventory;
+import com.ssafy.ddoya.domain.supplement.repository.SupplementInventoryRepository;
 import com.ssafy.ddoya.global.exception.CustomException;
 import lombok.Builder;
 import lombok.Getter;
@@ -41,6 +43,7 @@ public class IntakeRecordService {
 
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
+    private final SupplementInventoryRepository supplementInventoryRepository;
     private final IntakeRecordRepository intakeRecordRepository;
 
     @Value("${app.fastapi.url}")
@@ -90,9 +93,11 @@ public class IntakeRecordService {
         FastApiPillVerifyResponse fastApiResponse;
         if (isFastApiMockEnabled) {
             fastApiResponse = generateMockResponse(fastApiRequest);
+            log.debug("[verifyPillIntake] Mock 호출 isFastApiMockEnabled = " + isFastApiMockEnabled);
         } else {
             String url = fastApiUrl + "/api/ai/pills/verify";
             fastApiResponse = postVerifyToFastApi(url, image, fastApiRequest);
+            log.debug("[verifyPillIntake] FastAPI 호출 isFastApiMockEnabled = " + isFastApiMockEnabled);
         }
 
         // FastAPI 서버 응답이 null이면 서버 오류로 처리
@@ -113,6 +118,14 @@ public class IntakeRecordService {
         // FastAPI 응답 결과를 Map으로 구성 (기준: userSupplementId)
         Map<Long, FastApiPillVerifyResponse.VerifyResult> aiResultMap = fastApiResponse.getResults().stream()
                 .collect(Collectors.toMap(FastApiPillVerifyResponse.VerifyResult::getUserSupplementId, r -> r));
+
+        // 재고 관리를 위해 관련된 SupplementInventory 한꺼번에 조회 (Pessimistic Write Lock 적용)
+        List<Long> userSupplementIds = targets.stream()
+                .map(IntakeVerificationTarget::getUserSupplementId)
+                .distinct()
+                .toList();
+        Map<Long, SupplementInventory> inventoryMap = supplementInventoryRepository.findForUpdateBySupplementIds(userSupplementIds).stream()
+                .collect(Collectors.toMap(inv -> inv.getSupplement().getUserSupplementId(), inv -> inv));
 
         // 각 항목별 판정 및 상태 업데이트 진행
         LocalDateTime actionAt = LocalDateTime.now();
@@ -141,6 +154,7 @@ public class IntakeRecordService {
                         .matched(false)
                         .beforeStatus(beforeStatus)
                         .afterStatus(beforeStatus) // 원래 상태 유지
+                        .stockAdjusted(false)
                         .build());
                 continue;
             }
@@ -155,9 +169,19 @@ public class IntakeRecordService {
             // 3) 그 외에는 기존 상태 유지
             IntakeStatus afterStatus = decideAfterStatus(beforeStatus, matched);
 
+            boolean stockAdjusted = false;
+
             // 실제 DB 업데이트는 "TAKEN으로 바뀌는 경우"에만 수행
             if (afterStatus == IntakeStatus.TAKEN && beforeStatus != IntakeStatus.TAKEN) {
                 targetRecord.updateStatusToTaken(actionAt); 
+
+                SupplementInventory inventory = inventoryMap.get(suppId);
+                if (inventory != null) {
+                    stockAdjusted = inventory.decreaseWithFloorZero(expectedDose);
+                    if (stockAdjusted) {
+                        log.warn("[재고 부족] 일부만 복용 처리됨. supplementId={}, 필요수량={}, 현재재고=0(보정됨)", suppId, expectedDose);
+                    }
+                }
             }
 
             finalResults.add(PillVerifyResponse.VerifyResult.builder()
@@ -168,6 +192,7 @@ public class IntakeRecordService {
                     .matched(matched)
                     .beforeStatus(beforeStatus)
                     .afterStatus(afterStatus)
+                    .stockAdjusted(stockAdjusted)
                     .build());
         }
 
