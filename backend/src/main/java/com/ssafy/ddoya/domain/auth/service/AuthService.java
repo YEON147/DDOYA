@@ -121,6 +121,9 @@ public class AuthService {
         // 기본 알림 설정 데이터 자동 생성 (모두 허용 상태)
         notificationSettingService.createDefaultNotificationSetting(savedUser);
 
+        // 기본 약 챙김 알림 스케줄 생성 (20:00)
+        notificationSettingService.createDefaultCarrySchedule(savedUser);
+
         return SignUpResponseDto.from(savedUser);
     }
 

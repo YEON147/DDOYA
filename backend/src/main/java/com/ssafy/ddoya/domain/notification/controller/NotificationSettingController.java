@@ -67,4 +67,37 @@ public class NotificationSettingController {
         NotificationSettingResponse result = notificationSettingService.updateStockNotificationSetting(userId, request.getEnabled());
         return ResponseEntity.ok(SuccessResponse.of("재고 알림 설정이 변경되었습니다.", result));
     }
+
+    /**
+     * 약 챙김 알림 시각을 수정합니다.
+     *
+     * @param userDetails 인증된 사용자 정보
+     * @param request 수정할 시각 정보 요청 DTO
+     * @return 수정된 시각 정보 응답 DTO
+     */
+    @PatchMapping("/carry-time")
+    public ResponseEntity<SuccessResponse<CarryNotificationTimeUpdateResponse>> updateCarryNotificationTime(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @Valid @RequestBody CarryNotificationTimeUpdateRequest request) {
+
+        Long userId = userDetails.getUser().getUserId();
+        CarryNotificationTimeUpdateResponse result = 
+               notificationSettingService.updateCarryNotificationTime(userId, request.getCarryNotificationTime());
+        return ResponseEntity.ok(SuccessResponse.of("약 챙김 알림 시각이 변경되었습니다.", result));
+    }
+
+    /**
+     * 약 챙김 알림 시각을 조회합니다.
+     *
+     * @param userDetails 인증된 사용자 정보
+     * @return 챙김 알림 시각 정보 응답 DTO
+     */
+    @GetMapping("/carry-time")
+    public ResponseEntity<SuccessResponse<CarryNotificationTimeUpdateResponse>> getCarryNotificationTime(
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+
+        Long userId = userDetails.getUser().getUserId();
+        CarryNotificationTimeUpdateResponse result = notificationSettingService.getCarryNotificationTime(userId);
+        return ResponseEntity.ok(SuccessResponse.of("약 챙김 알림 시각 조회에 성공했습니다.", result));
+    }
 }
