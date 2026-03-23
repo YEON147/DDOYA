@@ -5,11 +5,14 @@ import * as ImagePicker from 'expo-image-picker';
 import { ScreenContainer } from '@/src/components/common/ScreenContainer';
 import { TopHeader } from '@/src/components/common/TopHeader';
 import { CaptureGuideScreenLayout } from '@/src/components/common/CaptureGuideScreenLayout';
-
+import { useSupplementCreateStore } from '@/src/store/supplementCreateStore';
+ 
 const REGISTER_GUIDE_IMAGE = require('../../../../assets/images/ocr_example.jpg');
 
 export default function SupplementCreateScreen() {
   const router = useRouter();
+  const setIngredientLabelUri = useSupplementCreateStore((s) => s.setIngredientLabelUri);
+  const setOcrResult = useSupplementCreateStore((s) => s.setOcrResult);
 
   const handleCapture = async () => {
     if (Platform.OS === 'web') {
@@ -24,16 +27,19 @@ export default function SupplementCreateScreen() {
       }
       const result = await ImagePicker.launchCameraAsync({
         mediaTypes: ['images'],
-        quality: 0.85,
+        quality: 0.55,
         allowsEditing: false,
       });
       if (result.canceled) return;
-      const uri = result.assets[0]?.uri;
+      const asset = result.assets[0];
+      const uri = asset?.uri;
       if (!uri) {
         Alert.alert('오류', '촬영 결과를 불러오지 못했습니다.');
         return;
       }
-      router.push('/(tabs)/(profile)/supplements/pill' as never);
+      setOcrResult(null);
+      setIngredientLabelUri(uri, asset.mimeType ?? null);
+      router.push('/supplements/label-preview' as never);
     } catch {
       Alert.alert('오류', '촬영에 실패했습니다. 다시 시도해 주세요.');
     }

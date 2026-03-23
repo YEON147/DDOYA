@@ -18,7 +18,10 @@ export type {
   SupplementCreateRequest,
   OcrResult,
   OcrIngredient,
+  IngredientAnalyzePayload,
+  IngredientAnalyzeIngredientDto,
 } from './supplement';
+export { ingredientAnalyzeToOcrResult } from './supplement';
 
 // Success Wrapper
 export interface SuccessResponse<T> {
@@ -28,7 +31,7 @@ export interface SuccessResponse<T> {
 
 // Intake Schedule
 export interface IntakeScheduleItem {
-  userSupplementScheduleId: number;
+  scheduleId: number | null;
   intakeTime: string; // HH:mm
 }
 
@@ -72,7 +75,7 @@ export interface SupplementUpdateRequest {
   stockQuantity: number;
   stockNotificationEnabled: boolean;
   intakeSchedules: {
-    userSupplementScheduleId?: number | null;
+    scheduleId?: number | null;
     intakeTime: string;
   }[];
 }

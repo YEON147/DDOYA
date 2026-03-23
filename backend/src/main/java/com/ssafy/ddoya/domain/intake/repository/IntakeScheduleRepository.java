@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * 섭취 일정(IntakeSchedule) 엔티티에 대한 데이터 액세스 처리를 담당하는 레포지토리 인터페이스입니다.
@@ -61,4 +62,14 @@ public interface IntakeScheduleRepository extends JpaRepository<IntakeSchedule, 
      * @return 섭취 일정 리스트
      */
     List<IntakeSchedule> findAllByScheduleType(ScheduleType scheduleType);
+
+    /**
+     * 특정 사용자에게 할당된 특정 일정 유형의 스케줄을 조회합니다.
+     * 약 챙김 알림(CARRY)조회 시 사용됩니다.
+     *
+     * @param userId       사용자 ID
+     * @param scheduleType 일정 유형
+     * @return 조회된 섭취 일정 (Optional)
+     */
+    Optional<IntakeSchedule> findByUser_UserIdAndScheduleType(Long userId, ScheduleType scheduleType);
 }

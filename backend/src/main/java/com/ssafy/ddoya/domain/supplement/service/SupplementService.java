@@ -827,4 +827,27 @@ public class SupplementService {
                 .intakeSchedules(scheduleDtos)
                 .build();
     }
+    /**
+     * 특정 사용자가 등록한 영양제의 재구매 알림 수신 여부를 수정합니다.
+     *
+     * @param userId           사용자 ID
+     * @param userSupplementId 영양제 ID
+     * @param enabled          알림 수신 여부
+     * @return 수정 결과 응답 DTO
+     */
+    @Transactional
+    public SupplementStockNotificationUpdateResponse updateStockNotificationSetting(
+            Long userId, Long userSupplementId, boolean enabled) {
+        
+        SupplementInventory inventory = supplementInventoryRepository
+                .findBySupplement_UserSupplementIdAndSupplement_User_UserId(userSupplementId, userId)
+                .orElseThrow(() -> CustomException.notFound("해당 영양제 또는 재고 정보를 찾을 수 없거나 권한이 없습니다."));
+
+        inventory.updateStockAlertEnabled(enabled);
+
+        return SupplementStockNotificationUpdateResponse.builder()
+                .userSupplementId(userSupplementId)
+                .stockNotificationEnabled(inventory.isStockAlertEnabled())
+                .build();
+    }
 }

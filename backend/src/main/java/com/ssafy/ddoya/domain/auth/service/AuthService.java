@@ -5,6 +5,7 @@ import com.ssafy.ddoya.domain.auth.dto.SignUpResponseDto;
 import com.ssafy.ddoya.domain.auth.dto.RefreshTokenResponseDto;
 import com.ssafy.ddoya.domain.auth.entity.RefreshToken;
 import com.ssafy.ddoya.domain.auth.repository.RefreshTokenRepository;
+import com.ssafy.ddoya.domain.notification.service.NotificationSettingService;
 import com.ssafy.ddoya.domain.user.entity.User;
 import com.ssafy.ddoya.domain.user.repository.UserRepository;
 import com.ssafy.ddoya.domain.user.service.UserIntakeTimingSettingService;
@@ -26,6 +27,7 @@ public class AuthService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final JwtUtil jwtUtil;
     private final UserIntakeTimingSettingService userIntakeTimingSettingService;
+    private final NotificationSettingService notificationSettingService;
 
     @Transactional
     public void logout(Long  userId) {
@@ -115,6 +117,12 @@ public class AuthService {
 
         // 기본 섭취 시점 데이터 자동 생성 (BEFORE_BREAKFAST ~ BEFORE_SLEEP)
         userIntakeTimingSettingService.createDefaultSettings(savedUser);
+
+        // 기본 알림 설정 데이터 자동 생성 (모두 허용 상태)
+        notificationSettingService.createDefaultNotificationSetting(savedUser);
+
+        // 기본 약 챙김 알림 스케줄 생성 (20:00)
+        notificationSettingService.createDefaultCarrySchedule(savedUser);
 
         return SignUpResponseDto.from(savedUser);
     }

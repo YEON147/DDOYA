@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * SupplementInventory 엔티티에 대한 데이터 액세스 처리를 담당하는 레포지토리입니다.
@@ -31,4 +32,14 @@ public interface SupplementInventoryRepository extends JpaRepository<SupplementI
     @Modifying
     @Query("DELETE FROM SupplementInventory i WHERE i.supplement.userSupplementId IN :supplementIds")
     void deleteBySupplementIds(@Param("supplementIds") List<Long> supplementIds);
+
+    /**
+     * 특정 사용자 소유의 영양제에 대한 재고 정보를 조회합니다.
+     *
+     * @param userSupplementId 영양제 ID
+     * @param userId 사용자 ID
+     * @return 조회된 재고 정보를 담은 Optional
+     */
+    Optional<SupplementInventory> findBySupplement_UserSupplementIdAndSupplement_User_UserId(
+            Long userSupplementId, Long userId);
 }
