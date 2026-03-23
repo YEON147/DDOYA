@@ -32,8 +32,12 @@ pipeline {
                 checkout scm
                 sh '''
                     set -e
+                    if command -v git-lfs >/dev/null 2>&1 || git lfs version >/dev/null 2>&1; then
                     git lfs install
                     git lfs pull || true
+                    else
+                    echo "git-lfs is not installed. Skipping LFS pull."
+                    fi
                     git rev-parse --short HEAD
                 '''
             }
