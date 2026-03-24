@@ -25,6 +25,18 @@ import {
 import { useReport } from '@/hooks/useReport';
 
 const line = `${colors.shadowDark}44`;
+const BODY_PART_IMAGE_BY_ID = {
+  1: require('../../../../assets/images/bodypart/뇌 · 신경계.png'),
+  2: require('../../../../assets/images/bodypart/눈 · 귀 · 구강.png'),
+  3: require('../../../../assets/images/bodypart/심장 · 혈관 · 혈액.png'),
+  4: require('../../../../assets/images/bodypart/폐 · 호흡기.png'),
+  5: require('../../../../assets/images/bodypart/위 · 장 · 소화기관.png'),
+  6: require('../../../../assets/images/bodypart/간 · 췌장 · 담낭.png'),
+  7: require('../../../../assets/images/bodypart/신장 · 방광 · 요로.png'),
+  8: require('../../../../assets/images/bodypart/뼈 · 관절 · 근육.png'),
+  9: require('../../../../assets/images/bodypart/피부 · 모발 · 손톱.png'),
+} as const;
+const DEFAULT_BODY_PART_IMAGE = BODY_PART_IMAGE_BY_ID[1];
 
 const smallNeuBtn = (disabled?: boolean) => [
   neuRaised(14, colors.input),
@@ -50,6 +62,8 @@ export default function SupplementDetailScreen() {
   // States
   const [alias, setAlias] = useState('');
   const [pillImageUrl, setPillImageUrl] = useState('');
+  const [bodyPartId, setBodyPartId] = useState<number | null>(null);
+  const [pillImageLoadFailed, setPillImageLoadFailed] = useState(false);
   const [dailyDose, setDailyDose] = useState(1);
   const [dosePerIntake, setDosePerIntake] = useState(1);
   const [stockQuantity, setStockQuantity] = useState(0);
@@ -64,6 +78,8 @@ export default function SupplementDetailScreen() {
     if (supplement) {
       setAlias(supplement.alias);
       setPillImageUrl(supplement.pillImageUrl);
+      setBodyPartId(typeof supplement.bodyPartId === 'number' ? supplement.bodyPartId : null);
+      setPillImageLoadFailed(false);
       
       // Determine daily dose: Priority to Report if specified
       let initialDose = supplement.dailyDose;
@@ -183,6 +199,10 @@ export default function SupplementDetailScreen() {
   };
 
   if (detailLoading || !supplement) return null;
+  const bodyPartImageSource =
+    (bodyPartId && BODY_PART_IMAGE_BY_ID[bodyPartId as keyof typeof BODY_PART_IMAGE_BY_ID]) ||
+    DEFAULT_BODY_PART_IMAGE;
+  const useRemotePillImage = !!pillImageUrl?.trim() && !pillImageLoadFailed;
 
   return (
     <ScreenContainer
@@ -213,20 +233,21 @@ export default function SupplementDetailScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View className="mb-1 items-center pb-6">
-          {pillImageUrl?.trim() ? (
+          {useRemotePillImage ? (
             <Image
               source={{ uri: pillImageUrl }}
               className="mb-3 h-[104px] w-[104px] rounded-2xl"
               style={{ backgroundColor: colors.input }}
               resizeMode="cover"
+              onError={() => setPillImageLoadFailed(true)}
             />
           ) : (
-            <View
-              className="mb-3 h-[104px] w-[104px] items-center justify-center rounded-2xl"
+            <Image
+              source={bodyPartImageSource}
+              className="mb-3 h-[104px] w-[104px] rounded-2xl"
               style={{ backgroundColor: colors.input, borderWidth: 1, borderColor: `${colors.shadowDark}33` }}
-            >
-              <AppIcon icon={Pill} size={28} color={colors.textMuted} />
-            </View>
+              resizeMode="cover"
+            />
           )}
           <Text
             className="px-4 text-center text-[16px] font-scdream-medium leading-6"
