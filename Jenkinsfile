@@ -298,7 +298,7 @@ pipeline {
         }
     }
 
-    post {
+    post { 
         success {
             echo "Deployment successful. Build #${env.BUILD_NUMBER}"
         }
