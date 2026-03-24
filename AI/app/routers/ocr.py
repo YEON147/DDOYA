@@ -4,7 +4,7 @@ from sqlalchemy import text
 from app.services.ocr_service import call_clova_ocr
 from app.services.ocr_parser import parse_ocr_result, calculate_confidence
 from app.services.openai_service import analyze_supplement_label, determine_body_part_id
-from app.db import get_db
+from app.core.deps import get_db
 import tempfile
 import os
 
