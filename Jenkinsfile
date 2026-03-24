@@ -242,31 +242,36 @@ pipeline {
                     echo "Current compose status:"
                     docker compose --env-file "${RUNTIME_ENV_FILE}" -f "${COMPOSE_FILE}" ps || true
 
-                    retry_http() {
-                        local url="$1"
-                        local max_retry="$2"
-                        local sleep_sec="$3"
-                        local i=1
-
-                        while [ "$i" -le "$max_retry" ]; do
-                            echo "Checking ${url} (${i}/${max_retry})"
-                            if curl -fsS "$url" > /dev/null; then
-                                echo "Health check success: ${url}"
-                                return 0
-                            fi
-                            sleep "$sleep_sec"
-                            i=$((i + 1))
-                        done
-
-                        echo "Health check failed after retries: ${url}"
-                        return 1
-                    }
-
-                    # 백엔드 검증 (사소한 에러 무시를 위해 || true 처리 또는 set +e 환경 활용)
-                    retry_http "http://127.0.0.1:8080/actuator/health" 24 5 || exit 1
+                    echo "Verifying Backend..."
+                    B_OK=0
+                    for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
+                        if curl -fsS "http://127.0.0.1:8080/actuator/health" > /dev/null; then
+                            echo "Backend is Healthy!"
+                            B_OK=1
+                            break
+                        fi
+                        sleep 5
+                    done
+                    if [ "$B_OK" -eq 0 ]; then
+                        echo "Backend failed to become healthy."
+                        exit 1
+                    fi
 
                     if grep -q '^AI_IMAGE=' "${RUNTIME_ENV_FILE}"; then
-                        retry_http "http://127.0.0.1:8000/health" 24 5 || exit 1
+                        echo "Verifying AI..."
+                        A_OK=0
+                        for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
+                            if curl -fsS "http://127.0.0.1:8000/health" > /dev/null; then
+                                echo "AI is Healthy!"
+                                A_OK=1
+                                break
+                            fi
+                            sleep 5
+                        done
+                        if [ "$A_OK" -eq 0 ]; then
+                            echo "AI failed to become healthy."
+                            exit 1
+                        fi
                     fi
                 '''
             }
