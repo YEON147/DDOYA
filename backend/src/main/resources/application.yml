@@ -14,6 +14,7 @@ spring:
 
   jpa:
     show-sql: false
+    open-in-view: false
     properties:
       hibernate:
         format_sql: true
@@ -49,3 +50,8 @@ logging:
   level:
     root: INFO
     com.ssafy.ddoya: INFO
+
+notification:
+  scheduler:
+    carry-enabled: true
+    intake-enabled: true

@@ -3,8 +3,11 @@ package com.ssafy.ddoya.domain.notification.scheduler;
 import com.ssafy.ddoya.domain.notification.service.NotificationProcessorService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+
+import jakarta.annotation.PostConstruct;
 
 import java.time.LocalTime;
 
@@ -13,10 +16,20 @@ import java.time.LocalTime;
  */
 @Slf4j
 @Component
+@ConditionalOnProperty(
+    prefix = "notification.scheduler",
+    name = "carry-enabled",
+    havingValue = "true"
+)
 @RequiredArgsConstructor
 public class CarryNotificationScheduler {
 
     private final NotificationProcessorService notificationProcessorService;
+
+    @PostConstruct
+    public void init() {
+        log.info("[챙김 알림 스케줄러 활성화됨]");
+    }
 
     /**
      * 매 1분마다(0초 기준) 실행되어 현재 시각에 설정된 챙김 알림을 발송합니다.
