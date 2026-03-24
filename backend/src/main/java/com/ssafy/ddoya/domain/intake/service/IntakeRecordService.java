@@ -11,6 +11,7 @@ import com.ssafy.ddoya.domain.supplement.entity.Supplement;
 import com.ssafy.ddoya.domain.supplement.entity.SupplementInventory;
 import com.ssafy.ddoya.domain.supplement.repository.SupplementInventoryRepository;
 import com.ssafy.ddoya.global.exception.CustomException;
+import com.ssafy.ddoya.global.util.FastApiUploadUtils;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -312,22 +313,12 @@ public class IntakeRecordService {
         MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
 
         try {
-            // MultipartFile → ByteArrayResource 변환
-            // RestTemplate multipart 요청 시 Resource 타입을 사용해야 파일로 인식됨
-            ByteArrayResource resource = new ByteArrayResource(imageFile.getBytes()) {
-                // 파일명을 반환하도록 override
-                @Override
-                public String getFilename() {
-                    return imageFile.getOriginalFilename() != null ? imageFile.getOriginalFilename() : "verify.jpg";
-                }
-            };
-
-            // multipart body에 파일 추가
-            body.add("file", resource);
+            // FastAPI 기준 필수 필드명인 "file" 고정 적용 및 유틸 메서드를 통한 파일 변환 처리
+            body.add("file", FastApiUploadUtils.convertToResource(imageFile));
             // ObjectMapper로 FastApiVerifyRequest를 JSON으로 말아서 전송
             body.add("expected_items", objectMapper.writeValueAsString(request.getExpectedItems()));
-        } catch (IOException e) {
-            throw new CustomException(HttpStatus.INTERNAL_SERVER_ERROR, "이미지 파일 처리 실패");
+        } catch (Exception e) {
+            throw new CustomException(HttpStatus.INTERNAL_SERVER_ERROR, "업로드 파일 변환 또는 JSON 직렬화에 실패했습니다.");
         }
 
         // 요청 body + header를 하나의 HttpEntity로 묶음
