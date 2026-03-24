@@ -13,6 +13,6 @@ torch
 transformers
 ultralytics
 pillow
-...
 sqlalchemy
 pymysql
+cryptography
