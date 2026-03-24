@@ -30,12 +30,6 @@ public class Product {
     @Column(name = "manufacturer", length = 200)
     private String manufacturer;
 
-    @Column(name = "serving_size", length = 50)
-    private String servingSize;
-
-    @Column(name = "daily_serving", length = 10)
-    private String dailyServing;
-
     @Column(name = "calcium", precision = 10, scale = 2)
     private BigDecimal calcium;
 
@@ -62,15 +56,13 @@ public class Product {
 
     @Builder
     private Product(String productCode, String productName, String productType, String manufacturer,
-            String servingSize, String dailyServing, BigDecimal calcium, BigDecimal iron,
+            BigDecimal calcium, BigDecimal iron,
             BigDecimal vitaminA, BigDecimal vitaminC, BigDecimal vitaminD,
             BigDecimal thiamin, BigDecimal riboflavin, BigDecimal niacin) {
         this.productCode = productCode;
         this.productName = productName;
         this.productType = productType;
         this.manufacturer = manufacturer;
-        this.servingSize = servingSize;
-        this.dailyServing = dailyServing;
         this.calcium = calcium;
         this.iron = iron;
         this.vitaminA = vitaminA;
