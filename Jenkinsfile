@@ -239,7 +239,7 @@ pipeline {
             }
         }
 
-        stage('Persist Current Tags') {
+        stage('Persist Current Tags') { 
             steps {
                 sh '''#!/usr/bin/env bash
                     set -Eeuo pipefail
