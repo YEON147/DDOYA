@@ -110,7 +110,16 @@ export default function MyInfoScreen() {
   };
 
   return (
-    <ScreenContainer scrollable={false} padding={0} header={<TopHeader title="내 정보" />}>
+    <ScreenContainer
+      scrollable={false}
+      padding={0}
+      header={
+        <TopHeader
+          // title="내 정보"
+          title=""
+        />
+      }
+    >
       <ScrollView
         className="flex-1"
         style={{ backgroundColor: colors.background }}

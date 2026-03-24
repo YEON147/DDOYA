@@ -135,7 +135,8 @@ export default function SupplementsScreen() {
     <ScreenContainer scrollable={false} padding={0}
       header={
         <TopHeader
-          title="영양제 관리"
+          // title="영양제 관리"
+          title=""
           right={
             <TouchableOpacity
               onPress={() => router.push('/supplements/create')}

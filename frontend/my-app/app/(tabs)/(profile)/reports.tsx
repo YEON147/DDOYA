@@ -65,7 +65,14 @@ export default function ReportsScreen() {
 
   if (isLoading) {
     return (
-      <ScreenContainer header={<TopHeader title="리포트" />}>
+      <ScreenContainer
+        header={
+          <TopHeader
+            // title="리포트"
+            title=""
+          />
+        }
+      >
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
@@ -76,7 +83,14 @@ export default function ReportsScreen() {
   const report = reportResponse?.data.data;
 
   return (
-    <ScreenContainer header={<TopHeader title="리포트" />}>
+    <ScreenContainer
+      header={
+        <TopHeader
+          // title="리포트"
+          title=""
+        />
+      }
+    >
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 40 }}

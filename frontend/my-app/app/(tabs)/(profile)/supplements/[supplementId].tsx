@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
+  TextInput,
   TouchableOpacity,
   Image,
   ScrollView,
@@ -165,7 +166,7 @@ export default function SupplementDetailScreen() {
     }, {
       onSuccess: () => {
         Alert.alert('성공', '수정사항이 저장되었습니다.');
-        router.replace('/(tabs)/(profile)/supplements' as any);
+        router.back();
       },
       onError: () => {
         Alert.alert('오류', '저장에 실패했습니다.');
@@ -210,16 +211,12 @@ export default function SupplementDetailScreen() {
       padding={0}
       header={
         <TopHeader
-          title="영양제 상세"
+          // title="영양제 상세"
+          title=""
           right={
             <View className="flex-row items-center">
-              <TouchableOpacity onPress={handleDelete} className="mr-4">
+              <TouchableOpacity onPress={handleDelete}>
                 <AppIcon icon={Trash2} size={24} color="#ef4444" />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={handleSave}>
-                <Text className="font-bold text-lg" style={{ color: colors.primary }}>
-                  저장
-                </Text>
               </TouchableOpacity>
             </View>
           }
@@ -236,7 +233,7 @@ export default function SupplementDetailScreen() {
           {useRemotePillImage ? (
             <Image
               source={{ uri: pillImageUrl }}
-              className="mb-3 h-[104px] w-[104px] rounded-2xl"
+              className="mb-5 h-[124px] w-[124px] rounded-2xl"
               style={{ backgroundColor: colors.input }}
               resizeMode="cover"
               onError={() => setPillImageLoadFailed(true)}
@@ -244,18 +241,27 @@ export default function SupplementDetailScreen() {
           ) : (
             <Image
               source={bodyPartImageSource}
-              className="mb-3 h-[104px] w-[104px] rounded-2xl"
+              className="mb-8 h-[124px] w-[124px] rounded-2xl"
               style={{ backgroundColor: colors.input, borderWidth: 1, borderColor: `${colors.shadowDark}33` }}
               resizeMode="cover"
             />
           )}
-          <Text
-            className="px-4 text-center text-[16px] font-scdream-medium leading-6"
-            style={{ color: colors.text }}
-            numberOfLines={2}
-          >
-            {alias}
-          </Text>
+          <View className="w-full px-4">
+            <TextInput
+              value={alias}
+              onChangeText={setAlias}
+              placeholder="별칭을 입력해 주세요"
+              placeholderTextColor={`${colors.textMuted}88`}
+              className="rounded-2xl px-4 py-3 text-center text-[16px] font-scdream-medium"
+              style={{
+                color: colors.text,
+                backgroundColor: colors.input,
+                borderWidth: 1,
+                borderColor: `${colors.shadowDark}44`,
+              }}
+              maxLength={24}
+            />
+          </View>
         </View>
 
         <Text className="mb-1.5 text-[12px] font-scdream tracking-wide" style={{ color: colors.textMuted }}>
@@ -280,36 +286,7 @@ export default function SupplementDetailScreen() {
 
         <Text
           className="mb-1.5 mt-7 text-[12px] font-scdream tracking-wide"
-          style={{ color: colors.textMuted }}
-        >
-          재고 관리
-        </Text>
-        <View className="border-b py-3.5" style={{ borderColor: line }}>
-          <View className="flex-row items-center justify-between">
-            <Text className="text-[14px] font-scdream" style={{ color: colors.text }}>
-              현재 재고
-            </Text>
-            <View className="flex-row items-center gap-2">
-              <Text className="text-[21px] font-scdream-bold" style={{ color: colors.text }}>
-                {stockQuantity}
-              </Text>
-            </View>
-          </View>
-        </View>
-        <View className="flex-row items-center justify-between border-b py-3.5" style={{ borderColor: line }}>
-          <Text className="text-[14px] font-scdream" style={{ color: colors.text }}>
-            재고 알림
-          </Text>
-          <Switch
-            value={stockNotificationEnabled}
-            onValueChange={setStockNotificationEnabled}
-            trackColor={{ false: '#d1d5db', true: colors.primary }}
-          />
-        </View>
-
-        <Text
-          className="mb-1 mt-7 text-[12px] font-scdream tracking-wide"
-          style={{ color: colors.textMuted }}
+          style={{ color: colors.textMuted, alignSelf: 'flex-start' }}
         >
           섭취 시점
         </Text>
@@ -324,12 +301,16 @@ export default function SupplementDetailScreen() {
               setPickerVisible(true);
             }}
           >
-            <Text className="text-[14px] font-scdream" style={{ color: colors.text }}>
+            <Text className="text-[15px] font-scdream" style={{ color: colors.text }}>
               {index + 1}회차
             </Text>
             <View className="flex-row items-center">
               <Text
-                className="mr-1 text-[14px] font-scdream-medium"
+                className={
+                  schedule.intakeTime
+                    ? 'mr-1 text-[18px] font-scdream-bold'
+                    : 'mr-1 text-[18px] font-scdream-medium'
+                }
                 style={{ color: schedule.intakeTime ? colors.text : `${colors.textMuted}99` }}
               >
                 {schedule.intakeTime || '선택'}
@@ -339,8 +320,59 @@ export default function SupplementDetailScreen() {
           </TouchableOpacity>
         ))}
 
-        <View className="h-8" />
+        <Text
+          className="mb-1.5 mt-7 text-[12px] font-scdream tracking-wide"
+          style={{ color: colors.textMuted, alignSelf: 'flex-start' }}
+        >
+          재고 관리
+        </Text>
+        <View className="border-b py-3.5" style={{ borderColor: line }}>
+          <View className="flex-row items-center justify-between">
+            <Text className="text-[15px] font-scdream" style={{ color: colors.text }}>
+              현재 재고
+            </Text>
+            <View className="w-[80px] items-end pr-8">
+              <Text className="text-[18px] font-scdream-bold" style={{ color: colors.text }}>
+                {stockQuantity}
+              </Text>
+            </View>
+          </View>
+        </View>
+        <View className="flex-row items-center justify-between border-b py-3.5" style={{ borderColor: line }}>
+          <Text className="text-[15px] font-scdream" style={{ color: colors.text }}>
+            재고 알림
+          </Text>
+          <View className="pr-4">
+            <Switch
+              value={stockNotificationEnabled}
+              onValueChange={setStockNotificationEnabled}
+              trackColor={{ false: '#d1d5db', true: colors.primary }}
+            />
+          </View>
+        </View>
+
+        <View className="h-10" />
       </ScrollView>
+
+      <View
+        className="px-7 pb-6 pt-3"
+        style={{
+          backgroundColor: colors.background,
+          borderTopWidth: 1,
+          borderColor: line,
+        }}
+      >
+        <TouchableOpacity
+          onPress={handleSave}
+          activeOpacity={0.9}
+          className="h-12 items-center justify-center rounded-2xl"
+          style={{ backgroundColor: colors.primary }}
+        >
+          <Text className="text-[16px] font-scdream-bold" style={{ color: '#ffffff' }}>
+            저장
+          </Text>
+        </TouchableOpacity>
+      </View>
 
       <TimePicker
         isVisible={pickerVisible}
@@ -375,7 +407,7 @@ export default function SupplementDetailScreen() {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingHorizontal: 22,
+    paddingHorizontal: 26,
     paddingTop: 34,
     paddingBottom: 24,
   },
