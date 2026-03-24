@@ -238,36 +238,35 @@ pipeline {
 
         stage('Verify Deployment') {
             steps {
-                sh '''#!/usr/bin/env bash
-                    set -Eeuo pipefail
+                sh '''
+                    echo "Current compose status:"
+                    docker compose --env-file "${RUNTIME_ENV_FILE}" -f "${COMPOSE_FILE}" ps || true
 
                     retry_http() {
-                    url="$1"
-                    max_retry="$2"
-                    sleep_sec="$3"
-                    i=1
+                        local url="$1"
+                        local max_retry="$2"
+                        local sleep_sec="$3"
+                        local i=1
 
-                    while [ "$i" -le "$max_retry" ]; do
-                        echo "Checking ${url} (${i}/${max_retry})"
-                        if curl -fsS "$url" > /dev/null; then
-                        echo "Health check success: ${url}"
-                        return 0
-                        fi
-                        sleep "$sleep_sec"
-                        i=$((i + 1))
-                    done
+                        while [ "$i" -le "$max_retry" ]; do
+                            echo "Checking ${url} (${i}/${max_retry})"
+                            if curl -fsS "$url" > /dev/null; then
+                                echo "Health check success: ${url}"
+                                return 0
+                            fi
+                            sleep "$sleep_sec"
+                            i=$((i + 1))
+                        done
 
-                    echo "Health check failed after retries: ${url}"
-                    return 1
+                        echo "Health check failed after retries: ${url}"
+                        return 1
                     }
 
-                    echo "Current compose status:"
-                    docker compose --env-file "${RUNTIME_ENV_FILE}" -f "${COMPOSE_FILE}" ps
-
-                    retry_http "http://127.0.0.1:8080/actuator/health" 24 5
+                    # 백엔드 검증 (사소한 에러 무시를 위해 || true 처리 또는 set +e 환경 활용)
+                    retry_http "http://127.0.0.1:8080/actuator/health" 24 5 || exit 1
 
                     if grep -q '^AI_IMAGE=' "${RUNTIME_ENV_FILE}"; then
-                    retry_http "http://127.0.0.1:8000/health" 24 5
+                        retry_http "http://127.0.0.1:8000/health" 24 5 || exit 1
                     fi
                 '''
             }
