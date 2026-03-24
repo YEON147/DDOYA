@@ -37,6 +37,9 @@ app:
   fastapi:
     url: ${FASTAPI_URL:http://localhost:8000}
     mock_enabled: ${FASTAPI_MOCK_ENABLED} # fastApi 준비 완료 시 제거
+  firebase:
+    config:
+      path: firebase/firebase-service-key.json
   timezone: Asia/Seoul
 
 server:
