@@ -74,7 +74,6 @@ public class NotificationController {
                 request.getUserId(),
                 request.getTitle(),
                 request.getBody(),
-                request.getNotificationType(),
                 request.getData()
         );
         
