@@ -15,7 +15,7 @@ def detect_pills(image: np.ndarray, model_registry) -> list[dict]:
     """
     results = model_registry.yolo_model.predict(
         source=image,
-        conf=getattr(model_registry, "yolo_conf_threshold", 0.25),
+        conf=getattr(model_registry, "yolo_conf_threshold", 0.7),
         verbose=False,
     )
 

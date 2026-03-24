@@ -125,6 +125,29 @@ def run_verify(
             results=None,
         )
 
+    detected_total_amount = len(filtered_detections)
+    expected_total_amount = sum(int(item.dose_per_intake) for item in expected_items)
+
+    # 핵심 변경:
+    # YOLO 최종 검출 개수가 예상 총 개수 이상이면
+    # 분류 없이 dose_per_intake 그대로 반환
+    if detected_total_amount >= expected_total_amount:
+        direct_results = [
+            VerifyResultItem(
+                user_supplement_id=item.user_supplement_id,
+                dose_per_intake=int(item.dose_per_intake),
+                detected_amount=int(item.dose_per_intake),
+            )
+            for item in expected_items
+        ]
+
+        return VerifyResponse(
+            success=True,
+            message="",
+            results=direct_results,
+        )
+
+    # YOLO 검출 개수가 부족한 경우에만 분류 수행
     reference_candidates = []
     for item in expected_items:
         bundle = load_reference_bundle(item.pill_reference_embedding_path)
