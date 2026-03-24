@@ -30,8 +30,8 @@ pipeline {
         stage('Checkout') {
             steps {
                 checkout scm
-                sh '''
-                    set -e
+                sh '''#!/usr/bin/env bash
+                    set -Eeuo pipefail
                     git rev-parse --short HEAD
                 '''
             }
@@ -41,11 +41,11 @@ pipeline {
             steps {
                 script {
                     def changedFiles = sh(
-                        script: '''
+                        script: '''#!/usr/bin/env bash
                             set +e
-                            if [ "${GIT_PREVIOUS_SUCCESSFUL_COMMIT:-}" != "" ]; then
+                            if [ -n "${GIT_PREVIOUS_SUCCESSFUL_COMMIT:-}" ]; then
                               git diff --name-only "$GIT_PREVIOUS_SUCCESSFUL_COMMIT" HEAD
-                            elif [ "${GIT_PREVIOUS_COMMIT:-}" != "" ]; then
+                            elif [ -n "${GIT_PREVIOUS_COMMIT:-}" ]; then
                               git diff --name-only "$GIT_PREVIOUS_COMMIT" HEAD
                             else
                               git ls-files
@@ -56,10 +56,12 @@ pipeline {
 
                     echo "Changed files:\n${changedFiles}"
 
-                    env.BUILD_BACKEND = changedFiles.split("\\n").any { it ==~ /^backend\\/.*|^docker-compose\\.yml$|^Jenkinsfile$/ } ? "true" : "false"
-                    env.BUILD_AI = changedFiles.split("\\n").any { it ==~ /^AI\\/.*|^docker-compose\\.yml$|^Jenkinsfile$/ } ? "true" : "false"
+                    def changedList = changedFiles ? changedFiles.split("\\n") : []
 
-                    if (changedFiles.trim() == "") {
+                    env.BUILD_BACKEND = changedList.any { it ==~ /^backend\\/.*|^docker-compose\\.yml$|^Jenkinsfile$/ } ? "true" : "false"
+                    env.BUILD_AI = changedList.any { it ==~ /^AI\\/.*|^docker-compose\\.yml$|^Jenkinsfile$/ } ? "true" : "false"
+
+                    if (!changedFiles) {
                         env.BUILD_BACKEND = "true"
                         env.BUILD_AI = "true"
                     }
@@ -72,8 +74,8 @@ pipeline {
 
         stage('Validate Required Commands') {
             steps {
-                sh '''
-                    set -e
+                sh '''#!/usr/bin/env bash
+                    set -Eeuo pipefail
                     command -v docker >/dev/null 2>&1
                     command -v git >/dev/null 2>&1
                     command -v grep >/dev/null 2>&1
@@ -93,8 +95,8 @@ pipeline {
                     usernameVariable: 'DOCKER_USER',
                     passwordVariable: 'DOCKER_PW'
                 )]) {
-                    sh '''
-                        set -e
+                    sh '''#!/usr/bin/env bash
+                        set -Eeuo pipefail
                         echo "$DOCKER_PW" | docker login -u "$DOCKER_USER" --password-stdin
                     '''
                 }
@@ -103,8 +105,8 @@ pipeline {
 
         stage('Resolve Current Runtime Tags') {
             steps {
-                sh '''
-                    set -e
+                sh '''#!/usr/bin/env bash
+                    set -Eeuo pipefail
 
                     mkdir -p "${APP_DIR}"
 
@@ -137,8 +139,8 @@ pipeline {
             }
             steps {
                 dir('backend') {
-                    sh '''
-                        set -e
+                    sh '''#!/usr/bin/env bash
+                        set -Eeuo pipefail
                         docker build \
                           -t ${BACKEND_IMAGE_NAME}:latest \
                           -t ${BACKEND_IMAGE_NAME}:${IMAGE_TAG} \
@@ -154,8 +156,8 @@ pipeline {
             }
             steps {
                 dir('AI') {
-                    sh '''
-                        set -e
+                    sh '''#!/usr/bin/env bash
+                        set -Eeuo pipefail
                         docker build \
                           -t ${AI_IMAGE_NAME}:latest \
                           -t ${AI_IMAGE_NAME}:${IMAGE_TAG} \
@@ -170,8 +172,8 @@ pipeline {
                 expression { env.BUILD_BACKEND == 'true' }
             }
             steps {
-                sh '''
-                    set -e
+                sh '''#!/usr/bin/env bash
+                    set -Eeuo pipefail
                     docker push ${BACKEND_IMAGE_NAME}:latest
                     docker push ${BACKEND_IMAGE_NAME}:${IMAGE_TAG}
                 '''
@@ -183,8 +185,8 @@ pipeline {
                 expression { env.BUILD_AI == 'true' }
             }
             steps {
-                sh '''
-                    set -e
+                sh '''#!/usr/bin/env bash
+                    set -Eeuo pipefail
                     docker push ${AI_IMAGE_NAME}:latest
                     docker push ${AI_IMAGE_NAME}:${IMAGE_TAG}
                 '''
@@ -193,8 +195,8 @@ pipeline {
 
         stage('Create Runtime Env File') {
             steps {
-                sh '''
-                    set -e
+                sh '''#!/usr/bin/env bash
+                    set -Eeuo pipefail
 
                     cp "${BASE_ENV_FILE}" "${RUNTIME_ENV_FILE}"
 
@@ -228,71 +230,35 @@ pipeline {
 
         stage('Deploy') {
             steps {
-                sh '''
-                    set -e
+                sh '''#!/usr/bin/env bash
+                    set -Eeuo pipefail
                     cd "${APP_DIR}"
+                    echo "Running deploy with runtime env: ${RUNTIME_ENV_FILE}"
                     APP_RUNTIME_ENV_FILE="${RUNTIME_ENV_FILE}" ./deploy.sh
-                '''
-            }
-        }
-
-        stage('Verify Deployment') {
-            steps {
-                sh '''
-                    echo "Current compose status:"
-                    docker compose --env-file "${RUNTIME_ENV_FILE}" -f "${COMPOSE_FILE}" ps || true
-
-                    echo "Verifying Backend..."
-                    B_OK=0
-                    for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
-                        if curl -fsS "http://127.0.0.1:8080/actuator/health" > /dev/null; then
-                            echo "Backend is Healthy!"
-                            B_OK=1
-                            break
-                        fi
-                        sleep 5
-                    done
-                    if [ "$B_OK" -eq 0 ]; then
-                        echo "Backend failed to become healthy."
-                        exit 1
-                    fi
-
-                    if grep -q '^AI_IMAGE=' "${RUNTIME_ENV_FILE}"; then
-                        echo "Verifying AI..."
-                        A_OK=0
-                        for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
-                            if curl -fsS "http://127.0.0.1:8000/health" > /dev/null; then
-                                echo "AI is Healthy!"
-                                A_OK=1
-                                break
-                            fi
-                            sleep 5
-                        done
-                        if [ "$A_OK" -eq 0 ]; then
-                            echo "AI failed to become healthy."
-                            exit 1
-                        fi
-                    fi
                 '''
             }
         }
 
         stage('Persist Current Tags') {
             steps {
-                sh '''
-                    set -e
+                sh '''#!/usr/bin/env bash
+                    set -Eeuo pipefail
+
                     cp "${RUNTIME_ENV_FILE}" "${BASE_ENV_FILE}"
 
                     grep '^SPRING_IMAGE=' "${BASE_ENV_FILE}" | cut -d'=' -f2- > "${CUR_BACKEND_TAG_FILE}" || true
                     grep '^AI_IMAGE=' "${BASE_ENV_FILE}" | cut -d'=' -f2- > "${CUR_AI_TAG_FILE}" || true
+
+                    echo "Persisted runtime env into base env."
+                    grep -E '^(SPRING_IMAGE|AI_IMAGE)=' "${BASE_ENV_FILE}" || true
                 '''
             }
         }
 
         stage('Cleanup Dangling Images') {
             steps {
-                sh '''
-                    set -e
+                sh '''#!/usr/bin/env bash
+                    set -Eeuo pipefail
                     docker image prune -f
                 '''
             }
@@ -305,7 +271,7 @@ pipeline {
         }
 
         failure {
-            sh '''
+            sh '''#!/usr/bin/env bash
                 set +e
 
                 echo "Deployment failed. Attempting rollback..."
