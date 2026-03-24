@@ -21,17 +21,17 @@ public class NotificationFacade {
     /**
      * 프론트 단 등에서 관리자 권한 없이 단숨에 푸시 기능을 QA 테스트해 볼 수 있도록 열어둔 메서드입니다.
      */
-    public void sendTestNotification(Long userId, String title, String body, Map<String, String> data) {
+    public boolean sendTestNotification(Long userId, String title, String body, Map<String, String> data) {
         Map<String, String> payload = data != null ? new HashMap<>(data) : new HashMap<>();
         payload.put("notificationType", NotificationType.TEST.name());
         
-        pushNotificationService.sendToUser(userId, title, body, NotificationType.TEST, payload);
+        return pushNotificationService.sendToUser(userId, title, body, NotificationType.TEST, payload);
     }
     
     /**
      * 영양제 섭취 알림
      */
-    public void sendIntakeReminder(Long userId, Long scheduleId, Long intakeRecordId, String supplementName) {
+    public boolean sendIntakeReminder(Long userId, Long scheduleId, Long intakeRecordId, String supplementName) {
         String title = "복용 알림";
         String body = supplementName + " 복용할 시간이에요.";
         Map<String, String> data = Map.of(
@@ -39,25 +39,25 @@ public class NotificationFacade {
                 "scheduleId", String.valueOf(scheduleId),
                 "intakeRecordId", String.valueOf(intakeRecordId)
         );
-        pushNotificationService.sendToUser(userId, title, body, NotificationType.INTAKE, data);
+        return pushNotificationService.sendToUser(userId, title, body, NotificationType.INTAKE, data);
     }
 
     /**
-     * 챙김 알림 (외출 전)
+     * 챙김 알림
      */
-    public void sendCarryReminder(Long userId) {
+    public boolean sendCarryReminder(Long userId) {
         String title = "영양제 챙김 알림";
         String body = "외출 전 영양제를 챙겨주세요.";
         Map<String, String> data = Map.of(
                 "notificationType", NotificationType.CARRY.name()
         );
-        pushNotificationService.sendToUser(userId, title, body, NotificationType.CARRY, data);
+        return pushNotificationService.sendToUser(userId, title, body, NotificationType.CARRY, data);
     }
 
     /**
      * 재구매 알림 (재고 임계치 이하 도달 시)
      */
-    public void sendRepurchaseReminder(Long userId, Long userSupplementId, String supplementName, Integer stockQuantity) {
+    public boolean sendRepurchaseReminder(Long userId, Long userSupplementId, String supplementName, Integer stockQuantity) {
         String title = "재구매 알림";
         String body = supplementName + " 재고가 " + stockQuantity + "개 남았어요.";
         Map<String, String> data = Map.of(
@@ -65,6 +65,6 @@ public class NotificationFacade {
                 "userSupplementId", String.valueOf(userSupplementId),
                 "stockQuantity", String.valueOf(stockQuantity)
         );
-        pushNotificationService.sendToUser(userId, title, body, NotificationType.REPURCHASE, data);
+        return pushNotificationService.sendToUser(userId, title, body, NotificationType.REPURCHASE, data);
     }
 }
