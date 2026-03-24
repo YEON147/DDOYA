@@ -1,60 +1,67 @@
 import { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, TextInput, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { ScreenContainer } from '@/src/components/common/ScreenContainer';
 import { TopHeader } from '@/src/components/common/TopHeader';
 import { colors } from '@/constants/theme/colors';
+import { neuInset } from '@/constants/theme/neumorphism';
 import { useUserProfileStore } from '@/src/store/userProfileStore';
+import { AppButton } from '@/src/components/common/AppButton';
 
 export default function MyInfoWeightScreen() {
   const weightKg = useUserProfileStore((s) => s.profile.weightKg);
   const setProfile = useUserProfileStore((s) => s.setProfile);
-  const [value, setValue] = useState(weightKg);
+  const [value, setValue] = useState(String(weightKg ?? ''));
+  const isValid = value.trim().length > 0 && !Number.isNaN(Number(value));
 
   const handleSave = () => {
-    if (!value.trim()) {
+    if (!isValid) {
       Alert.alert('몸무게', '몸무게를 입력해주세요.');
       return;
     }
-    setProfile({ weightKg: value.trim() });
+    setProfile({ weightKg: Number(value) });
     router.back();
   };
 
   return (
-    <ScreenContainer scrollable={false} padding={0} header={<TopHeader title="몸무게 변경" />}>
-      <View className="flex-1 px-6 pt-8">
-        <Text className="mb-3 text-[13px] font-scdream" style={{ color: colors.text }}>
-          몸무게
-        </Text>
-        <View className="relative">
-          <TextInput
-            value={value}
-            onChangeText={setValue}
-            placeholder="몸무게를 입력해주세요"
-            keyboardType="numeric"
-            placeholderTextColor={colors.textMuted}
-            className="rounded-2xl px-4 py-4 pr-14 text-[15px] font-scdream"
-            style={{ backgroundColor: colors.surfaceWarm, color: colors.text }}
-          />
-          <Text
-            className="absolute right-4 top-1/2 -translate-y-2 text-[14px] font-scdream"
-            style={{ color: colors.textMuted }}
-          >
-            kg
+    <ScreenContainer
+      scrollable={false}
+      padding={0}
+      header={
+        <TopHeader
+          // title="몸무게 변경"
+          title=""
+        />
+      }
+    >
+      <View className="flex-1 w-full items-center px-6 pb-6 pt-6">
+        <View className="w-full max-w-[340px] flex-1">
+          <Text className="mb-2 ml-1 text-[12px] font-scdream tracking-wide" style={{ color: colors.textMuted }}>
+            몸무게 변경
           </Text>
-        </View>
-
-        <View className="mt-auto pb-8">
-          <TouchableOpacity
+          <View className="px-4" style={neuInset(16)}>
+            <View className="relative">
+              <TextInput
+                className="h-[52px] w-full pr-11 text-[15px] font-scdream"
+                style={{ color: colors.text }}
+                placeholderTextColor={colors.textMuted}
+                placeholder="몸무게를 입력해주세요"
+                keyboardType="numeric"
+                value={value}
+                onChangeText={(text) => setValue(text.replace(/[^0-9.]/g, ''))}
+              />
+              <Text className="absolute right-1 top-[16px] text-[14px] font-scdream" style={{ color: colors.textMuted }}>
+                kg
+              </Text>
+            </View>
+          </View>
+          <AppButton
+            title="저장"
+            variant={isValid ? 'primary' : 'disabled'}
             onPress={handleSave}
-            activeOpacity={0.85}
-            className="items-center rounded-full py-4"
-            style={{ backgroundColor: colors.text }}
-          >
-            <Text className="text-[16px] font-scdream-medium" style={{ color: '#FFFFFF' }}>
-              저장
-            </Text>
-          </TouchableOpacity>
+            disabled={!isValid}
+            className="mt-auto h-[56px] w-full"
+          />
         </View>
       </View>
     </ScreenContainer>
