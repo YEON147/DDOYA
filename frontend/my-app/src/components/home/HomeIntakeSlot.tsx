@@ -3,6 +3,7 @@ import { Camera } from 'lucide-react-native';
 import { colors } from '@/constants/theme/colors';
 import { neuInset, neuRaised } from '@/constants/theme/neumorphism';
 import { AppIcon } from '@/src/components/common/AppIcon';
+import { useSupplementsList } from '@/hooks/useSupplement';
 
 export type HomeIntakeSlotProps = {
   timeLabel: string;
