@@ -92,4 +92,28 @@ public interface IntakeRecordRepository extends JpaRepository<IntakeRecord, Long
             @Param("start") LocalDateTime start, 
             @Param("end") LocalDateTime end
     );
+
+    /**
+     * 현재 시각 기준 섭취 알림(첫 알림 및 재시도) 대상이 되는 섭취 기록들을 조회합니다.
+     * 당일(00:00:00) 이후의 미복용 기록들만 대상으로 한정합니다.
+     * N+1 방지를 위해 사용자 및 알림 설정, 영양제 정보까지 페치 조인합니다.
+     * 
+     * @param now 현재 시각
+     * @param startOfDay 오늘 자정(00:00:00) 시각
+     * @return 섭취 알림 대상 목록
+     */
+    @Query("""
+        SELECT ir FROM IntakeRecord ir
+        JOIN FETCH ir.schedule s
+        JOIN FETCH s.user u
+        JOIN FETCH u.notificationSetting ns
+        LEFT JOIN FETCH s.supplement supp
+        WHERE ir.status = com.ssafy.ddoya.domain.intake.entity.IntakeStatus.MISSED
+          AND ir.plannedAt >= :startOfDay
+          AND ir.plannedAt <= :now
+          AND ns.intakeNotificationEnabled = true
+    """)
+    List<IntakeRecord> findIntakeReminders(
+            @Param("now") LocalDateTime now,
+            @Param("startOfDay") LocalDateTime startOfDay);
 }

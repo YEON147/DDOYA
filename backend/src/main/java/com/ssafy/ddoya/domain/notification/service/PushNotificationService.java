@@ -5,6 +5,7 @@ import com.google.firebase.messaging.Message;
 import com.google.firebase.messaging.Notification;
 import com.ssafy.ddoya.domain.notification.entity.DeviceToken;
 import com.ssafy.ddoya.domain.notification.enums.NotificationType;
+import com.ssafy.ddoya.domain.notification.enums.PushSendResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -25,14 +26,14 @@ public class PushNotificationService {
 
     /**
      * 특정 사용자 식별자(PK)를 받아서, 현재 살아있는 모든 기기로 알림을 브로드캐스팅합니다.
-     * @return 등록된 기기 중 하나라도 발송에 성공하면 true, 모두 실패하거나 기기가 없으면 false
+     * @return 발송 최종 결과 (성공/기기없음/실패)
      */
-    public boolean sendToUser(Long userId, String title, String body, NotificationType type, Map<String, String> data) {
+    public PushSendResult sendToUser(Long userId, String title, String body, NotificationType type, Map<String, String> data) {
         List<DeviceToken> activeTokens = deviceTokenService.getActiveTokens(userId);
 
         if (activeTokens.isEmpty()) {
-            log.info("푸시 알림 대상 스킵: 해당 사용자는({userId={}})는 활성화된 푸시 알림 기기가 존재하지 않습니다.", userId);
-            return false;
+            log.info("[푸시 알림 스킵] userId={} - 활성 기기 없음", userId);
+            return PushSendResult.NO_ACTIVE_DEVICE;
         }
 
         boolean overallSuccess = false;
@@ -42,7 +43,9 @@ public class PushNotificationService {
                 overallSuccess = true;
             }
         }
-        return overallSuccess;
+        
+        // 정책: 하나라도 성공하면 SUCCESS, 모두 실패하면 FAILED 반환
+        return overallSuccess ? PushSendResult.SUCCESS : PushSendResult.FAILED;
     }
 
     /**

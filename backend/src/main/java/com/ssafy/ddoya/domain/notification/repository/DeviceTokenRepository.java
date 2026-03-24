@@ -19,6 +19,12 @@ public interface DeviceTokenRepository extends JpaRepository<DeviceToken, Long> 
     List<DeviceToken> findAllByUser_UserIdAndIsActiveTrue(Long userId);
 
     /**
+     * 특정 사용자 목록(IDs)에 등록되어 있는 모든 활성화된 기기 토큰 목록을 반환합니다.
+     * 한 번의 쿼리로 여러 사용자의 토큰들을 벌크 조회할 때 사용됩니다.
+     */
+    List<DeviceToken> findAllByUser_UserIdInAndIsActiveTrue(java.util.Collection<Long> userIds);
+
+    /**
      * 입력받은 고유 FCM 토큰을 가진 기기 정보를 찾습니다. (가입/갱신 시 중복 체크용)
      */
     Optional<DeviceToken> findByFcmToken(String fcmToken);
