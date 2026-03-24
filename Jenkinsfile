@@ -238,35 +238,36 @@ pipeline {
 
         stage('Verify Deployment') {
             steps {
-                sh '''
-                    set -e
+                sh '''#!/usr/bin/env bash
+                    set -Eeuo pipefail
 
                     retry_http() {
-                      local url="$1"
-                      local max_retry="$2"
-                      local sleep_sec="$3"
-                      local i=1
+                    url="$1"
+                    max_retry="$2"
+                    sleep_sec="$3"
+                    i=1
 
-                      while [ "$i" -le "$max_retry" ]; do
+                    while [ "$i" -le "$max_retry" ]; do
                         echo "Checking ${url} (${i}/${max_retry})"
                         if curl -fsS "$url" > /dev/null; then
-                          echo "Health check success: ${url}"
-                          return 0
+                        echo "Health check success: ${url}"
+                        return 0
                         fi
                         sleep "$sleep_sec"
                         i=$((i + 1))
-                      done
+                    done
 
-                      echo "Health check failed after retries: ${url}"
-                      return 1
+                    echo "Health check failed after retries: ${url}"
+                    return 1
                     }
 
+                    echo "Current compose status:"
                     docker compose --env-file "${RUNTIME_ENV_FILE}" -f "${COMPOSE_FILE}" ps
 
                     retry_http "http://127.0.0.1:8080/actuator/health" 24 5
 
                     if grep -q '^AI_IMAGE=' "${RUNTIME_ENV_FILE}"; then
-                      retry_http "http://127.0.0.1:8000/health" 24 5
+                    retry_http "http://127.0.0.1:8000/health" 24 5
                     fi
                 '''
             }
