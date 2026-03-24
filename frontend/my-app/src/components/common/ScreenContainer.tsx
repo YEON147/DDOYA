@@ -9,6 +9,7 @@ type ScreenContainerProps = {
   header?: ReactNode;
   padding?: number;
   contentContainerStyle?: StyleProp<ViewStyle>;
+  scrollRef?: React.RefObject<ScrollView | null>;
 };
 
 export function ScreenContainer({
@@ -17,6 +18,7 @@ export function ScreenContainer({
   header,
   padding = 18,
   contentContainerStyle,
+  scrollRef,
 }: ScreenContainerProps) {
   const baseContentStyle = {
     padding,
@@ -38,6 +40,7 @@ export function ScreenContainer({
     <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }}>
       {header}
       <ScrollView
+        ref={scrollRef}
         className="flex-1"
         style={{ backgroundColor: colors.background }}
         contentContainerStyle={[baseContentStyle, contentContainerStyle]}
