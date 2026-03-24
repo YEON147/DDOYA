@@ -102,6 +102,9 @@ public class SupplementController {
 
         // 알약 이미지 Embedding 추출 요청
         FastApiEmbeddingResponse pillReferenceEmbeddingResult = supplementService.pillImageEmbedding(pillImg);
+        log.debug("[registerSupplement] pillReferenceEmbeddingResult.isSuccess={}", pillReferenceEmbeddingResult.isSuccess());
+        log.debug("[registerSupplement] pillReferenceEmbeddingResult.getPillReferenceEmbeddingPath={}", pillReferenceEmbeddingResult.getPillReferenceEmbeddingPath());
+        log.debug("[registerSupplement] pillReferenceEmbeddingResult.getMessage={}", pillReferenceEmbeddingResult.getMessage());
 
         // 최종 영양제 및 성분 정보 저장
         SupplementRegisterResponse result = supplementService.registerSupplement(userId, pillImg, request,
@@ -197,5 +200,29 @@ public class SupplementController {
 
         SupplementUpdateResponse result = supplementService.updateSupplement(userId, supplementId, request);
         return ResponseEntity.ok(SuccessResponse.of("영양제 정보를 수정했습니다.", result));
+    }
+
+    /**
+     * 특정 영양제의 재구매 알림 수신 여부를 수정합니다.
+     *
+     * @param userDetails 인증된 사용자 정보
+     * @param userSupplementId 수정할 영양제 ID
+     * @param request 수정할 정보 요청 DTO
+     * @return 수정된 알림 설정 결과 응답 DTO
+     */
+    @PatchMapping("/{userSupplementId}/stock-notification-settings")
+    public ResponseEntity<SuccessResponse<SupplementStockNotificationUpdateResponse>> updateStockNotificationSetting(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long userSupplementId,
+            @Valid @RequestBody SupplementStockNotificationUpdateRequest request) {
+
+        if (userDetails == null || userDetails.getUser() == null) {
+            throw CustomException.unauthorized("인증된 사용자 정보가 없습니다.");
+        }
+        Long userId = userDetails.getUser().getUserId();
+
+        SupplementStockNotificationUpdateResponse result = 
+                supplementService.updateStockNotificationSetting(userId, userSupplementId, request.getEnabled());
+        return ResponseEntity.ok(SuccessResponse.of("특정 영양제 재구매 알림 설정이 변경되었습니다.", result));
     }
 }

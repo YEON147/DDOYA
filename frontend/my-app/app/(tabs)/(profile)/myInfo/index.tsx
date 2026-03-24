@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Pressable, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { User, Users, CalendarDays, Ruler, Dumbbell, type LucideIcon } from 'lucide-react-native';
 import { ScreenContainer } from '@/src/components/common/ScreenContainer';
@@ -53,11 +53,20 @@ type ActionRowProps = {
 
 function ActionRow({ label, destructive, onPress }: ActionRowProps) {
   return (
-    <TouchableOpacity
+    <Pressable
       onPress={onPress}
-      activeOpacity={0.8}
-      className="flex-row items-center justify-between border-b py-4"
-      style={{ borderColor: line }}
+      style={({ pressed }) => [
+        {
+          width: '100%',
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          borderBottomWidth: 1,
+          borderBottomColor: line,
+          paddingVertical: 16,
+          opacity: pressed ? 0.75 : 1,
+        },
+      ]}
     >
       <Text
         className="text-[14px] font-scdream"
@@ -65,7 +74,7 @@ function ActionRow({ label, destructive, onPress }: ActionRowProps) {
       >
         {label}
       </Text>
-    </TouchableOpacity>
+    </Pressable>
   );
 }
 
@@ -107,6 +116,8 @@ export default function MyInfoScreen() {
         style={{ backgroundColor: colors.background }}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        removeClippedSubviews={false}
       >
         <View className="items-center pb-8 pt-2">
           <View

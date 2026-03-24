@@ -73,4 +73,23 @@ public interface IntakeRecordRepository extends JpaRepository<IntakeRecord, Long
             @Param("start") LocalDateTime start,
             @Param("end") LocalDateTime end
     );
+
+    /**
+     * 요청된 scheduleId 목록에 해당하는 IntakeRecord를 조회합니다.
+     */
+    @Query("""
+        SELECT ir FROM IntakeRecord ir 
+        JOIN FETCH ir.schedule s 
+        LEFT JOIN FETCH s.supplement 
+        WHERE s.user.userId = :userId 
+          AND s.scheduleId IN :scheduleIds
+          AND ir.plannedAt >= :start 
+          AND ir.plannedAt < :end
+    """)
+    List<IntakeRecord> findRecordsByScheduleIdsWithSupplement(
+            @Param("userId") Long userId, 
+            @Param("scheduleIds") List<Long> scheduleIds,
+            @Param("start") LocalDateTime start, 
+            @Param("end") LocalDateTime end
+    );
 }

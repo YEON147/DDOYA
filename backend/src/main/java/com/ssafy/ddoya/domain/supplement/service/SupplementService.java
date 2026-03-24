@@ -21,11 +21,11 @@ import com.ssafy.ddoya.domain.supplement.repository.SupplementRepository;
 import com.ssafy.ddoya.domain.supplement.repository.UserSupplementIngredientRepository;
 import com.ssafy.ddoya.domain.user.entity.User;
 import com.ssafy.ddoya.global.exception.CustomException;
+import com.ssafy.ddoya.global.util.FastApiUploadUtils;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.ByteArrayResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.*;
@@ -37,16 +37,13 @@ import org.springframework.util.unit.DataSize;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static java.nio.file.Files.write;
 import static java.util.Collections.emptyList;
-import static java.util.UUID.randomUUID;
 import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
 
 /**
@@ -66,11 +63,10 @@ public class SupplementService {
     private String fastApiUrl;
 
     // fastApi 준비 완료 시 제거
-    @Value("${app.fastapi.mock_enabled:true}")
+    @Value("${app.fastapi.mock_enabled:false}")
     private boolean isFastApiMockEnabled;
 
-    // S3 준비 완료 시 주석 해제
-    // private final ImageStorageService imageStorageService;
+    private final ImageStorageService imageStorageService;
     private final SupplementRepository supplementRepository;
     private final UserSupplementIngredientRepository userSupplementIngredientRepository;
     private final SupplementInventoryRepository supplementInventoryRepository;
@@ -305,13 +301,14 @@ public class SupplementService {
 
         return FastApiEmbeddingResponse.builder()
                 .success(isSuccess)
+                .pillReferenceEmbeddingPath(fastApiEmbeddingResponse.getPillReferenceEmbeddingPath())
                 .message(message)
                 .build();
     }
 
     /**
      * 이미지를 FastAPI 서버로 전송합니다.
-     * Multi-Value Map을 활용하여 Multipart 요청을 수행합니다.
+     * 공통 유틸인 FastApiUploadUtils를 사용하여 "file" 키 규칙을 준수합니다.
      */
     private <T> T postImageToFastApi(String url, MultipartFile imageFile, Class<T> responseType) {
         // HTTP 요청 헤더 생성
@@ -321,37 +318,20 @@ public class SupplementService {
         // multipart/form-data 요청 body 생성
         MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
 
-        try {
-            // MultipartFile → ByteArrayResource 변환
-            // RestTemplate multipart 요청 시 Resource 타입을 사용해야 파일로 인식됨
-            ByteArrayResource resource = new ByteArrayResource(imageFile.getBytes()) {
-                // 파일명을 반환하도록 override
-                // 일부 서버에서는 filename이 없으면 파일 파싱을 못할 수 있음
-                @Override
-                public String getFilename() {
-                    return imageFile.getOriginalFilename() != null ? imageFile.getOriginalFilename() : "image.jpg";
-                }
-            };
-
-            // multipart body에 파일 추가
-            // FastAPI에서 받을 필드명이 "image" 이므로 동일하게 설정
-            body.add("image", resource);
-        } catch (IOException e) {
-            throw new CustomException(INTERNAL_SERVER_ERROR, "이미지 파일 읽기 실패");
-        }
+        // FastAPI 기준 필수 필드명인 "file"로 변경
+        // MultipartFile -> 온전한 Resource 포맷 변환 (422 오류 제거)
+        body.add("file", FastApiUploadUtils.convertToResource(imageFile));
 
         // 요청 body + header를 하나의 HttpEntity로 묶음
         HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
 
         try {
             // FastAPI API 호출
-            // 요청: multipart/form-data (image 파일)
-            // 응답: responseType에 해당하는 DTO로 매핑
             ResponseEntity<T> responseEntity = restTemplate.postForEntity(url, requestEntity, responseType);
             return responseEntity.getBody();
         } catch (Exception e) {
             log.error("FastAPI 호출 실패. url={}", url, e);
-            throw new CustomException(HttpStatus.INTERNAL_SERVER_ERROR, "FastAPI 서버 호출 실패");
+            throw new CustomException(INTERNAL_SERVER_ERROR, "FastAPI 서버 호출 실패");
         }
     }
 
@@ -533,21 +513,8 @@ public class SupplementService {
                 }
             }
 
-            // S3 준비 완료 시 주석 해제
-            // --- [S3 저장 로직] ---
-            // return imageStorageService.upload(toStore, "supplements/pill", ext);
-
-            // S3 준비 완료 시 제거
-            // --- [로컬 저장 로직 (테스트용)] ---
-            String filename = randomUUID() + "." + ext;
-            File directory = new File("uploads/supplements/pill");
-            if (!directory.exists()) {
-                directory.mkdirs();
-            }
-            write(new File(directory, filename).toPath(), toStore);
-            return "/uploads/supplements/pill/" + filename;
-            // ────────────────────────────────────
-
+            // S3 저장 로직
+            return imageStorageService.upload(toStore, "supplements/pill", ext);
         } catch (IOException e) {
             throw new CustomException(INTERNAL_SERVER_ERROR, "이미지 처리 중 오류가 발생했습니다.");
         }
@@ -825,6 +792,30 @@ public class SupplementService {
                 .stockQuantity(inventory.getStockQuantity())
                 .stockNotificationEnabled(inventory.isStockAlertEnabled())
                 .intakeSchedules(scheduleDtos)
+                .build();
+    }
+
+    /**
+     * 특정 사용자가 등록한 영양제의 재구매 알림 수신 여부를 수정합니다.
+     *
+     * @param userId           사용자 ID
+     * @param userSupplementId 영양제 ID
+     * @param enabled          알림 수신 여부
+     * @return 수정 결과 응답 DTO
+     */
+    @Transactional
+    public SupplementStockNotificationUpdateResponse updateStockNotificationSetting(
+            Long userId, Long userSupplementId, boolean enabled) {
+
+        SupplementInventory inventory = supplementInventoryRepository
+                .findBySupplement_UserSupplementIdAndSupplement_User_UserId(userSupplementId, userId)
+                .orElseThrow(() -> CustomException.notFound("해당 영양제 또는 재고 정보를 찾을 수 없거나 권한이 없습니다."));
+
+        inventory.updateStockAlertEnabled(enabled);
+
+        return SupplementStockNotificationUpdateResponse.builder()
+                .userSupplementId(userSupplementId)
+                .stockNotificationEnabled(inventory.isStockAlertEnabled())
                 .build();
     }
 }

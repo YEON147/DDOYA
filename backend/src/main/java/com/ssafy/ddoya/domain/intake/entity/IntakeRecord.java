@@ -84,4 +84,14 @@ public class IntakeRecord {
     public void reschedule(LocalDateTime plannedAt) {
         this.plannedAt = plannedAt;
     }
+
+    /**
+     * AI 분석 결과에 따른 복용 승인 시 상태를 업데이트합니다.
+     */
+    public void updateStatusToTaken(LocalDateTime actionAt) {
+        if (this.status != IntakeStatus.TAKEN) {
+            this.status = IntakeStatus.TAKEN;
+            this.actionAt = actionAt;
+        }
+    }
 }

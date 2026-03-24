@@ -58,4 +58,30 @@ public class SupplementInventory {
         this.stockQuantity = stockQuantity;
         this.stockAlertEnabled = stockAlertEnabled;
     }
+
+    /**
+     * 재고 알림 설정 여부를 수정합니다.
+     *
+     * @param enabled 수신 여부
+     */
+    public void updateStockAlertEnabled(boolean enabled) {
+        this.stockAlertEnabled = enabled;
+    }
+
+    /**
+     * 재고를 주어진 수량만큼 감소시킵니다.
+     * 단, 재고가 부족한 경우 음수로 내려가지 않도록 0으로 보정합니다.
+     * 
+     * @param amount 감소시킬 수량
+     * @return 재고가 부족하여 0으로 보정되었는지 여부 (true면 부족하여 보정됨)
+     */
+    public boolean decreaseWithFloorZero(int amount) {
+        if (this.stockQuantity < amount) {
+            this.stockQuantity = 0;
+            return true;
+        } else {
+            this.stockQuantity -= amount;
+            return false;
+        }
+    }
 }

@@ -5,6 +5,13 @@ class Settings:
     # 품질 검사
     ENABLE_QUALITY_CHECK = os.getenv("ENABLE_QUALITY_CHECK", "false").lower() == "true"
 
+    # Database Settings (Read-Only access to MySQL)
+    AI_DB_HOST = os.getenv("AI_DB_HOST", "mysql")
+    AI_DB_PORT = int(os.getenv("AI_DB_PORT", 3306))
+    AI_DB_NAME = os.getenv("AI_DB_NAME", "ddoya")
+    AI_DB_USERNAME = os.getenv("AI_DB_USERNAME", "ddoya")
+    AI_DB_PASSWORD = os.getenv("AI_DB_PASSWORD", "ddoya1234")
+
     BLUR_THRESHOLD = float(os.getenv("BLUR_THRESHOLD", 25.0))
     BRIGHTNESS_MIN = float(os.getenv("BRIGHTNESS_MIN", 15.0))
     BRIGHTNESS_MAX = float(os.getenv("BRIGHTNESS_MAX", 245.0))
