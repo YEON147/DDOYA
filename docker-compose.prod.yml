@@ -43,8 +43,9 @@ services:
       AI_DB_HOST: ${AI_DB_HOST:-mysql}
       AI_DB_PORT: ${AI_DB_PORT:-3306}
       AI_DB_NAME: ${AI_DB_NAME:-ddoya}
-      AI_DB_USERNAME: ${MYSQL_USER:-ddoya}
-      AI_DB_PASSWORD: ${MYSQL_PASSWORD:-ddoya1234}
+      AI_DB_USERNAME: ${AI_DB_USERNAME:-ddoya_ai_reader}
+      AI_DB_PASSWORD: ${AI_DB_PASSWORD:-DdoyaAiReadOnly!123}
+      DATABASE_URL: ${DATABASE_URL:-}
       YOLO_MODEL_PATH: ${YOLO_MODEL_PATH:-/app/weights/yolo_pill_best.pt}
     ports:
       - "8000:8000"
