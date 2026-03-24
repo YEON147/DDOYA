@@ -58,6 +58,8 @@ export interface SupplementListResponse {
 export interface SupplementDetailResponse {
   userSupplementId: number;
   pillImageUrl: string;
+  bodyPartId?: number;
+  bodyPartName?: string;
   alias: string;
   primaryIngredientNames: string[];
   dailyDose: number;

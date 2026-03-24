@@ -17,3 +17,33 @@ export interface IntakeRoutineUpdateRequest {
 
 export type IntakeRoutineListResponse = SuccessResponse<IntakeRoutineSettingsListResponse>;
 export type IntakeRoutineDetailResponse = SuccessResponse<IntakeRoutineSettingItem>;
+
+/** GET /intake-schedules — 일별 섭취 스케줄 */
+export type IntakeScheduleItemStatus = 'TAKEN' | 'MISSED' | 'SKIPPED';
+
+export interface DailyIntakeScheduleSlotItem {
+  scheduleId: number;
+  userSupplementId: number;
+  alias: string;
+  dosePerIntake: number;
+  intakeRecordId: number;
+  status: IntakeScheduleItemStatus;
+  actionAt: string | null;
+}
+
+export interface DailyIntakeTimeSlot {
+  intakeTime: string;
+  plannedAt: string;
+  items: DailyIntakeScheduleSlotItem[];
+}
+
+export interface DailyIntakeScheduleData {
+  targetDate: string;
+  timeSlots: DailyIntakeTimeSlot[];
+}
+
+export type DailyIntakeScheduleResponse = SuccessResponse<DailyIntakeScheduleData>;
+
+export interface DailyIntakeScheduleQuery {
+  date?: string;
+}

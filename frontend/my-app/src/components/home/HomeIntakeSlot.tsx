@@ -3,15 +3,28 @@ import { Camera } from 'lucide-react-native';
 import { colors } from '@/constants/theme/colors';
 import { neuInset, neuRaised } from '@/constants/theme/neumorphism';
 import { AppIcon } from '@/src/components/common/AppIcon';
+import type { DailyIntakeScheduleSlotItem } from '@/src/types/intakeRoutine';
 
 export type HomeIntakeSlotProps = {
   timeLabel: string;
-  placeholderCount: number;
+  items: DailyIntakeScheduleSlotItem[];
   onPressCamera?: () => void;
 };
 
-/** 홈 — 시간대별 섭취 인증 카드 (와이어프레임, 동작은 추후 연결) */
-export function HomeIntakeSlot({ timeLabel, placeholderCount, onPressCamera }: HomeIntakeSlotProps) {
+function statusStyle(status: DailyIntakeScheduleSlotItem['status']) {
+  switch (status) {
+    case 'TAKEN':
+      return { bg: `${colors.primary}22`, bar: colors.primary };
+    case 'MISSED':
+      return { bg: '#EF444422', bar: '#EF4444' };
+    case 'SKIPPED':
+    default:
+      return { bg: `${colors.shadowLight}99`, bar: `${colors.shadowDark}60` };
+  }
+}
+
+/** 홈 — 시간대별 섭취 인증 카드 */
+export function HomeIntakeSlot({ timeLabel, items, onPressCamera }: HomeIntakeSlotProps) {
   return (
     <View>
       <View
@@ -52,32 +65,51 @@ export function HomeIntakeSlot({ timeLabel, placeholderCount, onPressCamera }: H
         </View>
 
         <View className="flex-row flex-wrap">
-          {Array.from({ length: placeholderCount }).map((_, i) => (
-            <View
-              key={i}
-              className="mb-2 rounded-xl p-1.5"
-              style={[
-                neuInset(12),
-                {
-                  width: '31.5%',
-                  aspectRatio: 1,
-                  marginRight: (i + 1) % 3 === 0 ? 0 : '2.75%',
-                },
-              ]}
-            >
-              <View
-                className="mb-1.5 rounded-md"
-                style={{
-                  flex: 1,
-                  minHeight: 40,
-                  backgroundColor: `${colors.shadowLight}99`,
-                  borderWidth: 1,
-                  borderColor: `${colors.shadowDark}26`,
-                }}
-              />
-              <View className="h-2 rounded-full" style={{ backgroundColor: `${colors.shadowDark}60` }} />
-            </View>
-          ))}
+          {items.length === 0 ? (
+            <Text className="w-full py-2 text-[12px] font-scdream" style={{ color: colors.textMuted }}>
+              이 시간대에 등록된 영양제가 없어요.
+            </Text>
+          ) : (
+            items.map((item, i) => {
+              const s = statusStyle(item.status);
+              return (
+                <View
+                  key={item.intakeRecordId ?? `${item.scheduleId}-${i}`}
+                  className="mb-2 rounded-xl p-1.5"
+                  style={[
+                    neuInset(12),
+                    {
+                      width: '31.5%',
+                      aspectRatio: 1,
+                      marginRight: (i + 1) % 3 === 0 ? 0 : '2.75%',
+                    },
+                  ]}
+                >
+                  <View
+                    className="mb-1.5 flex-1 justify-center rounded-md px-1 py-0.5"
+                    style={{
+                      minHeight: 40,
+                      backgroundColor: s.bg,
+                      borderWidth: 1,
+                      borderColor: `${colors.shadowDark}26`,
+                    }}
+                  >
+                    <Text
+                      className="text-[10px] font-scdream-medium leading-tight"
+                      style={{ color: colors.text }}
+                      numberOfLines={3}
+                    >
+                      {item.alias}
+                    </Text>
+                    <Text className="mt-0.5 text-[9px] font-scdream" style={{ color: colors.textMuted }}>
+                      {item.dosePerIntake}정
+                    </Text>
+                  </View>
+                  <View className="h-2 rounded-full" style={{ backgroundColor: s.bar }} />
+                </View>
+              );
+            })
+          )}
         </View>
       </View>
     </View>

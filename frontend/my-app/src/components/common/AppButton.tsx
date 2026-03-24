@@ -1,5 +1,5 @@
 import { TouchableOpacity, Text, TouchableOpacityProps } from 'react-native';
-import { cn } from '../../lib/utils';
+import { cn } from '@/src/utils/cn';
 import { colors } from '@/constants/theme/colors';
 import { neuInset, neuRaised } from '@/constants/theme/neumorphism';
 

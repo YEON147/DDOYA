@@ -13,6 +13,15 @@ export const useSupplementsList = (page = 0, size = 50) => {
     queryKey: [...SUPPLEMENTS_LIST_KEY, page, size],
     queryFn: async () => {
       const response = await supplementApi.getSupplements(page, size);
+      const rows = (response.data.data.supplements ?? []) as unknown as Array<Record<string, unknown>>;
+      console.log(
+        '[supplements:list][bodyPart]',
+        rows.map((row) => ({
+          userSupplementId: row.userSupplementId,
+          bodyPartId: row.bodyPartId,
+          bodyPartName: row.bodyPartName,
+        }))
+      );
       return response.data.data;
     },
     enabled: hasHydrated && !!accessToken,
@@ -24,6 +33,12 @@ export const useSupplementDetail = (supplementId: number) => {
     queryKey: ['supplement', supplementId],
     queryFn: async () => {
       const response = await supplementApi.getSupplementById(supplementId);
+      const detail = response.data.data as unknown as Record<string, unknown>;
+      console.log('[supplement:detail][bodyPart]', {
+        userSupplementId: detail.userSupplementId,
+        bodyPartId: detail.bodyPartId,
+        bodyPartName: detail.bodyPartName,
+      });
       return response.data.data;
     },
     enabled: !!supplementId,

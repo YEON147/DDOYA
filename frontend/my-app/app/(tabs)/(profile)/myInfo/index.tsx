@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Pressable, Alert } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { User, Users, CalendarDays, Ruler, Dumbbell, type LucideIcon } from 'lucide-react-native';
 import { ScreenContainer } from '@/src/components/common/ScreenContainer';
@@ -53,20 +53,11 @@ type ActionRowProps = {
 
 function ActionRow({ label, destructive, onPress }: ActionRowProps) {
   return (
-    <Pressable
+    <TouchableOpacity
       onPress={onPress}
-      style={({ pressed }) => [
-        {
-          width: '100%',
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          borderBottomWidth: 1,
-          borderBottomColor: line,
-          paddingVertical: 16,
-          opacity: pressed ? 0.75 : 1,
-        },
-      ]}
+      activeOpacity={0.8}
+      className="flex-row items-center justify-between border-b py-4"
+      style={{ borderColor: line }}
     >
       <Text
         className="text-[14px] font-scdream"
@@ -74,7 +65,7 @@ function ActionRow({ label, destructive, onPress }: ActionRowProps) {
       >
         {label}
       </Text>
-    </Pressable>
+    </TouchableOpacity>
   );
 }
 
@@ -110,7 +101,16 @@ export default function MyInfoScreen() {
   };
 
   return (
-    <ScreenContainer scrollable={false} padding={0} header={<TopHeader title="내 정보" />}>
+    <ScreenContainer
+      scrollable={false}
+      padding={0}
+      header={
+        <TopHeader
+          // title="내 정보"
+          title=""
+        />
+      }
+    >
       <ScrollView
         className="flex-1"
         style={{ backgroundColor: colors.background }}
@@ -132,9 +132,6 @@ export default function MyInfoScreen() {
             numberOfLines={1}
           >
             {profile.nickname}
-          </Text>
-          <Text className="mt-1.5 text-center text-[12px] font-scdream" style={{ color: colors.textMuted }}>
-            계정에서 사용 중인 이름이에요
           </Text>
         </View>
 
