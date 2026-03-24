@@ -243,6 +243,11 @@ pipeline {
             steps {
                 sh '''#!/usr/bin/env bash
                     set -Eeuo pipefail
+                    set -x
+
+                    echo "STEP: Persist Current Tags - start"
+                    ls -l "${RUNTIME_ENV_FILE}" || true
+                    ls -l "${BASE_ENV_FILE}" || true
 
                     cp "${RUNTIME_ENV_FILE}" "${BASE_ENV_FILE}"
 
@@ -251,6 +256,8 @@ pipeline {
 
                     echo "Persisted runtime env into base env."
                     grep -E '^(SPRING_IMAGE|AI_IMAGE)=' "${BASE_ENV_FILE}" || true
+
+                    echo "STEP: Persist Current Tags - done"
                 '''
             }
         }
@@ -259,7 +266,11 @@ pipeline {
             steps {
                 sh '''#!/usr/bin/env bash
                     set -Eeuo pipefail
+                    set -x
+
+                    echo "STEP: Cleanup Dangling Images - start"
                     docker image prune -f
+                    echo "STEP: Cleanup Dangling Images - done"
                 '''
             }
         }
@@ -275,6 +286,13 @@ pipeline {
                 set +e
 
                 echo "Deployment failed. Attempting rollback..."
+
+                echo "Debug: whoami"
+                whoami || true
+
+                echo "Debug: file permissions"
+                ls -l "${BASE_ENV_FILE}" "${RUNTIME_ENV_FILE}" || true
+                ls -ld "${APP_DIR}" || true
 
                 cp "${BASE_ENV_FILE}" "${RUNTIME_ENV_FILE}"
 
