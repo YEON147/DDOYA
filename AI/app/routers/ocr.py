@@ -1,29 +1,35 @@
-from fastapi import APIRouter, UploadFile, File, Form
+from fastapi import APIRouter, UploadFile, File, Depends
+from sqlalchemy.orm import Session
+from sqlalchemy import text
 from app.services.ocr_service import call_clova_ocr
 from app.services.ocr_parser import parse_ocr_result, calculate_confidence
 from app.services.openai_service import analyze_supplement_label, determine_body_part_id
+from app.db import get_db
 import tempfile
 import os
 
 router = APIRouter()
 
 
+def load_ingredient_list(db: Session) -> list:
+    """DB에서 ingredient_id, normalized_name 목록 로드"""
+    result = db.execute(
+        text("SELECT ingredient_id, normalized_name FROM ingredient_master")
+    ).fetchall()
+    return [{"ingredient_id": row[0], "normalized_name": row[1]} for row in result]
+
+
 @router.post("/analyze")
-async def analyze_ocr(file: UploadFile = File(...)):
-    # 1. 업로드된 파일을 임시 저장
+async def analyze_ocr(file: UploadFile = File(...), db: Session = Depends(get_db)):
     with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.filename)[1]) as tmp:
         content = await file.read()
         tmp.write(content)
         tmp_path = tmp.name
 
     try:
-        # 2. Clova OCR 호출
         ocr_result = call_clova_ocr(tmp_path)
-
-        # 3. 신뢰도 계산
         confidence = calculate_confidence(ocr_result)
 
-        # 4. 신뢰도 0.5 미만이면 재촬영 요청
         if confidence < 0.5:
             return {
                 "success": False,
@@ -31,17 +37,17 @@ async def analyze_ocr(file: UploadFile = File(...)):
                 "data": None
             }
 
-        # 5. 텍스트 파싱
         texts = parse_ocr_result(ocr_result)
 
-        # 임시 텍스트 확인 코드
         print("=== LLM에 넘어가는 텍스트 ===")
         print(" ".join([t["text"] for t in texts]))
 
-        # 6. LLM으로 한번에 분석
-        llm_result = analyze_supplement_label(texts)
+        # DB 성분 목록 로드
+        ingredient_list = load_ingredient_list(db)
 
-        # 7. 신체부위 처리
+        # LLM 분석 (ingredient_id 매칭 포함)
+        llm_result = analyze_supplement_label(texts, ingredient_list)
+
         body_part_id = llm_result.get("body_part_id")
         if not body_part_id:
             body_part_id = determine_body_part_id(llm_result["ingredients"])
@@ -58,5 +64,4 @@ async def analyze_ocr(file: UploadFile = File(...)):
         }
 
     finally:
-        # 8. 임시 파일 삭제
         os.unlink(tmp_path)
