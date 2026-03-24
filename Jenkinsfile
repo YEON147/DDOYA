@@ -228,7 +228,7 @@ pipeline {
             }
         }
 
-        stage('Deploy') {
+        stage('Deploy') { 
             steps {
                 script {
                     def rc = sh(
