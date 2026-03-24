@@ -1,9 +1,12 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  LayoutChangeEvent,
   Platform,
+  ScrollView,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -36,12 +39,19 @@ export default function SupplementPillGuideScreen() {
   const [phase, setPhase] = useState<Phase>('guide');
   const [validatePhase, setValidatePhase] = useState<ValidatePhase>('idle');
   const [validateResult, setValidateResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [showInputErrors, setShowInputErrors] = useState(false);
+  const [registerInfoY, setRegisterInfoY] = useState(0);
+  const scrollRef = useRef<ScrollView | null>(null);
 
   const ocrResult = useSupplementCreateStore((s) => s.ocrResult);
   const pillImageUri = useSupplementCreateStore((s) => s.pillImageUri);
   const pillImageMimeType = useSupplementCreateStore((s) => s.pillImageMimeType);
+  const alias = useSupplementCreateStore((s) => s.alias);
+  const capacityInput = useSupplementCreateStore((s) => s.capacityInput);
+  const setAlias = useSupplementCreateStore((s) => s.setAlias);
+  const setCapacityInput = useSupplementCreateStore((s) => s.setCapacityInput);
   const setPillImageUri = useSupplementCreateStore((s) => s.setPillImageUri);
-  const buildAutoRegisterRequest = useSupplementCreateStore((s) => s.buildAutoRegisterRequest);
+  const buildCreateRequest = useSupplementCreateStore((s) => s.buildCreateRequest);
   const reset = useSupplementCreateStore((s) => s.reset);
 
   const createMutation = useCreateSupplementMutation();
@@ -51,6 +61,12 @@ export default function SupplementPillGuideScreen() {
       router.replace('/(tabs)/(profile)/supplements/create' as never);
     }
   }, [ocrResult, router]);
+
+  useEffect(() => {
+    // 등록 정보는 기본값 없이 placeholder 상태로 시작
+    setAlias('');
+    setCapacityInput('');
+  }, [setAlias, setCapacityInput]);
 
   const handleCapture = async () => {
     if (Platform.OS === 'web') {
@@ -118,13 +134,29 @@ export default function SupplementPillGuideScreen() {
     setPhase('guide');
   }, [setPillImageUri]);
 
+  const handleRetakeAndCapture = useCallback(async () => {
+    setPillImageUri(null);
+    setValidatePhase('idle');
+    setValidateResult(null);
+    await handleCapture();
+  }, [setPillImageUri]);
+
   const handleRegister = () => {
     if (!pillImageUri) return;
-    const register = buildAutoRegisterRequest();
-    if (!register) {
-      Alert.alert('등록 불가', '성분 분석 결과가 없습니다. 처음부터 다시 진행해 주세요.');
+    const isAliasValid = alias.trim().length > 0;
+    const capacityNum = Number(capacityInput);
+    const isCapacityValid = Number.isFinite(capacityNum) && capacityNum > 0;
+    const register = buildCreateRequest();
+    if (!register || !isAliasValid || !isCapacityValid) {
+      setShowInputErrors(true);
+      scrollRef.current?.scrollTo({ y: Math.max(0, registerInfoY - 16), animated: true });
       return;
     }
+
+    console.log('[supplement-register][bodyPart]', {
+      bodyPartId: register.bodyPartId,
+      bodyPartName: register.bodyPartName,
+    });
 
     createMutation.mutate(
       {
@@ -145,6 +177,10 @@ export default function SupplementPillGuideScreen() {
         },
       }
     );
+  };
+
+  const handleRegisterInfoLayout = (e: LayoutChangeEvent) => {
+    setRegisterInfoY(e.nativeEvent.layout.y);
   };
 
   if (!ocrResult) {
@@ -169,24 +205,33 @@ export default function SupplementPillGuideScreen() {
     );
   }
 
-  const topInstruction =
-    validatePhase !== 'done'
-      ? '촬영 이미지를 확인하고 등록 가능 여부를 검사하고 있어요.'
-      : validateResult && !validateResult.success
-        ? '등록 불가입니다. 알약 이미지를 재촬영해 주세요.'
-        : '등록 가능 여부 검사가 완료되었어요. 등록하기를 누르면 내 영양제제에 저장됩니다.';
+  const registerPayload = buildCreateRequest();
 
   return (
-    <ScreenContainer scrollable padding={0} header={<TopHeader title="알약 촬영" />}>
+    <ScreenContainer scrollable padding={0} header={<TopHeader title="알약 촬영" />} scrollRef={scrollRef}>
       <View className="px-6 pt-2 pb-8" style={{ backgroundColor: colors.background }}>
-        <Text className="mb-3 text-center font-scdream" style={{ color: colors.textMuted }}>
-          {topInstruction}
-        </Text>
-
         <View className="mb-4 rounded-2xl px-4 py-3" style={neuRaised(16, colors.surface)}>
-          <Text className="text-xs font-scdream-medium tracking-wide" style={{ color: colors.textMuted }}>
-            등록 가능 여부 검사
-          </Text>
+          <View className="flex-row items-center justify-between">
+            <Text className="text-xs font-scdream-medium tracking-wide" style={{ color: colors.textMuted }}>
+              등록 가능 여부 검사
+            </Text>
+            <TouchableOpacity
+              onPress={handleRetakeAndCapture}
+              disabled={createMutation.isPending || validatePhase === 'checking'}
+              activeOpacity={0.85}
+              className="rounded-full px-4 py-2"
+              style={{
+                backgroundColor: colors.point,
+                borderWidth: 1.5,
+                borderColor: `${colors.shadowDark}88`,
+                opacity: createMutation.isPending || validatePhase === 'checking' ? 0.45 : 1,
+              }}
+            >
+              <Text className="text-[13px] font-scdream-medium" style={{ color: '#FFFFFF' }}>
+                다시찍기
+              </Text>
+            </TouchableOpacity>
+          </View>
           {validatePhase === 'checking' ? (
             <View className="mt-2 flex-row items-center">
               <ActivityIndicator size="small" color={colors.point} />
@@ -219,46 +264,114 @@ export default function SupplementPillGuideScreen() {
           )}
         </View>
 
+        <View className="mb-4 rounded-2xl px-4 py-3" style={neuRaised(16, colors.surface)} onLayout={handleRegisterInfoLayout}>
+          <View className="flex-row items-center justify-between">
+            <Text className="text-xs font-scdream-medium tracking-wide" style={{ color: colors.textMuted }}>
+              등록 정보
+            </Text>
+            <Text className="text-[11px] font-scdream-medium" style={{ color: '#DC2626' }}>
+              * 필수 입력
+            </Text>
+          </View>
+          <Text className="mt-1.5 text-[11px] font-scdream" style={{ color: colors.textMuted }}>
+            아래 항목을 입력해야 등록할 수 있어요.
+          </Text>
+
+          <View className="mt-3 flex-row items-center">
+            <Text className="text-xs font-scdream" style={{ color: colors.textMuted }}>
+              별칭
+            </Text>
+            <Text className="ml-1 text-xs font-scdream-medium" style={{ color: '#DC2626' }}>
+              *
+            </Text>
+          </View>
+          <TextInput
+            value={alias}
+            onChangeText={setAlias}
+            placeholder="예: 아침 비타민"
+            placeholderTextColor={`${colors.textMuted}99`}
+            className="mt-1 rounded-xl px-3 py-2.5 text-sm font-scdream"
+            style={{
+              color: colors.text,
+              backgroundColor: colors.input,
+              borderWidth: 1,
+              borderColor: !showInputErrors || alias.trim() ? `${colors.shadowDark}55` : '#DC262688',
+            }}
+            maxLength={24}
+            editable={!createMutation.isPending}
+          />
+          {showInputErrors && !alias.trim() ? (
+            <Text className="mt-1 text-[11px] font-scdream" style={{ color: '#DC2626' }}>
+              별칭을 입력해 주세요.
+            </Text>
+          ) : null}
+
+          <View className="mt-3 flex-row items-center">
+            <Text className="text-xs font-scdream" style={{ color: colors.textMuted }}>
+              재고(정)
+            </Text>
+            <Text className="ml-1 text-xs font-scdream-medium" style={{ color: '#DC2626' }}>
+              *
+            </Text>
+          </View>
+          <TextInput
+            value={capacityInput}
+            onChangeText={(v) => setCapacityInput(v.replace(/[^0-9]/g, ''))}
+            placeholder="예: 30"
+            placeholderTextColor={`${colors.textMuted}99`}
+            className="mt-1 rounded-xl px-3 py-2.5 text-sm font-scdream"
+            style={{
+              color: colors.text,
+              backgroundColor: colors.input,
+              borderWidth: 1,
+              borderColor:
+                !showInputErrors || (Number.isFinite(Number(capacityInput)) && Number(capacityInput) > 0)
+                  ? `${colors.shadowDark}55`
+                  : '#DC262688',
+            }}
+            keyboardType="number-pad"
+            editable={!createMutation.isPending}
+          />
+          {showInputErrors && !(Number.isFinite(Number(capacityInput)) && Number(capacityInput) > 0) ? (
+            <Text className="mt-1 text-[11px] font-scdream" style={{ color: '#DC2626' }}>
+              재고는 1 이상 숫자로 입력해 주세요.
+            </Text>
+          ) : null}
+        </View>
+
         <OcrResultSummary ocrResult={ocrResult} title="등록에 포함될 성분 (OCR)" />
 
         {createMutation.isPending ? (
           <ActivityIndicator className="my-4" color={colors.point} />
         ) : null}
 
-        <TouchableOpacity
-          onPress={handleRegister}
-          disabled={
-            createMutation.isPending ||
-            !pillImageUri ||
-            validatePhase !== 'done' ||
-            !validateResult?.success
-          }
-          activeOpacity={0.9}
-          className="items-center px-6 py-3"
-          style={[
-            neuRaised(999, colors.point),
-            (
+        <View className="mt-6">
+          <TouchableOpacity
+            onPress={handleRegister}
+            disabled={
               createMutation.isPending ||
               !pillImageUri ||
               validatePhase !== 'done' ||
-              !validateResult?.success
-            ) && { opacity: 0.45 },
-          ]}
-        >
-          <Text className="font-semibold text-white">등록하기</Text>
-        </TouchableOpacity>
+              !validateResult?.success ||
+              !registerPayload
+            }
+            activeOpacity={0.9}
+            className="items-center px-6 py-3"
+            style={[
+              neuRaised(999, colors.point),
+              (
+                createMutation.isPending ||
+                !pillImageUri ||
+                validatePhase !== 'done' ||
+                !validateResult?.success ||
+                !registerPayload
+              ) && { opacity: 0.45 },
+            ]}
+          >
+            <Text className="font-semibold text-white">등록하기</Text>
+          </TouchableOpacity>
+        </View>
 
-        <TouchableOpacity
-          onPress={handleRetake}
-          disabled={createMutation.isPending}
-          activeOpacity={0.9}
-          className="mx-0 mt-4 items-center px-6 py-3"
-          style={[neuRaised(999, colors.surface), createMutation.isPending && { opacity: 0.45 }]}
-        >
-          <Text className="font-semibold" style={{ color: colors.text }}>
-            다시 촬영
-          </Text>
-        </TouchableOpacity>
       </View>
     </ScreenContainer>
   );

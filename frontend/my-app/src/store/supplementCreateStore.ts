@@ -3,7 +3,6 @@ import type { OcrResult, SupplementCreateRequest } from '@/src/types/supplement'
 
 /**
  * 영양제 등록 플로우 전용 (OCR → 알약 촬영 → 별칭·총량 입력 후 저장).
- * 목록/상세용 useSupplementStore 와 분리.
  */
 type SupplementCreateStore = {
   ocrResult: OcrResult | null;

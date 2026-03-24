@@ -22,8 +22,20 @@ export default function PasswordChangeScreen() {
   };
 
   return (
-    <ScreenContainer scrollable={false} padding={0} header={<TopHeader title="비밀번호 변경" />}>
+    <ScreenContainer
+      scrollable={false}
+      padding={0}
+      header={
+        <TopHeader
+          // title="비밀번호 변경"
+          title=""
+        />
+      }
+    >
       <View className="flex-1 px-6 pt-8">
+        <Text className="mb-2 ml-1 text-[12px] font-scdream tracking-wide" style={{ color: colors.textMuted }}>
+          비밀번호 변경
+        </Text>
         <Text className="mb-3 text-[13px] font-scdream" style={{ color: colors.text }}>
           현재 비밀번호
         </Text>

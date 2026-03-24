@@ -164,26 +164,28 @@ export default function SupplementLabelPreviewScreen() {
           </>
         )}
 
-        <TouchableOpacity
-          onPress={handleNext}
-          disabled={ocrPhase !== 'success'}
-          activeOpacity={0.9}
-          className="items-center px-6 py-3"
-          style={[neuRaised(999, colors.point), ocrPhase !== 'success' && { opacity: 0.45 }]}
-        >
-          <Text className="font-semibold text-white">다음</Text>
-        </TouchableOpacity>
+        <View className="mt-6">
+          <TouchableOpacity
+            onPress={handleNext}
+            disabled={ocrPhase !== 'success'}
+            activeOpacity={0.9}
+            className="items-center px-6 py-3"
+            style={[neuRaised(999, colors.point), ocrPhase !== 'success' && { opacity: 0.45 }]}
+          >
+            <Text className="font-semibold text-white">다음</Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          onPress={handleRetake}
-          activeOpacity={0.9}
-          className="mx-0 mt-4 items-center px-6 py-3"
-          style={neuRaised(999, colors.surface)}
-        >
-          <Text className="font-semibold" style={{ color: colors.text }}>
-            다시 촬영
-          </Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            onPress={handleRetake}
+            activeOpacity={0.9}
+            className="mx-0 mt-4 items-center px-6 py-3"
+            style={neuRaised(999, colors.surface)}
+          >
+            <Text className="font-semibold" style={{ color: colors.text }}>
+              다시 촬영
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </ScreenContainer>
   );

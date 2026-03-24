@@ -1,8 +1,9 @@
 import { Platform } from 'react-native';
 import { Redirect, Tabs, usePathname } from 'expo-router';
+import { House, UserRound } from 'lucide-react-native';
 
 import { HapticTab } from '@/src/components/common/haptic-tab';
-import { IconSymbol } from '@/src/components/ui/icon-symbol';
+import { AppIcon } from '@/src/components/common/AppIcon';
 import { colors } from '@/constants/theme/colors';
 import { useColorScheme } from '@/hooks/theme/use-color-scheme';
 import { useAuthStore } from '@/src/store/authStore';
@@ -70,18 +71,14 @@ export default function TabLayout() {
         name="(home)"
         options={{
           title: '홈',
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="house.fill" color={color} />
-          ),
+          tabBarIcon: ({ color }) => <AppIcon icon={House} size={28} color={color} />,
         }}
       />
       <Tabs.Screen
         name="(profile)"
         options={{
           title: '프로필',
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="person.fill" color={color} />
-          ),
+          tabBarIcon: ({ color }) => <AppIcon icon={UserRound} size={28} color={color} />,
         }}
       />
     </Tabs>

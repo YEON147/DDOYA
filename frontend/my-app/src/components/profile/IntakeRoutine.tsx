@@ -8,70 +8,102 @@ import { useIntakeRoutineList } from '@/hooks/useIntakeRoutine';
 export function IntakeRoutine() {
   const router = useRouter();
   const { data: routineTimes, isLoading, isError } = useIntakeRoutineList();
+  const totalCount = routineTimes?.length ?? 0;
 
   return (
     <View className="px-1">
-      <View className="px-5 py-5" style={neuRaised(24, colors.surface)}>
-        <View className="mb-3 flex-row items-center justify-between">
-          <Text className="text-[20px] font-scdream-medium" style={{ color: colors.text }}>
-            섭취 루틴
-          </Text>
-          <Pressable
-            onPress={() => router.push('/intake-routine-edit' as any)}
-            hitSlop={8}
-            style={({ pressed }) => [
-              neuInset(999, colors.input),
-              {
-                paddingHorizontal: 12,
-                paddingVertical: 7,
-                opacity: pressed ? 0.88 : 1,
-              },
-            ]}
-          >
-            <Text className="text-[14px] font-scdream" style={{ color: colors.text }}>
-              수정
+      <View className="relative overflow-hidden rounded-3xl px-5 py-5" style={neuRaised(24, colors.surface)}>
+        <Text className="my-2 text-[11px] font-scdream tracking-[1.5px]" style={{ color: colors.textMuted }}>
+          INTAKE ROUTINE
+        </Text>
+        <View className="mb-4 flex-row items-center justify-between">
+          <View className="flex-1 pr-3">
+            <Text className="text-[20px] font-scdream-medium my-2" style={{ color: colors.text }}>
+              섭취 시간
             </Text>
-          </Pressable>
+          </View>
+          <View>
+            <Pressable
+              onPress={() => router.push('/intake-routine-edit' as any)}
+              hitSlop={8}
+              style={({ pressed }) => [
+                neuInset(999, colors.input),
+                {
+                  paddingHorizontal: 13,
+                  paddingVertical: 7,
+                  opacity: pressed ? 0.88 : 1,
+                  borderWidth: 1,
+                  borderColor: `${colors.shadowDark}30`,
+                },
+              ]}
+            >
+              <Text className="text-[13px] font-scdream-medium" style={{ color: colors.text }}>
+                수정
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+        <Text className="mb-4 text-[12px] font-scdream" style={{ color: colors.textMuted }}>
+          {isLoading ? '불러오는 중…' : `설정된 시간 ${totalCount}개`}
+        </Text>
+
+        <View
+          className="flex-row items-center justify-between rounded-xl px-3 py-2"
+          style={{ borderWidth: 1, borderColor: `${colors.shadowDark}1F`, backgroundColor: `${colors.input}66` }}
+        >
+          <Text className="text-[11px] font-scdream tracking-wide" style={{ color: colors.textMuted }}>
+            섭취 구분
+          </Text>
+          <Text className="text-[11px] font-scdream tracking-wide" style={{ color: colors.textMuted }}>
+            섭취 시간
+          </Text>
         </View>
 
-        <View className="overflow-hidden rounded-2xl" style={{ borderWidth: 1, borderColor: `${colors.shadowDark}44` }}>
-          {isLoading && (
-            <View className="py-6">
-              <ActivityIndicator color={colors.primary} />
-            </View>
-          )}
+        {isLoading && (
+          <View className="py-7">
+            <ActivityIndicator color={colors.primary} />
+          </View>
+        )}
 
-          {isError && (
-            <View className="py-6 items-center">
-              <Text style={{ color: colors.textMuted }}>데이터 로드 실패</Text>
-            </View>
-          )}
+        {isError && (
+          <View className="py-7 items-center">
+            <Text className="text-[13px] font-scdream" style={{ color: colors.textMuted }}>
+              데이터 로드 실패
+            </Text>
+          </View>
+        )}
 
-          {!isLoading && !isError && routineTimes && routineTimes.length === 0 && (
-            <View className="py-6 items-center">
-              <Text style={{ color: colors.textMuted }}>설정된 루틴이 없습니다.</Text>
-            </View>
-          )}
+        {!isLoading && !isError && routineTimes && routineTimes.length === 0 && (
+          <View className="py-7 items-center">
+            <Text className="text-[13px] font-scdream" style={{ color: colors.textMuted }}>
+              설정된 루틴이 없습니다.
+            </Text>
+          </View>
+        )}
 
-          {!isLoading && !isError && routineTimes?.map((t, index) => (
-            <View
-              key={t.userIntakeTimingSettingId}
-              className="flex-row items-center justify-between px-4 py-3.5"
-              style={{
-                backgroundColor: colors.input,
-                borderBottomWidth: index === routineTimes.length - 1 ? 0 : 1,
-                borderBottomColor: `${colors.shadowDark}33`,
-              }}
-            >
-              <Text className="text-[14px] font-scdream" style={{ color: colors.textMuted }}>
-                {t.intakeTiming}
-              </Text>
-              <Text className="text-[14px] font-scdream-medium" style={{ color: colors.text }}>
+        {!isLoading && !isError && routineTimes?.map((t, index) => (
+          <View
+            key={t.userIntakeTimingSettingId}
+            className="flex-row items-center justify-between px-3 py-4"
+            style={{
+              borderBottomWidth: index === routineTimes.length - 1 ? 0 : 1,
+              borderBottomColor: `${colors.shadowDark}1E`,
+            }}
+          >
+            <Text className="text-[13px] font-scdream" style={{ color: colors.textMuted }}>
+              {t.intakeTiming}
+            </Text>
+            <View className="flex-row items-center">
+              <View
+                className="mr-3 h-2 w-2 rounded-full"
+                style={{ backgroundColor: colors.primary }}
+              />
+              <Text className="text-[15px] font-scdream-medium tracking-wide" style={{ color: colors.text }}>
                 {t.intakeTime}
               </Text>
             </View>
-          ))}
-        </View>
+          </View>
+        ))}
       </View>
     </View>
   );

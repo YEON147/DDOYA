@@ -2,7 +2,7 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { useAuthStore } from '../store/authStore';
 import { tokenService } from './token';
-  
+
 const apiClient = axios.create({
     baseURL: process.env.EXPO_PUBLIC_API_URL,
     timeout: 10000,

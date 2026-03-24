@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
+  TextInput,
   TouchableOpacity,
   Image,
   ScrollView,
@@ -10,7 +11,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronRight, Minus, Plus, Trash2 } from 'lucide-react-native';
+import { ChevronRight, Minus, Pill, Plus, Trash2 } from 'lucide-react-native';
 import { TimePicker } from '@/src/components/common/TimePicker';
 import { colors } from '@/constants/theme/colors';
 import { neuRaised } from '@/constants/theme/neumorphism';
@@ -25,6 +26,18 @@ import {
 import { useReport } from '@/hooks/useReport';
 
 const line = `${colors.shadowDark}44`;
+const BODY_PART_IMAGE_BY_ID = {
+  1: require('../../../../assets/images/bodypart/뇌 · 신경계.png'),
+  2: require('../../../../assets/images/bodypart/눈 · 귀 · 구강.png'),
+  3: require('../../../../assets/images/bodypart/심장 · 혈관 · 혈액.png'),
+  4: require('../../../../assets/images/bodypart/폐 · 호흡기.png'),
+  5: require('../../../../assets/images/bodypart/위 · 장 · 소화기관.png'),
+  6: require('../../../../assets/images/bodypart/간 · 췌장 · 담낭.png'),
+  7: require('../../../../assets/images/bodypart/신장 · 방광 · 요로.png'),
+  8: require('../../../../assets/images/bodypart/뼈 · 관절 · 근육.png'),
+  9: require('../../../../assets/images/bodypart/피부 · 모발 · 손톱.png'),
+} as const;
+const DEFAULT_BODY_PART_IMAGE = BODY_PART_IMAGE_BY_ID[1];
 
 const smallNeuBtn = (disabled?: boolean) => [
   neuRaised(14, colors.input),
@@ -50,6 +63,8 @@ export default function SupplementDetailScreen() {
   // States
   const [alias, setAlias] = useState('');
   const [pillImageUrl, setPillImageUrl] = useState('');
+  const [bodyPartId, setBodyPartId] = useState<number | null>(null);
+  const [pillImageLoadFailed, setPillImageLoadFailed] = useState(false);
   const [dailyDose, setDailyDose] = useState(1);
   const [dosePerIntake, setDosePerIntake] = useState(1);
   const [stockQuantity, setStockQuantity] = useState(0);
@@ -64,6 +79,8 @@ export default function SupplementDetailScreen() {
     if (supplement) {
       setAlias(supplement.alias);
       setPillImageUrl(supplement.pillImageUrl);
+      setBodyPartId(typeof supplement.bodyPartId === 'number' ? supplement.bodyPartId : null);
+      setPillImageLoadFailed(false);
       
       // Determine daily dose: Priority to Report if specified
       let initialDose = supplement.dailyDose;
@@ -149,7 +166,7 @@ export default function SupplementDetailScreen() {
     }, {
       onSuccess: () => {
         Alert.alert('성공', '수정사항이 저장되었습니다.');
-        router.replace('/(tabs)/(profile)/supplements' as any);
+        router.back();
       },
       onError: () => {
         Alert.alert('오류', '저장에 실패했습니다.');
@@ -183,6 +200,10 @@ export default function SupplementDetailScreen() {
   };
 
   if (detailLoading || !supplement) return null;
+  const bodyPartImageSource =
+    (bodyPartId && BODY_PART_IMAGE_BY_ID[bodyPartId as keyof typeof BODY_PART_IMAGE_BY_ID]) ||
+    DEFAULT_BODY_PART_IMAGE;
+  const useRemotePillImage = !!pillImageUrl?.trim() && !pillImageLoadFailed;
 
   return (
     <ScreenContainer
@@ -190,16 +211,12 @@ export default function SupplementDetailScreen() {
       padding={0}
       header={
         <TopHeader
-          title="영양제 상세"
+          // title="영양제 상세"
+          title=""
           right={
             <View className="flex-row items-center">
-              <TouchableOpacity onPress={handleDelete} className="mr-4">
+              <TouchableOpacity onPress={handleDelete}>
                 <AppIcon icon={Trash2} size={24} color="#ef4444" />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={handleSave}>
-                <Text className="font-bold text-lg" style={{ color: colors.primary }}>
-                  저장
-                </Text>
               </TouchableOpacity>
             </View>
           }
@@ -213,19 +230,38 @@ export default function SupplementDetailScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View className="mb-1 items-center pb-6">
-          <Image
-            source={{ uri: pillImageUrl }}
-            className="mb-3 h-[104px] w-[104px] rounded-2xl"
-            style={{ backgroundColor: colors.input }}
-            resizeMode="cover"
-          />
-          <Text
-            className="px-4 text-center text-[16px] font-scdream-medium leading-6"
-            style={{ color: colors.text }}
-            numberOfLines={2}
-          >
-            {alias}
-          </Text>
+          {useRemotePillImage ? (
+            <Image
+              source={{ uri: pillImageUrl }}
+              className="mb-5 h-[124px] w-[124px] rounded-2xl"
+              style={{ backgroundColor: colors.input }}
+              resizeMode="cover"
+              onError={() => setPillImageLoadFailed(true)}
+            />
+          ) : (
+            <Image
+              source={bodyPartImageSource}
+              className="mb-8 h-[124px] w-[124px] rounded-2xl"
+              style={{ backgroundColor: colors.input, borderWidth: 1, borderColor: `${colors.shadowDark}33` }}
+              resizeMode="cover"
+            />
+          )}
+          <View className="w-full px-4">
+            <TextInput
+              value={alias}
+              onChangeText={setAlias}
+              placeholder="별칭을 입력해 주세요"
+              placeholderTextColor={`${colors.textMuted}88`}
+              className="rounded-2xl px-4 py-3 text-center text-[16px] font-scdream-medium"
+              style={{
+                color: colors.text,
+                backgroundColor: colors.input,
+                borderWidth: 1,
+                borderColor: `${colors.shadowDark}44`,
+              }}
+              maxLength={24}
+            />
+          </View>
         </View>
 
         <Text className="mb-1.5 text-[12px] font-scdream tracking-wide" style={{ color: colors.textMuted }}>
@@ -250,36 +286,7 @@ export default function SupplementDetailScreen() {
 
         <Text
           className="mb-1.5 mt-7 text-[12px] font-scdream tracking-wide"
-          style={{ color: colors.textMuted }}
-        >
-          재고 관리
-        </Text>
-        <View className="border-b py-3.5" style={{ borderColor: line }}>
-          <View className="flex-row items-center justify-between">
-            <Text className="text-[14px] font-scdream" style={{ color: colors.text }}>
-              현재 재고
-            </Text>
-            <View className="flex-row items-center gap-2">
-              <Text className="text-[21px] font-scdream-bold" style={{ color: colors.text }}>
-                {stockQuantity}
-              </Text>
-            </View>
-          </View>
-        </View>
-        <View className="flex-row items-center justify-between border-b py-3.5" style={{ borderColor: line }}>
-          <Text className="text-[14px] font-scdream" style={{ color: colors.text }}>
-            재고 알림
-          </Text>
-          <Switch
-            value={stockNotificationEnabled}
-            onValueChange={setStockNotificationEnabled}
-            trackColor={{ false: '#d1d5db', true: colors.primary }}
-          />
-        </View>
-
-        <Text
-          className="mb-1 mt-7 text-[12px] font-scdream tracking-wide"
-          style={{ color: colors.textMuted }}
+          style={{ color: colors.textMuted, alignSelf: 'flex-start' }}
         >
           섭취 시점
         </Text>
@@ -294,12 +301,16 @@ export default function SupplementDetailScreen() {
               setPickerVisible(true);
             }}
           >
-            <Text className="text-[14px] font-scdream" style={{ color: colors.text }}>
+            <Text className="text-[15px] font-scdream" style={{ color: colors.text }}>
               {index + 1}회차
             </Text>
             <View className="flex-row items-center">
               <Text
-                className="mr-1 text-[14px] font-scdream-medium"
+                className={
+                  schedule.intakeTime
+                    ? 'mr-1 text-[18px] font-scdream-bold'
+                    : 'mr-1 text-[18px] font-scdream-medium'
+                }
                 style={{ color: schedule.intakeTime ? colors.text : `${colors.textMuted}99` }}
               >
                 {schedule.intakeTime || '선택'}
@@ -309,8 +320,59 @@ export default function SupplementDetailScreen() {
           </TouchableOpacity>
         ))}
 
-        <View className="h-8" />
+        <Text
+          className="mb-1.5 mt-7 text-[12px] font-scdream tracking-wide"
+          style={{ color: colors.textMuted, alignSelf: 'flex-start' }}
+        >
+          재고 관리
+        </Text>
+        <View className="border-b py-3.5" style={{ borderColor: line }}>
+          <View className="flex-row items-center justify-between">
+            <Text className="text-[15px] font-scdream" style={{ color: colors.text }}>
+              현재 재고
+            </Text>
+            <View className="w-[80px] items-end pr-8">
+              <Text className="text-[18px] font-scdream-bold" style={{ color: colors.text }}>
+                {stockQuantity}
+              </Text>
+            </View>
+          </View>
+        </View>
+        <View className="flex-row items-center justify-between border-b py-3.5" style={{ borderColor: line }}>
+          <Text className="text-[15px] font-scdream" style={{ color: colors.text }}>
+            재고 알림
+          </Text>
+          <View className="pr-4">
+            <Switch
+              value={stockNotificationEnabled}
+              onValueChange={setStockNotificationEnabled}
+              trackColor={{ false: '#d1d5db', true: colors.primary }}
+            />
+          </View>
+        </View>
+
+        <View className="h-10" />
       </ScrollView>
+
+      <View
+        className="px-7 pb-6 pt-3"
+        style={{
+          backgroundColor: colors.background,
+          borderTopWidth: 1,
+          borderColor: line,
+        }}
+      >
+        <TouchableOpacity
+          onPress={handleSave}
+          activeOpacity={0.9}
+          className="h-12 items-center justify-center rounded-2xl"
+          style={{ backgroundColor: colors.primary }}
+        >
+          <Text className="text-[16px] font-scdream-bold" style={{ color: '#ffffff' }}>
+            저장
+          </Text>
+        </TouchableOpacity>
+      </View>
 
       <TimePicker
         isVisible={pickerVisible}
@@ -345,7 +407,7 @@ export default function SupplementDetailScreen() {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingHorizontal: 22,
+    paddingHorizontal: 26,
     paddingTop: 34,
     paddingBottom: 24,
   },
