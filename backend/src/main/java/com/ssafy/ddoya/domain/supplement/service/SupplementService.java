@@ -37,16 +37,13 @@ import org.springframework.util.unit.DataSize;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static java.nio.file.Files.write;
 import static java.util.Collections.emptyList;
-import static java.util.UUID.randomUUID;
 import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
 
 /**
@@ -69,8 +66,7 @@ public class SupplementService {
     @Value("${app.fastapi.mock_enabled:false}")
     private boolean isFastApiMockEnabled;
 
-    // S3 준비 완료 시 주석 해제
-    // private final ImageStorageService imageStorageService;
+    private final ImageStorageService imageStorageService;
     private final SupplementRepository supplementRepository;
     private final UserSupplementIngredientRepository userSupplementIngredientRepository;
     private final SupplementInventoryRepository supplementInventoryRepository;
@@ -517,21 +513,8 @@ public class SupplementService {
                 }
             }
 
-            // S3 준비 완료 시 주석 해제
-            // --- [S3 저장 로직] ---
-            // return imageStorageService.upload(toStore, "supplements/pill", ext);
-
-            // S3 준비 완료 시 제거
-            // --- [로컬 저장 로직 (테스트용)] ---
-            String filename = randomUUID() + "." + ext;
-            File directory = new File("uploads/supplements/pill");
-            if (!directory.exists()) {
-                directory.mkdirs();
-            }
-            write(new File(directory, filename).toPath(), toStore);
-            return "/uploads/supplements/pill/" + filename;
-            // ────────────────────────────────────
-
+            // S3 저장 로직
+            return imageStorageService.upload(toStore, "supplements/pill", ext);
         } catch (IOException e) {
             throw new CustomException(INTERNAL_SERVER_ERROR, "이미지 처리 중 오류가 발생했습니다.");
         }
