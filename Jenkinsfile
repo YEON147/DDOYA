@@ -236,9 +236,8 @@ pipeline {
                         script: '''#!/usr/bin/env bash
                             set -Eeuo pipefail
                             set -x
-                            
-                            # 깃허브(젠킨스 워크스페이스)에서 최신 docker-compose.yml 파일을 EC2 운영 폴더로 복사!
-                            cp docker-compose.yml "${COMPOSE_FILE}"
+                            # 깃허브(젠킨스 워크스페이스)에서 운영전용 docker-compose.prod.yml 파일을 EC2 운영 폴더로 복사!
+                            cp docker-compose.prod.yml "${COMPOSE_FILE}"
                             
                             cd "${APP_DIR}"
                             echo "Running deploy with runtime env: ${RUNTIME_ENV_FILE}"
