@@ -10,7 +10,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronRight, Minus, Plus, Trash2 } from 'lucide-react-native';
+import { ChevronRight, Minus, Pill, Plus, Trash2 } from 'lucide-react-native';
 import { TimePicker } from '@/src/components/common/TimePicker';
 import { colors } from '@/constants/theme/colors';
 import { neuRaised } from '@/constants/theme/neumorphism';
@@ -213,12 +213,21 @@ export default function SupplementDetailScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View className="mb-1 items-center pb-6">
-          <Image
-            source={{ uri: pillImageUrl }}
-            className="mb-3 h-[104px] w-[104px] rounded-2xl"
-            style={{ backgroundColor: colors.input }}
-            resizeMode="cover"
-          />
+          {pillImageUrl?.trim() ? (
+            <Image
+              source={{ uri: pillImageUrl }}
+              className="mb-3 h-[104px] w-[104px] rounded-2xl"
+              style={{ backgroundColor: colors.input }}
+              resizeMode="cover"
+            />
+          ) : (
+            <View
+              className="mb-3 h-[104px] w-[104px] items-center justify-center rounded-2xl"
+              style={{ backgroundColor: colors.input, borderWidth: 1, borderColor: `${colors.shadowDark}33` }}
+            >
+              <AppIcon icon={Pill} size={28} color={colors.textMuted} />
+            </View>
+          )}
           <Text
             className="px-4 text-center text-[16px] font-scdream-medium leading-6"
             style={{ color: colors.text }}

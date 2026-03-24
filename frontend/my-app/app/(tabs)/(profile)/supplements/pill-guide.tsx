@@ -153,6 +153,11 @@ export default function SupplementPillGuideScreen() {
       return;
     }
 
+    console.log('[supplement-register][bodyPart]', {
+      bodyPartId: register.bodyPartId,
+      bodyPartName: register.bodyPartName,
+    });
+
     createMutation.mutate(
       {
         pillUri: pillImageUri,

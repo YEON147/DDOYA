@@ -10,7 +10,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { ChevronRight, Plus } from 'lucide-react-native';
+import { ChevronRight, Pill, Plus } from 'lucide-react-native';
 import type { SupplementSummaryDto } from '@/src/types/types';
 import { useSupplementsList } from '@/hooks/useSupplement';
 import { useAuthStore } from '@/src/store/authStore';
@@ -26,6 +26,7 @@ export default function SupplementsScreen() {
   const accessToken = useAuthStore((s) => s.accessToken);
   const { data, isLoading, isError, refetch, isRefetching } = useSupplementsList();
   const supplements = data?.supplements ?? [];
+  const [failedImageIds, setFailedImageIds] = React.useState<Record<number, true>>({});
 
   const accentPairs = [
     ['#FF8A80', '#FFD6DC'],
@@ -35,7 +36,7 @@ export default function SupplementsScreen() {
     ['#9BA7FF', '#FFD6A8'],
   ] as const;
 
-  const renderItem = ({ item }: { item: SupplementSummaryDto }) => (
+  const renderItem = ({ item, index }: { item: SupplementSummaryDto; index: number }) => (
     <TouchableOpacity
       onPress={() => router.push(`/supplements/${item.userSupplementId}`)}
       activeOpacity={0.65}
@@ -43,8 +44,8 @@ export default function SupplementsScreen() {
       style={[styles.card, { paddingHorizontal: 18, paddingVertical: 18 }]}
     >
       <View className="flex-row items-start justify-between">
-        <Text className="text-[10px] font-scdream leading-4" style={{ color: colors.textMuted }}>
-          SUPPLEMENT CARD
+        <Text className="text-[11px] font-scdream-medium leading-4" style={{ color: colors.textMuted }}>
+          {`No.${index + 1}`}
         </Text>
         <AppIcon icon={ChevronRight} size={18} color={colors.textMuted} />
       </View>
@@ -53,16 +54,33 @@ export default function SupplementsScreen() {
         className="mt-2.5 items-center justify-center overflow-hidden rounded-2xl"
         style={{ backgroundColor: colors.input, borderWidth: 1, borderColor: `${colors.shadowDark}30`, aspectRatio: 1 }}
       >
-        {item.pillImageUrl ? (
+        {item.pillImageUrl?.trim() && !failedImageIds[item.userSupplementId] ? (
           <Image
             source={{ uri: item.pillImageUrl }}
             style={{ width: '100%', height: '100%' }}
             resizeMode="cover"
+            onError={() =>
+              setFailedImageIds((prev) => ({ ...prev, [item.userSupplementId]: true }))
+            }
           />
         ) : (
-          <Text className="text-[12px] font-scdream" style={{ color: colors.textMuted }}>
-            Image
-          </Text>
+          <View className="items-center">
+            <View
+              className="items-center justify-center rounded-full"
+              style={{
+                width: 42,
+                height: 42,
+                backgroundColor: `${colors.shadowLight}AA`,
+                borderWidth: 1,
+                borderColor: `${colors.shadowDark}44`,
+              }}
+            >
+              <AppIcon icon={Pill} size={22} color={colors.textMuted} />
+            </View>
+            <Text className="mt-1.5 text-[11px] font-scdream" style={{ color: colors.textMuted }}>
+              이미지 없음
+            </Text>
+          </View>
         )}
       </View>
 
@@ -76,15 +94,18 @@ export default function SupplementsScreen() {
         </Text>
         <Text
           className="mt-1 text-[12px] font-scdream leading-4"
-          style={{ color: colors.textMuted }}
-          numberOfLines={2}
+          style={{ color: colors.textMuted, minHeight: 16 }}
+          numberOfLines={1}
+          ellipsizeMode="tail"
         >
-          {[
-            (item.primaryIngredientNames ?? []).filter(Boolean).join(' · '),
-            `재고 ${item.stockQuantity}정`,
-          ]
-            .filter(Boolean)
-            .join(' · ')}
+          {(item.primaryIngredientNames ?? []).filter(Boolean).join(' · ') || '성분 정보 없음'}
+        </Text>
+        <Text
+          className="mt-0.5 text-[12px] font-scdream leading-4"
+          style={{ color: colors.textMuted }}
+          numberOfLines={1}
+        >
+          {`재고 ${item.stockQuantity}정`}
         </Text>
       </View>
 
@@ -204,7 +225,7 @@ const styles = StyleSheet.create({
   card: {
     ...neuRaised(22, colors.surface),
     width: '48.5%',
-    aspectRatio: 0.68,
+    height: 296,
     justifyContent: 'space-between',
   },
   row: {
