@@ -230,47 +230,69 @@ pipeline {
 
         stage('Deploy') {
             steps {
-                sh '''#!/usr/bin/env bash
-                    set -Eeuo pipefail
-                    cd "${APP_DIR}"
-                    echo "Running deploy with runtime env: ${RUNTIME_ENV_FILE}"
-                    APP_RUNTIME_ENV_FILE="${RUNTIME_ENV_FILE}" ./deploy.sh
-                '''
+                script {
+                    def rc = sh(
+                        returnStatus: true,
+                        script: '''#!/usr/bin/env bash
+                            set -Eeuo pipefail
+                            set -x
+                            cd "${APP_DIR}"
+                            echo "Running deploy with runtime env: ${RUNTIME_ENV_FILE}"
+                            APP_RUNTIME_ENV_FILE="${RUNTIME_ENV_FILE}" ./deploy.sh
+                        '''
+                    )
+                    echo "Deploy stage rc=${rc}"
+                    if (rc != 0) {
+                        error("Deploy stage failed with rc=${rc}")
+                    }
+                }
             }
         }
 
-        stage('Persist Current Tags') { 
+        stage('Persist Current Tags') {
             steps {
-                sh '''#!/usr/bin/env bash
-                    set -Eeuo pipefail
-                    set -x
+                script {
+                    def rc = sh(
+                        returnStatus: true,
+                        script: '''#!/usr/bin/env bash
+                            set -Eeuo pipefail
+                            set -x
 
-                    echo "STEP: Persist Current Tags - start"
-                    ls -l "${RUNTIME_ENV_FILE}" || true
-                    ls -l "${BASE_ENV_FILE}" || true
+                            echo "STEP: Persist Current Tags - start"
+                            ls -l "${RUNTIME_ENV_FILE}" || true
+                            ls -l "${BASE_ENV_FILE}" || true
 
-                    cp "${RUNTIME_ENV_FILE}" "${BASE_ENV_FILE}"
+                            cp "${RUNTIME_ENV_FILE}" "${BASE_ENV_FILE}"
 
-                    grep '^SPRING_IMAGE=' "${BASE_ENV_FILE}" | cut -d'=' -f2- > "${CUR_BACKEND_TAG_FILE}" || true
-                    grep '^AI_IMAGE=' "${BASE_ENV_FILE}" | cut -d'=' -f2- > "${CUR_AI_TAG_FILE}" || true
+                            grep '^SPRING_IMAGE=' "${BASE_ENV_FILE}" | cut -d'=' -f2- > "${CUR_BACKEND_TAG_FILE}" || true
+                            grep '^AI_IMAGE=' "${BASE_ENV_FILE}" | cut -d'=' -f2- > "${CUR_AI_TAG_FILE}" || true
 
-                    echo "Persisted runtime env into base env."
-                    grep -E '^(SPRING_IMAGE|AI_IMAGE)=' "${BASE_ENV_FILE}" || true
+                            echo "Persisted runtime env into base env."
+                            grep -E '^(SPRING_IMAGE|AI_IMAGE)=' "${BASE_ENV_FILE}" || true
 
-                    echo "STEP: Persist Current Tags - done"
-                '''
+                            echo "STEP: Persist Current Tags - done"
+                        '''
+                    )
+                    echo "Persist Current Tags rc=${rc}"
+                    if (rc != 0) {
+                        error("Persist Current Tags failed with rc=${rc}")
+                    }
+                }
             }
         }
 
         stage('Cleanup Dangling Images') {
             steps {
                 sh '''#!/usr/bin/env bash
-                    set -Eeuo pipefail
+                    set +e
                     set -x
 
                     echo "STEP: Cleanup Dangling Images - start"
                     docker image prune -f
+                    rc=$?
+                    echo "Cleanup rc=${rc}"
                     echo "STEP: Cleanup Dangling Images - done"
+                    exit 0
                 '''
             }
         }
@@ -285,7 +307,7 @@ pipeline {
             sh '''#!/usr/bin/env bash
                 set +e
 
-                echo "Deployment failed. Attempting rollback..."
+                echo "Deployment failed. Debugging mode: rollback deploy skipped."
 
                 echo "Debug: whoami"
                 whoami || true
@@ -294,40 +316,16 @@ pipeline {
                 ls -l "${BASE_ENV_FILE}" "${RUNTIME_ENV_FILE}" || true
                 ls -ld "${APP_DIR}" || true
 
-                cp "${BASE_ENV_FILE}" "${RUNTIME_ENV_FILE}"
+                echo "Debug: previous/current tag files"
+                ls -l "${PREV_BACKEND_TAG_FILE}" "${PREV_AI_TAG_FILE}" "${CUR_BACKEND_TAG_FILE}" "${CUR_AI_TAG_FILE}" || true
 
-                prev_backend="$(cat "${PREV_BACKEND_TAG_FILE}" 2>/dev/null || true)"
-                prev_ai="$(cat "${PREV_AI_TAG_FILE}" 2>/dev/null || true)"
-
-                if [ -n "${prev_backend}" ]; then
-                  if grep -q '^SPRING_IMAGE=' "${RUNTIME_ENV_FILE}"; then
-                    sed -i "s|^SPRING_IMAGE=.*|SPRING_IMAGE=${prev_backend}|" "${RUNTIME_ENV_FILE}"
-                  else
-                    echo "SPRING_IMAGE=${prev_backend}" >> "${RUNTIME_ENV_FILE}"
-                  fi
-                fi
-
-                if [ -n "${prev_ai}" ]; then
-                  if grep -q '^AI_IMAGE=' "${RUNTIME_ENV_FILE}"; then
-                    sed -i "s|^AI_IMAGE=.*|AI_IMAGE=${prev_ai}|" "${RUNTIME_ENV_FILE}"
-                  else
-                    echo "AI_IMAGE=${prev_ai}" >> "${RUNTIME_ENV_FILE}"
-                  fi
-                fi
-
-                echo "Rollback runtime image settings:"
-                grep -E '^(SPRING_IMAGE|AI_IMAGE)=' "${RUNTIME_ENV_FILE}" || true
-
-                cd "${APP_DIR}"
-                APP_RUNTIME_ENV_FILE="${RUNTIME_ENV_FILE}" ./deploy.sh || true
-
-                echo "Recent deploy log:"
-                tail -n 100 "${DEPLOY_LOG}" || true
-
-                echo "Current compose status:"
+                echo "Debug: current compose status"
                 docker compose --env-file "${RUNTIME_ENV_FILE}" -f "${COMPOSE_FILE}" ps || true
+
+                echo "Debug: recent deploy log"
+                tail -n 100 "${DEPLOY_LOG}" || true
             '''
-            echo "Deployment failed. Rollback attempted."
+            echo "Deployment failed."
         }
 
         always {
