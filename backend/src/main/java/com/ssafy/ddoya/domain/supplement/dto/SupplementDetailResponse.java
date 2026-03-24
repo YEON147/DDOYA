@@ -53,6 +53,11 @@ public class SupplementDetailResponse {
     private Boolean stockNotificationEnabled;
 
     /**
+     * 영양제가 연결된 신체 부위 ID
+     */
+    private Byte bodyPartId;
+
+    /**
      * 설정된 섭취 스케줄 리스트
      */
     private List<IntakeScheduleDto> intakeSchedules;

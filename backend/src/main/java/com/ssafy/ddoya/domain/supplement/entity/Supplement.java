@@ -39,7 +39,7 @@ public class Supplement {
      * 영양제가 작용하는 신체 부위
      */
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "body_part_id", nullable = false)
+    @JoinColumn(name = "body_part_id", nullable = true)
     private BodyPart bodyPart;
 
     /**
