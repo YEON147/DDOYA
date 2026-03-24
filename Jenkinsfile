@@ -58,8 +58,8 @@ pipeline {
 
                     def changedList = changedFiles ? changedFiles.split("\\n") : []
 
-                    env.BUILD_BACKEND = changedList.any { it ==~ /^backend\\/.*|^docker-compose\\.yml$|^Jenkinsfile$/ } ? "true" : "false"
-                    env.BUILD_AI = changedList.any { it ==~ /^AI\\/.*|^docker-compose\\.yml$|^Jenkinsfile$/ } ? "true" : "false"
+                    env.BUILD_BACKEND = changedList.any { it ==~ /^backend\\/.*|^docker-compose\\.yml$|^docker-compose\\.prod\\.yml$|^Jenkinsfile$/ } ? "true" : "false"
+                    env.BUILD_AI = changedList.any { it ==~ /^AI\\/.*|^docker-compose\\.yml$|^docker-compose\\.prod\\.yml$|^Jenkinsfile$/ } ? "true" : "false"
 
                     if (!changedFiles) {
                         env.BUILD_BACKEND = "true"
@@ -83,6 +83,7 @@ pipeline {
                     command -v curl >/dev/null 2>&1
                     test -f "${BASE_ENV_FILE}"
                     test -f "${COMPOSE_FILE}"
+                    test -f "docker-compose.prod.yml"
                     test -x "${APP_DIR}/deploy.sh"
                 '''
             }
@@ -228,7 +229,7 @@ pipeline {
             }
         }
 
-        stage('Deploy') { 
+        stage('Deploy') {
             steps {
                 script {
                     def rc = sh(
@@ -236,12 +237,14 @@ pipeline {
                         script: '''#!/usr/bin/env bash
                             set -Eeuo pipefail
                             set -x
-                            # 깃허브(젠킨스 워크스페이스)에서 운영전용 docker-compose.prod.yml 파일을 EC2 운영 폴더로 복사!
-                            cp docker-compose.prod.yml "${COMPOSE_FILE}"
-                            
+
+                            cp docker-compose.prod.yml "${APP_DIR}/docker-compose.yml.candidate"
+                            docker compose --env-file "${RUNTIME_ENV_FILE}" -f "${APP_DIR}/docker-compose.yml.candidate" config > /dev/null
+                            mv "${APP_DIR}/docker-compose.yml.candidate" "${COMPOSE_FILE}"
+
                             cd "${APP_DIR}"
                             echo "Running deploy with runtime env: ${RUNTIME_ENV_FILE}"
-                            APP_RUNTIME_ENV_FILE="${RUNTIME_ENV_FILE}" ./deploy.sh
+                            APP_RUNTIME_ENV_FILE="${RUNTIME_ENV_FILE}" APP_COMPOSE_FILE="${COMPOSE_FILE}" ./deploy.sh
                         '''
                     )
                     echo "Deploy stage rc=${rc}"
@@ -332,7 +335,10 @@ pipeline {
         }
 
         always {
-            sh 'docker logout || true'
+            sh '''#!/usr/bin/env bash
+                set +e
+                docker logout || true
+            '''
             cleanWs(deleteDirs: true, disableDeferredWipeout: true)
         }
     }
