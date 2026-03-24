@@ -102,6 +102,9 @@ public class SupplementController {
 
         // 알약 이미지 Embedding 추출 요청
         FastApiEmbeddingResponse pillReferenceEmbeddingResult = supplementService.pillImageEmbedding(pillImg);
+        log.debug("[registerSupplement] pillReferenceEmbeddingResult.isSuccess={}", pillReferenceEmbeddingResult.isSuccess());
+        log.debug("[registerSupplement] pillReferenceEmbeddingResult.getPillReferenceEmbeddingPath={}", pillReferenceEmbeddingResult.getPillReferenceEmbeddingPath());
+        log.debug("[registerSupplement] pillReferenceEmbeddingResult.getMessage={}", pillReferenceEmbeddingResult.getMessage());
 
         // 최종 영양제 및 성분 정보 저장
         SupplementRegisterResponse result = supplementService.registerSupplement(userId, pillImg, request,

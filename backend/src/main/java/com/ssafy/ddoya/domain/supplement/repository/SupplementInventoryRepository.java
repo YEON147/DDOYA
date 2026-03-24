@@ -6,6 +6,9 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.Lock;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -23,6 +26,17 @@ public interface SupplementInventoryRepository extends JpaRepository<SupplementI
      */
     @Query("SELECT i FROM SupplementInventory i WHERE i.supplement.userSupplementId IN :supplementIds")
     List<SupplementInventory> findBySupplementIds(@Param("supplementIds") List<Long> supplementIds);
+
+    /**
+     * 영양제 섭취 후 재고를 감소시킬 때, 동시성 문제를 방지하기 위해 
+     * 해당하는 영양제들의 재고 정보에 비관적 쓰기 락(Pessimistic Write Lock)을 겁니다.
+     * 
+     * @param supplementIds 영양제 ID 목록
+     * @return 재고 정보 리스트
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT i FROM SupplementInventory i WHERE i.supplement.userSupplementId IN :supplementIds")
+    List<SupplementInventory> findForUpdateBySupplementIds(@Param("supplementIds") List<Long> supplementIds);
 
     /**
      * 특정 영양제들의 재고 정보를 일괄 삭제합니다.

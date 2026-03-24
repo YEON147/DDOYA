@@ -29,7 +29,7 @@ logging:
 
 app:
   fastapi:
-    mock_enabled: true  # fastApi 준비 완료 시 제거
+    mock_enabled: false  # fastApi 준비 완료 시 제거
 
 cors:
   allowed-origins:

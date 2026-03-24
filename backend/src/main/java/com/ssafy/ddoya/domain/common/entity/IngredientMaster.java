@@ -1,13 +1,6 @@
 package com.ssafy.ddoya.domain.common.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -26,7 +19,7 @@ public class IngredientMaster {
     @Column(name = "ingredient_id")
     private Long ingredientId;
 
-    @Column(name = "normalized_name", nullable = false, unique = true, length = 50)
+    @Column(name = "normalized_name", nullable = false, unique = true, length = 100)
     private String normalizedName;
 
     @Column(name = "ul_adult_m", precision = 10, scale = 2)
@@ -41,8 +34,8 @@ public class IngredientMaster {
     @Column(name = "ul_pregnant", precision = 10, scale = 2)
     private BigDecimal ulPregnant;
 
-    @Column(name = "ul_unit", length = 10)
-    private String ulUnit;
+    @Column(name = "unit", length = 20)
+    private String unit;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "solubility")
@@ -55,27 +48,62 @@ public class IngredientMaster {
     @Column(name = "effect")
     private EffectType effect;
 
-    @Column(name = "absorption_note", length = 200)
+    @Column(name = "absorption_note", length = 500)
     private String absorptionNote;
 
     @Column(name = "synonyms", columnDefinition = "JSON")
     private String synonyms;
 
+    @Column(name = "ri_adult_m", precision = 10, scale = 0)
+    private BigDecimal riAdultM;
+
+    @Column(name = "ri_adult_f", precision = 10, scale = 0)
+    private BigDecimal riAdultF;
+
+    @Column(name = "ri_non_adult", precision = 10, scale = 0)
+    private BigDecimal riNonAdult;
+
+    @Column(name = "ri_pregnant", precision = 10, scale = 0)
+    private BigDecimal riPregnant;
+
+    // 🔹 부모 영양소 (계층 구조)
+    @Column(name = "parent_id")
+    private Long parentId;
+
     @Builder
-    private IngredientMaster(String normalizedName, BigDecimal ulAdultM, BigDecimal ulAdultF,
-            BigDecimal ulNonAdult, BigDecimal ulPregnant, String ulUnit,
-            SolubilityType solubility, Boolean giIrritant, EffectType effect,
-            String absorptionNote, String synonyms) {
+    private IngredientMaster(
+            String normalizedName,
+            BigDecimal ulAdultM,
+            BigDecimal ulAdultF,
+            BigDecimal ulNonAdult,
+            BigDecimal ulPregnant,
+            String unit,
+            SolubilityType solubility,
+            Boolean giIrritant,
+            EffectType effect,
+            String absorptionNote,
+            String synonyms,
+            BigDecimal riAdultM,
+            BigDecimal riAdultF,
+            BigDecimal riNonAdult,
+            BigDecimal riPregnant,
+            Long parentId
+    ) {
         this.normalizedName = normalizedName;
         this.ulAdultM = ulAdultM;
         this.ulAdultF = ulAdultF;
         this.ulNonAdult = ulNonAdult;
         this.ulPregnant = ulPregnant;
-        this.ulUnit = ulUnit;
+        this.unit = unit;
         this.solubility = solubility;
         this.giIrritant = giIrritant;
         this.effect = effect;
         this.absorptionNote = absorptionNote;
         this.synonyms = synonyms;
+        this.riAdultM = riAdultM;
+        this.riAdultF = riAdultF;
+        this.riNonAdult = riNonAdult;
+        this.riPregnant = riPregnant;
+        this.parentId = parentId;
     }
 }

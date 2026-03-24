@@ -33,6 +33,7 @@ public class ImageStorageService {
         try {
             // 파일명 랜덤 생성
             String filename = UUID.randomUUID() + "." + ext;
+            
             // S3 키 생성 (경로 + 파일명)
             String s3Key = pathPrefix + "/" + filename;
 
