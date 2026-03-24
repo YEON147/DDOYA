@@ -29,21 +29,13 @@ public class ImageStorageService {
     @Value("${aws.cloudfront.domain:}")
     private String cloudFrontDomain;
 
-    @Value("${app.s3.prefix:}")
-    private String s3Prefix;
-
     public String upload(byte[] bytes, String pathPrefix, String ext) {
         try {
             // 파일명 랜덤 생성
             String filename = UUID.randomUUID() + "." + ext;
             
-            // 프리픽스가 존재하면 자동으로 경로 맨 앞에 조합
-            String finalPrefix = (s3Prefix != null && !s3Prefix.isBlank()) 
-                    ? s3Prefix + "/" + pathPrefix 
-                    : pathPrefix;
-            
             // S3 키 생성 (경로 + 파일명)
-            String s3Key = finalPrefix + "/" + filename;
+            String s3Key = pathPrefix + "/" + filename;
 
             // S3에 업로드
             PutObjectRequest putRequest = PutObjectRequest.builder()
