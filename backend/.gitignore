@@ -69,3 +69,6 @@ Thumbs.db
 
 ### 테스트 결과 ###
 test-results/
+
+### firebase ####
+src/main/resources/firebase/
