@@ -23,3 +23,14 @@ export const useUpdateIntakeTime = () => {
     },
   });
 };
+
+/** `date` 생략 시 서버 기준 오늘. 쿼리 키는 `__today__`로 고정(자정 이후 새로고침 시 갱신). */
+export const useDailyIntakeSchedule = (date?: string) => {
+  return useQuery({
+    queryKey: ['dailyIntakeSchedule', date ?? '__today__'],
+    queryFn: async () => {
+      const response = await intakeRoutineApi.getDailySchedule(date ? { date } : undefined);
+      return response.data.data;
+    },
+  });
+};
