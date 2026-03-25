@@ -12,13 +12,16 @@ export function IntakeRoutine() {
 
   return (
     <View className="px-1">
-      <View className="relative overflow-hidden rounded-3xl px-5 py-5" style={neuRaised(24, colors.surface)}>
+      <View
+        className="relative overflow-hidden rounded-3xl px-5 py-5"
+        style={[neuRaised(24, colors.cardIvory), { borderWidth: 1, borderColor: `${colors.shadowDark}14` }]}
+      >
         <Text className="my-2 text-[11px] font-scdream tracking-[1.5px]" style={{ color: colors.textMuted }}>
           INTAKE ROUTINE
         </Text>
         <View className="mb-4 flex-row items-center justify-between">
           <View className="flex-1 pr-3">
-            <Text className="text-[20px] font-scdream-medium my-2" style={{ color: colors.text }}>
+            <Text className="my-2 text-[20px] font-scdream-medium" style={{ color: colors.text }}>
               섭취 시간
             </Text>
           </View>
@@ -48,8 +51,13 @@ export function IntakeRoutine() {
         </Text>
 
         <View
-          className="flex-row items-center justify-between rounded-xl px-3 py-2"
-          style={{ borderWidth: 1, borderColor: `${colors.shadowDark}1F`, backgroundColor: `${colors.input}66` }}
+          className="-mx-5 flex-row items-center justify-between px-10 py-2.5"
+          style={{
+            borderTopWidth: 1,
+            borderBottomWidth: 1,
+            borderColor: `${colors.shadowDark}1F`,
+            backgroundColor: `${colors.input}66`,
+          }}
         >
           <Text className="text-[11px] font-scdream tracking-wide" style={{ color: colors.textMuted }}>
             섭취 구분
@@ -66,7 +74,7 @@ export function IntakeRoutine() {
         )}
 
         {isError && (
-          <View className="py-7 items-center">
+          <View className="items-center py-7">
             <Text className="text-[13px] font-scdream" style={{ color: colors.textMuted }}>
               데이터 로드 실패
             </Text>
@@ -74,36 +82,35 @@ export function IntakeRoutine() {
         )}
 
         {!isLoading && !isError && routineTimes && routineTimes.length === 0 && (
-          <View className="py-7 items-center">
+          <View className="items-center py-7">
             <Text className="text-[13px] font-scdream" style={{ color: colors.textMuted }}>
               설정된 루틴이 없습니다.
             </Text>
           </View>
         )}
 
-        {!isLoading && !isError && routineTimes?.map((t, index) => (
-          <View
-            key={t.userIntakeTimingSettingId}
-            className="flex-row items-center justify-between px-3 py-4"
-            style={{
-              borderBottomWidth: index === routineTimes.length - 1 ? 0 : 1,
-              borderBottomColor: `${colors.shadowDark}1E`,
-            }}
-          >
-            <Text className="text-[13px] font-scdream" style={{ color: colors.textMuted }}>
-              {t.intakeTiming}
-            </Text>
-            <View className="flex-row items-center">
-              <View
-                className="mr-3 h-2 w-2 rounded-full"
-                style={{ backgroundColor: colors.primary }}
-              />
-              <Text className="text-[15px] font-scdream-medium tracking-wide" style={{ color: colors.text }}>
-                {t.intakeTime}
+        {!isLoading &&
+          !isError &&
+          routineTimes?.map((t, index) => (
+            <View
+              key={t.userIntakeTimingSettingId}
+              className="flex-row items-center justify-between px-5 py-4"
+              style={{
+                borderBottomWidth: index === routineTimes.length - 1 ? 0 : 1,
+                borderBottomColor: `${colors.shadowDark}1E`,
+              }}
+            >
+              <Text className="text-[13px] font-scdream" style={{ color: colors.textMuted }}>
+                {t.intakeTiming}
               </Text>
+              <View className="flex-row items-center">
+                <View className="mr-3 h-2 w-2 rounded-full" style={{ backgroundColor: colors.primary }} />
+                <Text className="text-[15px] font-scdream-medium tracking-wide" style={{ color: colors.text }}>
+                  {t.intakeTime}
+                </Text>
+              </View>
             </View>
-          </View>
-        ))}
+          ))}
       </View>
     </View>
   );

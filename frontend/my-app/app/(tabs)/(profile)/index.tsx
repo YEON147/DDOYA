@@ -14,7 +14,10 @@ export default function ProfileScreen() {
 
   return (
     <ScreenContainer>
-      <View className="relative mb-3 mt-1 overflow-hidden rounded-3xl px-5 py-5" style={neuRaised(20, colors.surface)}>
+      <View
+        className="relative mb-3 mt-1 overflow-hidden rounded-3xl px-5 py-5"
+        style={[neuRaised(20, colors.cardIvory), { borderWidth: 1, borderColor: `${colors.shadowDark}14` }]}
+      >
         <View
           className="absolute -right-6 -top-8 h-24 w-24 rounded-full"
           style={{ backgroundColor: `${colors.primary}14` }}
@@ -31,9 +34,13 @@ export default function ProfileScreen() {
           >
             <View
               className="h-[72px] w-[72px] items-center justify-center rounded-full"
-              style={{ backgroundColor: colors.surfaceWarm, borderWidth: 1, borderColor: `${colors.shadowDark}24` }}
+              style={{
+                backgroundColor: colors.surfaceWarm,
+                borderWidth: 1,
+                borderColor: `${colors.shadowDark}24`,
+              }}
             >
-              <AppIcon icon={User} size={32} color={colors.textMuted} />
+              <AppIcon icon={User} size={32} color={colors.textMuted} strokeWidth={1.75} />
             </View>
           </View>
           <Text
@@ -55,26 +62,26 @@ export default function ProfileScreen() {
         <View className="gap-0.5">
           <ProfileMenuButton
             label="내 정보"
-            icon={<AppIcon icon={User} size={23} color={colors.text} />}
+            icon={<AppIcon icon={User} size={23} color={colors.iconMuted} strokeWidth={1.75} />}
             onPress={() => router.push('/myInfo' as never)}
             variant="flat"
             withBorder
           />
           <ProfileMenuButton
             label="영양제 관리"
-            icon={<AppIcon icon={Pill} size={23} color={colors.text} />}
+            icon={<AppIcon icon={Pill} size={23} color={colors.iconMuted} strokeWidth={1.75} />}
             onPress={() => router.push('/supplements')}
             variant="flat"
             withBorder
           />
           <ProfileMenuButton
             label="알림 설정"
-            icon={<AppIcon icon={Bell} size={28} color={colors.text} />}
+            icon={<AppIcon icon={Bell} size={28} color={colors.iconMuted} strokeWidth={1.75} />}
             onPress={() => router.push('/notification-settings' as never)}
           />
           <ProfileMenuButton
             label="리포트"
-            icon={<AppIcon icon={FileText} size={23} color={colors.text} />}
+            icon={<AppIcon icon={FileText} size={23} color={colors.iconMuted} strokeWidth={1.75} />}
             onPress={() => router.push('/reports')}
             variant="flat"
           />
@@ -82,10 +89,7 @@ export default function ProfileScreen() {
       </View>
 
       <View className="items-center">
-        <View
-          className="h-[3px] w-10 rounded-full"
-          style={{ backgroundColor: `${colors.shadowDark}22` }}
-        />
+        <View className="h-[3px] w-10 rounded-full" style={{ backgroundColor: `${colors.shadowDark}22` }} />
       </View>
 
       <View className="mt-1">
