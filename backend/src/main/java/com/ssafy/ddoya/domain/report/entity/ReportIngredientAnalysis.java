@@ -28,6 +28,9 @@ public class ReportIngredientAnalysis {
     @JoinColumn(name = "ingredient_id", nullable = false)
     private IngredientMaster ingredient;
 
+    @Column(name = "normalized_ingredient_name", nullable = false, length = 100)
+    private String normalizedIngredientName;
+
     @Column(name = "recommended_amount", nullable = false, precision = 10, scale = 2)
     private BigDecimal recommendedAmount;
 
@@ -55,12 +58,14 @@ public class ReportIngredientAnalysis {
 
     @Builder
     private ReportIngredientAnalysis(Report report, IngredientMaster ingredient,
+            String normalizedIngredientName,
             BigDecimal recommendedAmount, BigDecimal currentAmount,
             BigDecimal excessRatio, BigDecimal excessAmount,
             BigDecimal deficiencyRatio, BigDecimal deficiencyAmount,
             String unit, AnalysisType analysisType) {
         this.report = report;
         this.ingredient = ingredient;
+        this.normalizedIngredientName = normalizedIngredientName;
         this.recommendedAmount = recommendedAmount;
         this.currentAmount = currentAmount;
         this.excessRatio = excessRatio;

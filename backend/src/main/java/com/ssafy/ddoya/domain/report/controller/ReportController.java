@@ -2,6 +2,7 @@ package com.ssafy.ddoya.domain.report.controller;
 
 import com.ssafy.ddoya.domain.auth.dto.CustomUserDetails;
 import com.ssafy.ddoya.domain.report.dto.ReportCreateResponse;
+import com.ssafy.ddoya.domain.report.dto.ReportDetailResponse;
 import com.ssafy.ddoya.domain.report.service.ReportService;
 import com.ssafy.ddoya.global.exception.CustomException;
 import com.ssafy.ddoya.global.response.SuccessResponse;
@@ -9,12 +10,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 리포트 생성 및 갱신을 처리하는 컨트롤러입니다.
+ * 리포트 생성 및 조회를 처리하는 컨트롤러입니다.
  */
 @Slf4j
 @RestController
@@ -39,5 +41,21 @@ public class ReportController {
         ReportCreateResponse response = reportService.createOrUpdateReport(userDetails.getUser().getUserId());
 
         return ResponseEntity.ok(SuccessResponse.of("리포트 생성 또는 갱신이 완료되었습니다.", response));
+    }
+
+    /**
+     * 사용자의 최신 리포트 정보를 조회합니다.
+     */
+    @GetMapping
+    public ResponseEntity<SuccessResponse<ReportDetailResponse>> getMyReport(
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+
+        if (userDetails == null || userDetails.getUser() == null) {
+            throw CustomException.unauthorized("로그인이 필요한 서비스입니다.");
+        }
+
+        ReportDetailResponse response = reportService.getReportDetail(userDetails.getUser().getUserId());
+
+        return ResponseEntity.ok(SuccessResponse.of("리포트 조회가 완료되었습니다.", response));
     }
 }

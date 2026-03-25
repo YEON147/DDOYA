@@ -7,10 +7,14 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 @Repository
 public interface ReportIngredientAnalysisRepository extends JpaRepository<ReportIngredientAnalysis, Long> {
 
     @Modifying
     @Query("DELETE FROM ReportIngredientAnalysis r WHERE r.report.reportId = :reportId")
     void deleteAllByReportId(@Param("reportId") Long reportId);
+
+    List<ReportIngredientAnalysis> findAllByReport_ReportId(@Param("reportId") Long reportId);
 }

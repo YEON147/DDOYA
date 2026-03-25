@@ -8,6 +8,7 @@ import com.ssafy.ddoya.domain.common.repository.ProductRepository;
 import com.ssafy.ddoya.domain.report.dto.FastApiReportRequest;
 import com.ssafy.ddoya.domain.report.dto.FastApiReportResponse;
 import com.ssafy.ddoya.domain.report.dto.ReportCreateResponse;
+import com.ssafy.ddoya.domain.report.dto.ReportDetailResponse;
 import com.ssafy.ddoya.domain.report.entity.AnalysisType;
 import com.ssafy.ddoya.domain.report.entity.IntakeTiming;
 import com.ssafy.ddoya.domain.report.entity.Report;
@@ -52,8 +53,7 @@ import java.util.stream.Collectors;
 import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
 
 /**
- * 리포트 생성 및 갱신을 담당하는 서비스입니다.
- * SupplementService와 동일한 방식으로 RestTemplate을 직접 주입하여 FastAPI를 호출합니다.
+ * 리포트 생성 및 조회를 담당하는 서비스입니다.
  */
 @Slf4j
 @Service
@@ -118,8 +118,87 @@ public class ReportService {
     }
 
     /**
+     * 사용자의 최신 리포트 상세 정보를 조회합니다.
+     *
+     * @param userId 사용자 ID
+     * @return 리포트 상세 응답 DTO
+     */
+    public ReportDetailResponse getReportDetail(Long userId) {
+        // 1. 리포트 조회 (사용자당 1개)
+        Report report = reportRepository.findByUserId(userId)
+                .orElseThrow(() -> CustomException.notFound("리포트를 찾을 수 없습니다."));
+
+        Long reportId = report.getReportId();
+
+        // 2. 하위 데이터 병렬 또는 순차 조회 (Fetch Join 활용)
+        Optional<ReportComments> commentsOpt = reportCommentsRepository.findByReport_ReportId(reportId);
+        List<ReportRecommendedProduct> recommendedProducts = recommendedProductRepository.findAllByReport_ReportId(reportId);
+        List<ReportIntakeTimingRecommendation> timingRecommendations = timingRecommendationRepository.findAllByReport_ReportId(reportId);
+
+        // 3. 추천 제품 그룹화 (Ingredient 기준)
+        List<ReportDetailResponse.RecommendedProductsByIngredientDto> productsByIngredient = recommendedProducts.stream()
+                .collect(Collectors.groupingBy(rrp -> rrp.getIngredient().getIngredientId()))
+                .entrySet().stream()
+                .map(entry -> {
+                    List<ReportRecommendedProduct> group = entry.getValue();
+                    // 그룹 내 첫 번째 데이터에서 성분 정보 추출 (IngredientMaster의 normalizedName 활용)
+                    ReportRecommendedProduct first = group.get(0);
+                    Long ingId = first.getIngredient().getIngredientId();
+                    String ingName = first.getIngredient().getNormalizedName();
+
+                    List<ReportDetailResponse.RecommendedProductDto> productDtos = group.stream()
+                            .map(rrp -> ReportDetailResponse.RecommendedProductDto.builder()
+                                    .productCode(rrp.getProduct().getProductCode())
+                                    .productName(rrp.getProduct().getProductName())
+                                    .build())
+                            .collect(Collectors.toList());
+
+                    return ReportDetailResponse.RecommendedProductsByIngredientDto.builder()
+                            .ingredientId(ingId)
+                            .ingredientName(ingName)
+                            .recommendedProducts(productDtos)
+                            .build();
+                })
+                .collect(Collectors.toList());
+
+        // 4. 섭취 타이밍 그룹화
+        List<ReportDetailResponse.IntakeRecommendationSummaryDto> intakeSummary = timingRecommendations.stream()
+                .collect(Collectors.groupingBy(ReportIntakeTimingRecommendation::getIntakeTiming))
+                .entrySet().stream()
+                .map(entry -> {
+                    List<String> supplementAliases = entry.getValue().stream()
+                            .map(ritr -> ritr.getSupplement().getAlias())
+                            .collect(Collectors.toList());
+                    return ReportDetailResponse.IntakeRecommendationSummaryDto.builder()
+                            .intakeTiming(entry.getKey())
+                            .supplements(supplementAliases)
+                            .build();
+                })
+                .collect(Collectors.toList());
+
+        // 5. 코멘트 조립
+        ReportDetailResponse.ReportCommentsDto commentsDto = commentsOpt.map(c -> ReportDetailResponse.ReportCommentsDto.builder()
+                        .excessComment(c.getExcessComment())
+                        .deficiencyComment(c.getDeficiencyComment())
+                        .productComment(c.getProductComment())
+                        .scheduleComment(c.getScheduleComment())
+                        .build())
+                .orElse(null);
+
+        // 6. 최종 응답 조립
+        return ReportDetailResponse.builder()
+                .reportId(reportId)
+                .needsRefresh(report.getNeedsRefresh())
+                .updatedAt(report.getUpdatedAt() != null ? report.getUpdatedAt() : report.getCreatedAt())
+                .isEditable(false) // 조회 API에서는 항상 false
+                .comments(commentsDto)
+                .recommendedProductsByIngredient(productsByIngredient)
+                .intakeRecommendationSummary(intakeSummary)
+                .build();
+    }
+
+    /**
      * FastAPI 리포트 생성 API를 호출합니다.
-     * SupplementService.postImageToFastApi와 동일한 패턴으로 RestTemplate을 직접 사용합니다.
      */
     private FastApiReportResponse callFastApiGenerateReport(FastApiReportRequest request) {
         String url = fastApiUrl + "/api/ai/report/generate";
@@ -263,7 +342,6 @@ public class ReportService {
 
     /**
      * FastAPI의 timing_recommendations 목록에 사용자 설정 intake_time을 주입합니다.
-     * Map 기반 O(1) 조회로 N+1 없이 처리합니다.
      */
     private List<ReportCreateResponse.TimingRecommendationWithTimeDto> buildTimingWithTime(
             List<FastApiReportResponse.TimingRecommendationDto> timingDtos,
@@ -351,6 +429,7 @@ public class ReportService {
             entities.add(ReportIngredientAnalysis.builder()
                     .report(report)
                     .ingredient(ingredient)
+                    .normalizedIngredientName(dto.getNormalizedIngredientName())
                     .recommendedAmount(dto.getRecommendedAmount())
                     .currentAmount(dto.getCurrentAmount())
                     .excessRatio(dto.getExcessRatio())
