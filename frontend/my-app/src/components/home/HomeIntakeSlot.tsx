@@ -39,108 +39,148 @@ function statusStyle(status: DailyIntakeScheduleSlotItem['status']) {
 
 /** 홈 — 시간대별 섭취 인증 카드 (Soft Wellness) */
 export function HomeIntakeSlot({ timeLabel, items, onPressCamera }: HomeIntakeSlotProps) {
+  const scheduleIds = items.map((i) => i.scheduleId);
+  const hasItems = items.length > 0;
+  const completedCount = items.filter((i) => i.status === 'TAKEN' || i.status === 'SKIPPED').length;
+  const remainingCount = Math.max(0, items.length - completedCount);
+  const success = '#2FB58A';
+  const successBg = `${success}12`;
+  const successBorder = `${success}33`;
+
+  const BUBBLE_W = 310;
+  const BUBBLE_PAD = 'px-6 py-5';
+  const BUBBLE_RADIUS = 'rounded-3xl';
+  const TAIL_SIZE = 12;
+  const TAIL_OFFSET = 18;
+
   return (
-    <View>
-      <View className="px-4 py-4" style={softWellnessCard(20)}>
-        <View className="mb-3 flex-row items-center justify-between">
-          <View className="min-w-0 flex-1 flex-row items-center">
+    <View className="gap-3.5">
+      <View className="flex-row items-end justify-between">
+        <View style={{ width: BUBBLE_W }}>
+          <View
+            className={`relative ${BUBBLE_RADIUS} ${BUBBLE_PAD}`}
+            style={{ backgroundColor: colors.cardIvory, borderWidth: 1, borderColor: `${colors.shadowDark}80` }}
+          >
             <View
-              className="mr-2 h-2 w-2 shrink-0 rounded-full"
-              style={{ backgroundColor: colors.primary }}
-            />
-            <View
-              className="rounded-full px-2.5 py-1"
               style={{
-                backgroundColor: colors.input,
-                borderWidth: 1,
-                borderColor: `${colors.shadowDark}28`,
+                position: 'absolute',
+                left: -6,
+                bottom: TAIL_OFFSET,
+                width: TAIL_SIZE,
+                height: TAIL_SIZE,
+                backgroundColor: colors.cardIvory,
+                borderLeftWidth: 1,
+                borderBottomWidth: 1,
+                borderColor: `${colors.shadowDark}80`,
+                transform: [{ rotate: '45deg' }],
               }}
-            >
-              <Text className="text-[11px] font-scdream" style={{ color: colors.textMuted }}>
-                섭취 시간
+            />
+
+            <View>
+              <View className="flex-row items-center p-1">
+                <View className="mr-3 h-2 w-2 rounded-full" style={{ backgroundColor: colors.primary }} />
+                <Text className="text-[16px] font-scdream-bold" style={{ color: colors.text }} numberOfLines={1}>
+                  {timeLabel}
+                </Text>
+              </View>
+              <Text className="mt-1 p-1 text-[12px] font-scdream" style={{ color: colors.textMuted }}>
+                {hasItems ? '사진으로 섭취 인증을 해주세요' : '이 시간대엔 등록된 영양제가 없어요.'}
               </Text>
             </View>
+
+            {hasItems ? (
+              <View className="mt-3">
+                <View className="mb-2 flex-row items-center justify-between">
+                  <Text className="text-[11px] font-scdream-medium tracking-wide" style={{ color: colors.textMuted }}>
+                    섭취할 영양제
+                  </Text>
+                  <Text className="text-[11px] font-scdream" style={{ color: colors.textMuted }}>
+                    남은 {remainingCount} · 완료 {completedCount}
+                  </Text>
+                </View>
+
+                <View
+                  className="overflow-hidden rounded-2xl"
+                  style={{ backgroundColor: colors.surface, borderWidth: 1, borderColor: `${colors.shadowDark}18` }}
+                >
+                  <View style={{ height: 3, backgroundColor: `${success}26` }} />
+                  <View className="p-3">
+                    <View className="flex-row flex-wrap gap-2">
+                      {items.map((it, idx) => {
+                        const isTaken = it.status === 'TAKEN';
+                        const isSkipped = it.status === 'SKIPPED';
+                        const badgeBg = isTaken ? successBg : isSkipped ? `${colors.shadowDark}10` : `${colors.input}AA`;
+                        const badgeBorder = isTaken ? successBorder : `${colors.shadowDark}22`;
+                        const badgeText = isTaken ? success : colors.textMuted;
+
+                        return (
+                          <View
+                            key={`${it.intakeRecordId ?? it.scheduleId}-${idx}`}
+                            className="flex-row items-center rounded-full px-3 py-1.5"
+                            style={{ backgroundColor: badgeBg, borderWidth: 1, borderColor: badgeBorder }}
+                          >
+                            <Text
+                              className="text-[11px] font-scdream-medium"
+                              style={{ color: badgeText }}
+                              numberOfLines={1}
+                            >
+                              {it.alias}
+                            </Text>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  </View>
+                </View>
+
+                <View className="mt-3 flex-row flex-wrap gap-2">
+                  {items.slice(0, 6).map((it, idx) => (
+                    <View
+                      key={`${it.scheduleId}-${idx}`}
+                      className="h-10 w-10 overflow-hidden rounded-xl"
+                      style={{ borderWidth: 1, borderColor: `${colors.shadowDark}22`, backgroundColor: `${colors.input}66` }}
+                    >
+                      <Image source={getBodyPartImageSource(it.bodyPartId)} style={{ width: '100%', height: '100%' }} resizeMode="contain" />
+                    </View>
+                  ))}
+                </View>
+              </View>
+            ) : null}
+          </View>
+        </View>
+
+        <View className="w-[64px] self-stretch">
+          <View className="flex-1 items-center justify-center">
+            <Pressable
+              disabled={!hasItems}
+              onPress={() => onPressCamera?.(scheduleIds)}
+              hitSlop={10}
+              className="h-10 w-10 items-center justify-center rounded-full"
+              style={({ pressed }) => ({
+                opacity: !hasItems ? 0.42 : pressed ? 0.86 : 1,
+                backgroundColor: `${colors.primary}14`,
+                borderWidth: 1,
+                borderColor: `${colors.primary}33`,
+                shadowColor: colors.shadowDark,
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.08,
+                shadowRadius: 6,
+                elevation: 1,
+              })}
+            >
+              <AppIcon icon={Camera} size={16} color={colors.primary} strokeWidth={1.9} />
+            </Pressable>
+          </View>
+          <View className="mb-3 flex-row items-center pl-2" style={{ width: '100%' }}>
             <Text
-              className="ml-2 text-[17px] font-scdream-medium"
-              style={{ color: colors.text }}
+              className="text-[11px] font-scdream"
+              style={{ color: colors.textMuted, width: '100%' }}
               numberOfLines={1}
+              ellipsizeMode="tail"
             >
               {timeLabel}
             </Text>
           </View>
-          <Pressable
-            onPress={() => onPressCamera?.(items.map((item) => item.scheduleId))}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            className="h-9 w-9 shrink-0 items-center justify-center rounded-full"
-            style={({ pressed }) => ({
-              backgroundColor: colors.input,
-              borderWidth: 1,
-              borderColor: `${colors.shadowDark}30`,
-              opacity: pressed ? 0.82 : 1,
-            })}
-          >
-            <AppIcon icon={Camera} size={16} color={colors.iconMuted} strokeWidth={1.75} />
-          </Pressable>
-        </View>
-
-        <View className="flex-row flex-wrap">
-          {items.length === 0 ? (
-            <Text className="w-full py-2 text-[12px] font-scdream" style={{ color: colors.textMuted }}>
-              이 시간대에 등록된 영양제가 없어요.
-            </Text>
-          ) : (
-            items.map((item, i) => {
-              const s = statusStyle(item.status);
-              return (
-                <View
-                  key={item.intakeRecordId ?? `${item.scheduleId}-${i}`}
-                  className="mb-3 overflow-hidden rounded-2xl"
-                  style={{
-                    width: '31.5%',
-                    marginRight: (i + 1) % 3 === 0 ? 0 : '2.75%',
-                    backgroundColor: colors.cardIvory,
-                    borderWidth: 1,
-                    borderColor: `${colors.shadowDark}16`,
-                  }}
-                >
-                  <View
-                    className="relative w-full items-center justify-center"
-                    style={{ aspectRatio: 1, backgroundColor: `${colors.input}66`, padding: 6 }}
-                  >
-                    <Image
-                      source={getBodyPartImageSource(item.bodyPartId)}
-                      style={{ width: '100%', height: '100%' }}
-                      resizeMode="contain"
-                    />
-                    {s.showCheck ? (
-                      <View
-                        className="absolute right-2 top-2 h-7 w-7 items-center justify-center rounded-full"
-                        style={{ backgroundColor: `${colors.cardIvory}F0`, borderWidth: 1, borderColor: `${colors.primary}55` }}
-                      >
-                        <AppIcon icon={Check} size={16} color={colors.primary} strokeWidth={2.2} />
-                      </View>
-                    ) : null}
-                  </View>
-                  <View
-                    className="px-2.5 pb-2.5 pt-2"
-                    style={{ backgroundColor: s.captionBg, borderTopWidth: 1, borderTopColor: `${colors.shadowDark}14` }}
-                  >
-                    <Text
-                      className="text-[13px] font-scdream-medium leading-snug"
-                      style={{ color: colors.text }}
-                      numberOfLines={2}
-                    >
-                      {item.alias}
-                    </Text>
-                    <Text className="mt-1 text-[11px] font-scdream" style={{ color: colors.textMuted }}>
-                      1회 {item.dosePerIntake}정 섭취
-                    </Text>
-                  </View>
-                  <View className="h-[3px]" style={{ backgroundColor: s.track }} />
-                </View>
-              );
-            })
-          )}
         </View>
       </View>
     </View>

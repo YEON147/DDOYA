@@ -23,8 +23,18 @@ export const intakeRoutineApi = {
     apiClient.get<DailyIntakeScheduleResponse>('/intake-schedules', { params }),
 
   /** 복용 인증 (이미지 + request JSON) */
-  postIntakeCertification: (formData: FormData) =>
-    apiClient.post<IntakeCertificationResponse>('/intake-records/verify', formData),
+  postIntakeCertification: async (formData: FormData) => {
+    try {
+      return await apiClient.post<IntakeCertificationResponse>('/intake-records/verify', formData);
+    } catch (e: any) {
+      const status = e?.response?.status;
+      if (status === 404) {
+        // (구)스펙/게이트웨이에서 사용하는 경로 fallback
+        return await apiClient.post<IntakeCertificationResponse>('/intake-certifications', formData);
+      }
+      throw e;
+    }
+  },
 };
 
 export function buildIntakeCertificationFormData(

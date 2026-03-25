@@ -10,6 +10,7 @@ import { CaptureGuideScreenLayout } from '@/src/components/common/CaptureGuideSc
 import { buildIntakeCertificationFormData, intakeRoutineApi } from '@/src/api/intakeRoutine';
 import { prepareLabelImageForOcr } from '@/src/utils/labelImageForUpload';
 import { colors } from '@/constants/theme/colors';
+import apiClient from '@/src/api/client';
 
 const INTAKE_GUIDE_IMAGE = require('../../../assets/images/intake_verify_example.jpg');
 
@@ -100,12 +101,18 @@ export default function IntakeVerifyScreen() {
     } catch (e) {
       console.error('[intake-verify] failed', e);
       const anyErr = e as any;
-      const serverMessage =
-        anyErr?.response?.data?.message ?? anyErr?.response?.data?.data?.message ?? null;
+      const status = anyErr?.response?.status;
+      const reqUrl = anyErr?.config?.url ?? anyErr?.response?.config?.url;
+      const baseURL = anyErr?.config?.baseURL ?? apiClient.defaults.baseURL;
+      const serverMessage = anyErr?.response?.data?.message ?? anyErr?.response?.data?.data?.message ?? null;
       const fallbackMessage = anyErr?.message ?? '알 수 없는 오류';
       Alert.alert(
         '인증 실패',
-        serverMessage ? String(serverMessage) : String(fallbackMessage),
+        status
+          ? `${status} ${serverMessage ? String(serverMessage) : String(fallbackMessage)}\n${baseURL ?? ''}${reqUrl ?? ''}`
+          : serverMessage
+            ? String(serverMessage)
+            : String(fallbackMessage),
       );
     } finally {
       setIsProcessing(false);
