@@ -94,4 +94,16 @@ public class IntakeRecord {
             this.actionAt = actionAt;
         }
     }
+
+    /**
+     * 사용자의 수동 조작에 의해 상태를 업데이트합니다. (MISSED, SKIPPED 로의 변경만 허용)
+     * 이 때 actionAt 은 null 처리됩니다.
+     *
+     * @param newStatus 변경할 목표 상태
+     */
+    public void updateStatusByManual(IntakeStatus newStatus) {
+        this.status.validateTransition(newStatus);
+        this.status = newStatus;
+        this.actionAt = null;
+    }
 }

@@ -17,7 +17,6 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,7 +25,6 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.lang.reflect.Field;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -202,6 +200,37 @@ public class IntakeRecordService {
                 .success(true)
                 .message("복용 사진 인증 처리가 완료되었습니다.")
                 .results(finalResults)
+                .build();
+    }
+
+    /**
+     * 사용자가 직접 특정 섭취 기록의 상태를 변경합니다. (MISSED <-> SKIPPED, TAKEN -> MISSED/SKIPPED)
+     * 이 기능은 본인 소유의 섭취 기록에 대해서만 가능합니다.
+     *
+     * @param userId         현재 로그인한 사용자 ID
+     * @param intakeRecordId 상태를 변경할 섭취 기록 ID
+     * @param request        변경할 목표 상태를 포함한 요청 DTO
+     * @return 변경된 섭취 기록 정보
+     */
+    @Transactional
+    public IntakeStatusUpdateResponse updateIntakeRecordStatus(Long userId, Long intakeRecordId,
+            IntakeStatusUpdateRequest request) {
+        IntakeRecord intakeRecord = intakeRecordRepository.findById(intakeRecordId)
+                .orElseThrow(() -> CustomException.notFound("요청하신 섭취 기록을 찾을 수 없습니다."));
+
+        // 권한 체크
+        if (!intakeRecord.getSchedule().getUser().getUserId().equals(userId)) {
+            throw CustomException.forbidden("해당 섭취 기록에 대한 변경 권한이 없습니다.");
+        }
+
+        // 상태 변경 수행
+        intakeRecord.updateStatusByManual(request.getStatus());
+
+        return IntakeStatusUpdateResponse.builder()
+                .intakeRecordId(intakeRecord.getIntakeRecordId())
+                .scheduleId(intakeRecord.getSchedule().getScheduleId())
+                .status(intakeRecord.getStatus())
+                .actionAt(intakeRecord.getActionAt())
                 .build();
     }
 
