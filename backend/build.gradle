@@ -45,7 +45,7 @@ dependencies {
 	implementation 'me.paulschwarz:spring-dotenv:4.0.0'
 
 	// Firebase Admin SDK (FCM 푸시 알림)
-	implementation 'com.google.firebase:firebase-admin:9.2.0'
+	implementation 'com.google.firebase:firebase-admin:9.4.3'
 
 	// aws s3
 	implementation platform("software.amazon.awssdk:bom:2.25.60")

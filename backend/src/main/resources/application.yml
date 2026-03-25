@@ -38,10 +38,14 @@ app:
   fastapi:
     url: ${FASTAPI_URL:http://localhost:8000}
     mock_enabled: ${FASTAPI_MOCK_ENABLED} # fastApi 준비 완료 시 제거
-  firebase:
-    config:
-      path: firebase/firebase-service-key.json
   timezone: Asia/Seoul
+
+firebase:
+  config:
+    # 로컬 환경: 클래스패스 내의 JSON 키 파일 경로 (기본값 제공)
+    path: ${FIREBASE_CONFIG_PATH:classpath:firebase/firebase-service-key.json}
+    # 운영 환경: 보안 및 안정성을 위해 JSON 내용을 Base64 인코딩한 문자열 (시크릿 주입용)
+    base64: ${FIREBASE_CONFIG_BASE64:}
 
 server:
   port: 8080
