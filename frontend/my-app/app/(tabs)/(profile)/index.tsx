@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { Pill, FileText, User } from 'lucide-react-native';
+import { Pill, FileText, User, Bell } from 'lucide-react-native';
 import { ProfileMenuButton } from '@/src/components/profile/ProfileMenuButton';
 import { IntakeRoutine } from '@/src/components/profile/IntakeRoutine';
 import { colors } from '@/constants/theme/colors';
@@ -66,6 +66,11 @@ export default function ProfileScreen() {
             onPress={() => router.push('/supplements')}
             variant="flat"
             withBorder
+          />
+          <ProfileMenuButton
+            label="알림 설정"
+            icon={<AppIcon icon={Bell} size={28} color={colors.text} />}
+            onPress={() => router.push('/notification-settings' as never)}
           />
           <ProfileMenuButton
             label="리포트"

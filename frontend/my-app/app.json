@@ -10,11 +10,13 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "com.ssafy.ddoya",
       "config": {
         "usesNonExemptEncryption": false
       }
     },
     "android": {
+      "package": "com.ssafy.ddoya",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/ddoya_logo.png"
@@ -63,7 +65,8 @@
           "photosPermission": "Allow $(PRODUCT_NAME) to access your photos when you choose images.",
           "cameraPermission": "Allow $(PRODUCT_NAME) to use the camera to photograph supplement labels."
         }
-      ]
+      ],
+      "expo-notifications"
     ],
     "experiments": {
       "typedRoutes": true,
