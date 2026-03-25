@@ -14,45 +14,45 @@ export default function ProfileScreen() {
 
   return (
     <ScreenContainer>
-        <View className="relative mb-3 mt-1 overflow-hidden rounded-3xl px-5 py-5" style={neuRaised(20, colors.surface)}>
-          <View
-            className="absolute -right-6 -top-8 h-24 w-24 rounded-full"
-            style={{ backgroundColor: `${colors.primary}14` }}
-          />
-          <View
-            className="absolute -left-10 top-14 h-20 w-20 rounded-full"
-            style={{ backgroundColor: `${colors.text}08` }}
-          />
+      <View className="relative mb-3 mt-1 overflow-hidden rounded-3xl px-5 py-5" style={neuRaised(20, colors.surface)}>
+        <View
+          className="absolute -right-6 -top-8 h-24 w-24 rounded-full"
+          style={{ backgroundColor: `${colors.primary}14` }}
+        />
+        <View
+          className="absolute -left-10 top-14 h-20 w-20 rounded-full"
+          style={{ backgroundColor: `${colors.text}08` }}
+        />
 
-          <View className="items-center pb-5 pt-1">
+        <View className="items-center pb-5 pt-1">
+          <View
+            className="h-[80px] w-[80px] items-center justify-center rounded-full"
+            style={{ backgroundColor: `${colors.primary}18` }}
+          >
             <View
-              className="h-[80px] w-[80px] items-center justify-center rounded-full"
-              style={{ backgroundColor: `${colors.primary}18` }}
+              className="h-[72px] w-[72px] items-center justify-center rounded-full"
+              style={{ backgroundColor: colors.surfaceWarm, borderWidth: 1, borderColor: `${colors.shadowDark}24` }}
             >
-              <View
-                className="h-[72px] w-[72px] items-center justify-center rounded-full"
-                style={{ backgroundColor: colors.surfaceWarm, borderWidth: 1, borderColor: `${colors.shadowDark}24` }}
-              >
-                <AppIcon icon={User} size={32} color={colors.textMuted} />
-              </View>
+              <AppIcon icon={User} size={32} color={colors.textMuted} />
             </View>
-            <Text
-              className="mt-3 text-[24px] font-scdream-bold tracking-tight"
-              style={{ color: colors.text }}
-              numberOfLines={1}
-            >
-              {nickname || '회원'}
-            </Text>
-            <Text className="mt-3 text-[13px] font-scdream" style={{ color: colors.textMuted }}>
-              DDOYA와 건강해지기 : 2일차
-            </Text>
           </View>
-
-          <View className="my-4" style={{ borderTopWidth: 1, borderColor: `${colors.shadowDark}22` }} />
-          <Text className="mb-2 text-[11px] font-scdream tracking-[1.5px]" style={{ color: colors.textMuted }}>
-            MY PROFILE
+          <Text
+            className="mt-3 text-[24px] font-scdream-bold tracking-tight"
+            style={{ color: colors.text }}
+            numberOfLines={1}
+          >
+            {nickname || '회원'}
           </Text>
-          <View className="gap-0.5">
+          <Text className="mt-3 text-[13px] font-scdream" style={{ color: colors.textMuted }}>
+            DDOYA와 건강해지기 : 2일차
+          </Text>
+        </View>
+
+        <View className="my-4" style={{ borderTopWidth: 1, borderColor: `${colors.shadowDark}22` }} />
+        <Text className="mb-2 text-[11px] font-scdream tracking-[1.5px]" style={{ color: colors.textMuted }}>
+          MY PROFILE
+        </Text>
+        <View className="gap-0.5">
           <ProfileMenuButton
             label="내 정보"
             icon={<AppIcon icon={User} size={23} color={colors.text} />}
@@ -78,19 +78,19 @@ export default function ProfileScreen() {
             onPress={() => router.push('/reports')}
             variant="flat"
           />
-          </View>
         </View>
+      </View>
 
-        <View className="items-center">
-          <View
-            className="h-[3px] w-10 rounded-full"
-            style={{ backgroundColor: `${colors.shadowDark}22` }}
-          />
-        </View>
+      <View className="items-center">
+        <View
+          className="h-[3px] w-10 rounded-full"
+          style={{ backgroundColor: `${colors.shadowDark}22` }}
+        />
+      </View>
 
-        <View className="mt-1">
-          <IntakeRoutine />
-        </View>
+      <View className="mt-1">
+        <IntakeRoutine />
+      </View>
     </ScreenContainer>
   );
 }

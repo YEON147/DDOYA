@@ -22,7 +22,8 @@
         "foregroundImage": "./assets/images/ddoya_logo.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "bundler": "metro",
