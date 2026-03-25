@@ -2,14 +2,17 @@ package com.ssafy.ddoya.domain.notification.controller;
 
 import com.ssafy.ddoya.domain.auth.dto.CustomUserDetails;
 import com.ssafy.ddoya.domain.notification.dto.DeviceTokenRegisterRequest;
+import com.ssafy.ddoya.domain.notification.dto.NotificationListResponse;
 import com.ssafy.ddoya.domain.notification.dto.PushSendRequest;
 import com.ssafy.ddoya.domain.notification.service.DeviceTokenService;
 import com.ssafy.ddoya.domain.notification.service.NotificationFacade;
+import com.ssafy.ddoya.domain.notification.service.NotificationService;
 import com.ssafy.ddoya.global.exception.CustomException;
 import com.ssafy.ddoya.global.response.SuccessResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -27,6 +30,34 @@ public class NotificationController {
 
     private final DeviceTokenService deviceTokenService;
     private final NotificationFacade notificationFacade;
+    private final NotificationService notificationService;
+
+    /**
+     * 사용자의 모든 알림 내역을 최신순으로 페이징 조회합니다.
+     */
+    @GetMapping
+    public ResponseEntity<SuccessResponse<NotificationListResponse>> getNotifications(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            Pageable pageable) {
+        
+        validateUser(userDetails);
+        NotificationListResponse response = notificationService.getNotifications(userDetails.getUser().getUserId(), pageable);
+        
+        return ResponseEntity.ok(SuccessResponse.of("알림 내역 조회가 완료되었습니다.", response));
+    }
+
+    /**
+     * 사용자의 모든 알림 내역을 전체 삭제 처리합니다.
+     */
+    @DeleteMapping
+    public ResponseEntity<SuccessResponse<Void>> deleteAllNotifications(
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        
+        validateUser(userDetails);
+        notificationService.deleteAllNotifications(userDetails.getUser().getUserId());
+        
+        return ResponseEntity.ok(SuccessResponse.of("알림 내역 전체 삭제가 완료되었습니다.", null));
+    }
 
     /**
      * 사용자 기기의 가장 최신화된 FCM 토큰을 기록합니다.
