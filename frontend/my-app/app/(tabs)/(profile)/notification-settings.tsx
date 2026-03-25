@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Switch, StyleSheet, Alert } from 'react-native';
+import { View, Text, Switch, StyleSheet, Alert, TouchableOpacity } from 'react-native';
 import { ScreenContainer } from '@/src/components/common/ScreenContainer';
 import { NicknameHeader } from '@/src/components/common/HeaderMessage';
+import { TimePicker } from '@/src/components/common/TimePicker';
 import { colors } from '@/constants/theme/colors';
 import { neuRaised } from '@/constants/theme/neumorphism';
 import { notificationApi, NotificationSettings } from '@/src/api/notification';
@@ -17,6 +18,8 @@ export default function NotificationSettingsScreen() {
     stockNotificationEnabled: true,
     carryNotificationEnabled: true,
   });
+  const [carryTime, setCarryTime] = useState<string | null>(null);
+  const [isTimePickerVisible, setIsTimePickerVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   // 초기 설정 로드
@@ -26,6 +29,12 @@ export default function NotificationSettingsScreen() {
         const response = await notificationApi.getNotificationSettings();
         if (response.data && response.data.data) {
           setSettings(response.data.data);
+        }
+        
+        // 챙김 알림 시각 추가 조회
+        const timeResponse = await notificationApi.getCarryNotificationTime();
+        if (timeResponse.data && timeResponse.data.data) {
+          setCarryTime(timeResponse.data.data.carry_notification_time);
         }
       } catch (error) {
         console.error('알림 설정 로드 실패:', error);
@@ -43,12 +52,31 @@ export default function NotificationSettingsScreen() {
     setSettings(updatedSettings);
 
     try {
-      await notificationApi.updateNotificationSettings({ [key]: value });
+      if (key === 'intakeNotificationEnabled') {
+        await notificationApi.updateIntakeNotificationSetting(value);
+      } else if (key === 'stockNotificationEnabled') {
+        await notificationApi.updateStockNotificationSetting(value);
+      } else if (key === 'carryNotificationEnabled') {
+        await notificationApi.updateCarryNotificationSetting(value);
+      }
     } catch (error) {
       console.error(`${key} 업데이트 실패:`, error);
       Alert.alert('오류', '알림 설정을 저장하지 못했습니다.');
       // 실패 시 롤백
       setSettings(settings);
+    }
+  };
+
+  // 챙김 시각 변경 핸들러
+  const handleCarryTimeChange = async (selectedTime: string) => {
+    try {
+      await notificationApi.updateCarryNotificationTime(selectedTime);
+      setCarryTime(selectedTime);
+    } catch (error) {
+      console.error('챙김 알림 시각 업데이트 실패:', error);
+      Alert.alert('오류', '알림 시각을 저장하지 못했습니다.');
+    } finally {
+      setIsTimePickerVisible(false);
     }
   };
 
@@ -82,7 +110,39 @@ export default function NotificationSettingsScreen() {
           value={settings.carryNotificationEnabled}
           onValueChange={(val) => handleToggle('carryNotificationEnabled', val)}
         />
+
+        {/* 챙김 알림 시각 설정 (챙김 알림이 활성화되어 있을 때만 표시) */}
+        {settings.carryNotificationEnabled && (
+          <View 
+            className="flex-row items-center justify-between rounded-2xl px-5 py-5" 
+            style={neuRaised(16, colors.surface)}
+          >
+            <View>
+              <Text className="text-[16px] font-scdream-bold mb-1" style={{ color: colors.text }}>
+                챙김 알림 시각
+              </Text>
+            </View>
+            <TouchableOpacity 
+              activeOpacity={0.7} 
+              onPress={() => setIsTimePickerVisible(true)}
+              className="px-3 py-1.5 rounded-lg"
+              style={{ backgroundColor: `${colors.primary}15` }}
+            >
+              <Text className="text-[16px] font-scdream-bold" style={{ color: colors.primary }}>
+                {carryTime || '설정 필요'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
+
+      <TimePicker
+        isVisible={isTimePickerVisible}
+        title="챙김 알림 시각 설정"
+        initialTime={carryTime || '22:00'}
+        onClose={() => setIsTimePickerVisible(false)}
+        onConfirm={handleCarryTimeChange}
+      />
     </ScreenContainer>
   );
 }

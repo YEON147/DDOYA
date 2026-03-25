@@ -32,17 +32,35 @@ export const notificationApi = {
 
   /**
    * 사용자 알림 설정 조회
-   * (user_notification_setting 테이블 기반)
+   * GET /api/notification-settings
    */
   getNotificationSettings: () => {
-    return apiClient.get<SuccessResponse<NotificationSettings>>('/notifications/settings');
+    return apiClient.get<SuccessResponse<NotificationSettings>>('/notification-settings');
   },
 
-  /**
-   * 사용자 알림 설정 수정
-   */
-  updateNotificationSettings: (settings: Partial<NotificationSettings>) => {
-    return apiClient.patch<SuccessResponse<NotificationSettings>>('/notifications/settings', settings);
+  /** 섭취 알림 토글 (PATCH /api/notification-settings/intake) */
+  updateIntakeNotificationSetting: (enabled: boolean) => {
+    return apiClient.patch<SuccessResponse<NotificationSettings>>('/notification-settings/intake', { enabled });
+  },
+
+  /** 재고 알림 토글 (PATCH /api/notification-settings/stock) */
+  updateStockNotificationSetting: (enabled: boolean) => {
+    return apiClient.patch<SuccessResponse<NotificationSettings>>('/notification-settings/stock', { enabled });
+  },
+
+  /** 챙김 알림 토글 (PATCH /api/notification-settings/carry) */
+  updateCarryNotificationSetting: (enabled: boolean) => {
+    return apiClient.patch<SuccessResponse<NotificationSettings>>('/notification-settings/carry', { enabled });
+  },
+
+  /** 챙김 알림 시각 조회 (GET /api/notification-settings/carry-time) */
+  getCarryNotificationTime: () => {
+    return apiClient.get<SuccessResponse<{ carry_notification_time: string }>>('/notification-settings/carry-time');
+  },
+
+  /** 챙김 알림 시각 설정 (PATCH /api/notification-settings/carry-time) */
+  updateCarryNotificationTime: (carryNotificationTime: string) => {
+    return apiClient.patch<SuccessResponse<{ carry_notification_time: string }>>('/notification-settings/carry-time', { carry_notification_time: carryNotificationTime });
   },
 };
 

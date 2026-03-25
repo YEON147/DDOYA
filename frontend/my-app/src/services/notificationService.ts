@@ -18,7 +18,6 @@ export const notificationService = {
 
     // 1. 물리 디바이스인지 확인 (에뮬레이터/시뮬레이터에서는 푸시 알림이 제한적일 수 있음)
     if (!Device.isDevice) {
-      console.log('푸시 알림은 물리 디바이스에서만 가능합니다.');
       return null;
     }
 
@@ -30,7 +29,6 @@ export const notificationService = {
       finalStatus = status;
     }
     if (finalStatus !== 'granted') {
-      console.log('알림 권한을 얻지 못했습니다.');
       return null;
     }
 
@@ -39,7 +37,6 @@ export const notificationService = {
     try {
         const projectId = Constants?.expoConfig?.extra?.eas?.projectId ?? Constants?.easConfig?.projectId;
         token = (await Notifications.getDevicePushTokenAsync()).data;
-        console.log('획득한 디바이스 토큰:', token);
     } catch (e) {
         console.error('토큰 획득 실패:', e);
     }
@@ -65,7 +62,6 @@ export const notificationService = {
       const token = await notificationService.registerForPushNotificationsAsync();
       if (token) {
         await notificationApi.registerToken(token);
-        console.log('서버에 토큰 등록 완료');
       }
     } catch (error) {
       console.error('서버 토큰 동기화 오류:', error);
@@ -78,7 +74,6 @@ export const notificationService = {
   deactivateTokenOnServer: async (token: string) => {
     try {
       await notificationApi.deactivateToken(token);
-      console.log('서버 토큰 비활성화 완료');
     } catch (error) {
       console.error('토큰 비활성화 오류:', error);
     }
