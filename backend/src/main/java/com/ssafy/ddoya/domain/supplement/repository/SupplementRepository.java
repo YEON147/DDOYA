@@ -33,7 +33,7 @@ public interface SupplementRepository extends JpaRepository<Supplement, Long> {
      * @param pageable 페이징 정보
      * @return 페이징된 영양제 목록
      */
-    @Query("SELECT s FROM Supplement s WHERE s.user.userId = :userId ORDER BY s.createdAt DESC")
+    @Query("SELECT s FROM Supplement s LEFT JOIN FETCH s.bodyPart WHERE s.user.userId = :userId ORDER BY s.createdAt DESC")
     Page<Supplement> findByUserId(@Param("userId") Long userId, Pageable pageable);
 
     /**

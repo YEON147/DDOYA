@@ -25,7 +25,19 @@ public interface IntakeRecordRepository extends JpaRepository<IntakeRecord, Long
      * @param end    조회 종료 일시
      * @return 섭취 기록 리스트
      */
-    List<IntakeRecord> findByScheduleUserUserIdAndPlannedAtBetween(Long userId, LocalDateTime start, LocalDateTime end);
+    @Query("""
+        SELECT ir FROM IntakeRecord ir 
+        JOIN FETCH ir.schedule s 
+        JOIN FETCH s.supplement supp 
+        LEFT JOIN FETCH supp.bodyPart 
+        WHERE s.user.userId = :userId 
+          AND ir.plannedAt >= :start 
+          AND ir.plannedAt < :end
+    """)
+    List<IntakeRecord> findByScheduleUserUserIdAndPlannedAtBetween(
+            @Param("userId") Long userId, 
+            @Param("start") LocalDateTime start, 
+            @Param("end") LocalDateTime end);
 
     /**
      * 특정 일정의 특정 기간 내 섭취 기록을 조회합니다.

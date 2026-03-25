@@ -587,6 +587,7 @@ public class SupplementService {
                         .userSupplementId(s.getUserSupplementId())
                         .pillImageUrl(s.getPillImageUrl())
                         .alias(s.getAlias())
+                        .bodyPartId(s.getBodyPart() != null ? s.getBodyPart().getBodyPartId() : null)
                         .primaryIngredientNames(primaryNameMap.getOrDefault(s.getUserSupplementId(), emptyList()))
                         .stockQuantity(stockQuantityMap.getOrDefault(s.getUserSupplementId(), 0))
                         .build())
