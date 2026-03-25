@@ -47,6 +47,8 @@ public class IntakeScheduleResponse {
         private Long userSupplementId;
         /** 영양제 별칭 */
         private String alias;
+        /** 영양제가 연결된 신체 부위 ID */
+        private Byte bodyPartId;
         /** 1회 섭취량 */
         private Integer dosePerIntake;
         /** 섭취 기록 ID */

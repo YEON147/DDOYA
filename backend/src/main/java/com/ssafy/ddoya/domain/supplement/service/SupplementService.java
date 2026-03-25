@@ -587,6 +587,7 @@ public class SupplementService {
                         .userSupplementId(s.getUserSupplementId())
                         .pillImageUrl(s.getPillImageUrl())
                         .alias(s.getAlias())
+                        .bodyPartId(s.getBodyPart() != null ? s.getBodyPart().getBodyPartId() : null)
                         .primaryIngredientNames(primaryNameMap.getOrDefault(s.getUserSupplementId(), emptyList()))
                         .stockQuantity(stockQuantityMap.getOrDefault(s.getUserSupplementId(), 0))
                         .build())
@@ -607,12 +608,9 @@ public class SupplementService {
      * 영양제 상세 정보 및 섭취 일정을 조회합니다.
      */
     public SupplementDetailResponse getSupplementDetail(Long userId, Long supplementId) {
-        Supplement supplement = supplementRepository.findById(supplementId)
-                .orElseThrow(() -> CustomException.notFound("요청한 영양제를 찾을 수 없습니다."));
-
-        if (!supplement.getUser().getUserId().equals(userId)) {
-            throw CustomException.forbidden("해당 영양제에 대한 권한이 없습니다.");
-        }
+        // findByIdAndUserId를 사용하도록 변경하여 성능(Fetch Join)과 권한 체크를 동시에 수행
+        Supplement supplement = supplementRepository.findByIdAndUserId(supplementId, userId)
+                .orElseThrow(() -> CustomException.notFound("요청한 영양제를 찾을 수 없거나 권한이 없습니다."));
 
         // 주성분명 목록 조회
         List<String> primaryIngredientNames = userSupplementIngredientRepository
@@ -635,10 +633,13 @@ public class SupplementService {
                         .build())
                 .collect(Collectors.toList());
 
+        Byte bodyPartId = (supplement.getBodyPart() != null) ? supplement.getBodyPart().getBodyPartId() : null;
+
         return SupplementDetailResponse.builder()
                 .userSupplementId(supplement.getUserSupplementId())
                 .pillImageUrl(supplement.getPillImageUrl())
                 .alias(supplement.getAlias())
+                .bodyPartId(bodyPartId)
                 .primaryIngredientNames(primaryIngredientNames)
                 .dailyDose(supplement.getDailyDose())
                 .dosePerIntake(supplement.getDosePerIntake())

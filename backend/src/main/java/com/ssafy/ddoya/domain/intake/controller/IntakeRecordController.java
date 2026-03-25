@@ -3,12 +3,12 @@ package com.ssafy.ddoya.domain.intake.controller;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.ddoya.domain.auth.dto.CustomUserDetails;
-import com.ssafy.ddoya.domain.intake.dto.PillVerifyRequest;
-import com.ssafy.ddoya.domain.intake.dto.PillVerifyResponse;
+import com.ssafy.ddoya.domain.intake.dto.*;
 import com.ssafy.ddoya.domain.intake.service.IntakeRecordService;
 import com.ssafy.ddoya.global.exception.CustomException;
 import com.ssafy.ddoya.global.response.SuccessResponse;
 import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Valid;
 import jakarta.validation.Validator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
@@ -62,5 +62,25 @@ public class IntakeRecordController {
         // 3. 비즈니스 로직 수행
         PillVerifyResponse result = intakeRecordService.verifyPillIntake(userDetails.getUser().getUserId(), image, request);
         return ResponseEntity.ok(SuccessResponse.of("복용 사진 인증 처리가 완료되었습니다.", result));
+    }
+
+    /**
+     * 특정 섭취 기록의 상태를 직접 수정합니다. (MISSED, SKIPPED 상태로만 변경 가능)
+     *
+     * @param userDetails    인증된 사용자의 정보
+     * @param intakeRecordId 상태를 변경할 섭취 기록 ID
+     * @param request        변경할 상태 정보가 담긴 DTO
+     * @return 변경된 섭취 기록 정보
+     */
+    @PatchMapping("/{intakeRecordId}/status")
+    public ResponseEntity<SuccessResponse<IntakeStatusUpdateResponse>> updateIntakeRecordStatus(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long intakeRecordId,
+            @Valid @RequestBody IntakeStatusUpdateRequest request) {
+
+        IntakeStatusUpdateResponse result = intakeRecordService.updateIntakeRecordStatus(
+                userDetails.getUser().getUserId(), intakeRecordId, request);
+
+        return ResponseEntity.ok(SuccessResponse.of("섭취 기록 상태가 변경되었습니다.", result));
     }
 }
