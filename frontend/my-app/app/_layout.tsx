@@ -36,6 +36,8 @@ const queryClient = new QueryClient();
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+  const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
+  const hasHydratedFromStorage = useAuthStore((state) => state.hasHydratedFromStorage);
 
   const [loaded] = useFonts({
     SCoreDreamThin: require('../assets/fonts/SCDream1.otf'),
@@ -59,15 +61,16 @@ export default function RootLayout() {
     void useAuthStore.getState().loadToken();
   }, []);
 
-  // 알림 리스너 및 초기화 로직
+  // 로그인 상태 복원 완료 후, 알림 토큰 서버 동기화
   useEffect(() => {
-    // 1. 로그인 상태라면 서버와 토큰 동기화 시도
-    const authStore = useAuthStore.getState();
-    if (authStore.isLoggedIn) {
+    if (hasHydratedFromStorage && isLoggedIn) {
       notificationService.syncTokenWithServer();
     }
+  }, [hasHydratedFromStorage, isLoggedIn]);
 
-    // 2. 알림 수신 리스너 (포그라운드 환경)
+  // 알림 리스너 환경 구성
+  useEffect(() => {
+    // 1. 알림 수신 리스너 (포그라운드 환경)
     const notificationListener = Notifications.addNotificationReceivedListener(notification => {
       console.log('알림 수신:', notification);
     });
