@@ -1,0 +1,537 @@
+from datetime import date, datetime
+from sqlalchemy.orm import Session
+from sqlalchemy import text
+
+from app.services.openai_service import (
+    select_top_deficient_ingredients,
+    match_product_types,
+    generate_report_comments,
+)
+
+# ── 단위 변환 ──────────────────────────────────────────────
+UNIT_TO_MG = {
+    "g": 1000.0,
+    "mg": 1.0,
+    "μg": 0.001,
+    "ug": 0.001,
+    "mcg": 0.001,
+    "μg RAE": 0.001,
+    "μg DFE": 0.001,
+    "mg α-TE": 1.0,
+    "mg NE": 1.0,
+    "IU": None,  # 성분마다 환산값이 다름 → 별도 처리
+}
+
+IU_TO_MG = {
+    "비타민D": 0.025 * 0.001,       # 1 IU = 0.025 μg = 0.000025 mg
+    "비타민A": 0.3 * 0.001,         # 1 IU(retinol) = 0.3 μg = 0.0003 mg
+    "비타민E": 0.67 * 1.0,          # 1 IU(d-α-tocopherol) ≈ 0.67 mg
+}
+
+
+def _convert_to_mg(amount: float, from_unit: str, ingredient_name: str = "") -> float:
+    """입력 amount를 mg 기준으로 변환"""
+    from_unit_lower = from_unit.strip()
+
+    factor = UNIT_TO_MG.get(from_unit_lower)
+    if factor is not None:
+        return amount * factor
+
+    # IU 처리
+    if from_unit_lower.upper() == "IU":
+        for name_key, iu_factor in IU_TO_MG.items():
+            if name_key in ingredient_name:
+                return amount * iu_factor
+        return amount  # 매핑 못 찾으면 그대로 반환
+
+    # CFU 등 변환 불가 단위는 그대로
+    return amount
+
+
+def _convert_from_mg(amount_mg: float, to_unit: str, ingredient_name: str = "") -> float:
+    """mg 기준 값을 target_unit으로 변환"""
+    factor = UNIT_TO_MG.get(to_unit.strip())
+    if factor is not None and factor != 0:
+        return amount_mg / factor
+
+    if to_unit.strip().upper() == "IU":
+        for name_key, iu_factor in IU_TO_MG.items():
+            if name_key in ingredient_name:
+                return amount_mg / iu_factor if iu_factor != 0 else amount_mg
+        return amount_mg
+
+    return amount_mg
+
+
+# ── 나이 계산 ──────────────────────────────────────────────
+def _calculate_age(birth_date_str: str) -> int:
+    birth = datetime.strptime(birth_date_str, "%Y-%m-%d").date()
+    today = date.today()
+    return today.year - birth.year - ((today.month, today.day) < (birth.month, birth.day))
+
+
+# ── RI/UL 컬럼 선택 ───────────────────────────────────────
+def _get_ri_ul_columns(gender: str, age: int) -> tuple[str, str]:
+    if age < 19:
+        return "ri_non_adult", "ul_non_adult"
+    if gender.upper() == "MALE":
+        return "ri_adult_m", "ul_adult_m"
+    return "ri_adult_f", "ul_adult_f"
+
+
+# ── DB 조회 ────────────────────────────────────────────────
+def _load_ingredient_master(db: Session, ingredient_ids: list[int] | None = None) -> dict:
+    """ingredient_master 테이블에서 성분 정보 조회. ingredient_ids가 비면 전체 조회."""
+    if ingredient_ids:
+        placeholders = ", ".join([f":id_{i}" for i in range(len(ingredient_ids))])
+        params = {f"id_{i}": iid for i, iid in enumerate(ingredient_ids)}
+        where_clause = f"WHERE ingredient_id IN ({placeholders})"
+    else:
+        params = {}
+        where_clause = ""
+
+    result = db.execute(
+        text(
+            f"SELECT ingredient_id, normalized_name, "
+            f"ri_adult_m, ri_adult_f, ri_non_adult, ri_pregnant, "
+            f"ul_adult_m, ul_adult_f, ul_non_adult, ul_pregnant, "
+            f"unit, solubility, gi_irritant, effect, absorption_note "
+            f"FROM ingredient_master "
+            f"{where_clause}"
+        ),
+        params,
+    ).fetchall()
+
+    master = {}
+    for row in result:
+        master[row[0]] = {
+            "ingredient_id": row[0],
+            "normalized_name": row[1],
+            "ri_adult_m": float(row[2]) if row[2] is not None else None,
+            "ri_adult_f": float(row[3]) if row[3] is not None else None,
+            "ri_non_adult": float(row[4]) if row[4] is not None else None,
+            "ri_pregnant": float(row[5]) if row[5] is not None else None,
+            "ul_adult_m": float(row[6]) if row[6] is not None else None,
+            "ul_adult_f": float(row[7]) if row[7] is not None else None,
+            "ul_non_adult": float(row[8]) if row[8] is not None else None,
+            "ul_pregnant": float(row[9]) if row[9] is not None else None,
+            "unit": row[10],
+            "solubility": row[11],
+            "gi_irritant": bool(row[12]) if row[12] is not None else False,
+            "effect": row[13],
+            "absorption_note": row[14],
+        }
+    return master
+
+
+def _load_interactions(db: Session, ingredient_ids: list[int]) -> list[dict]:
+    """ingredient_interaction 테이블에서 상호작용 정보 조회"""
+    if not ingredient_ids:
+        return []
+
+    placeholders = ", ".join([f":id_{i}" for i in range(len(ingredient_ids))])
+    params = {f"id_{i}": iid for i, iid in enumerate(ingredient_ids)}
+
+    result = db.execute(
+        text(
+            f"SELECT interaction_id, ingredient_a, ingredient_b, type, min_interval_hours, note "
+            f"FROM ingredient_interaction "
+            f"WHERE ingredient_a IN ({placeholders}) OR ingredient_b IN ({placeholders})"
+        ),
+        params,
+    ).fetchall()
+
+    return [
+        {
+            "interaction_id": row[0],
+            "ingredient_a": row[1],
+            "ingredient_b": row[2],
+            "type": row[3],
+            "min_interval_hours": row[4],
+            "note": row[5],
+        }
+        for row in result
+    ]
+
+
+def _load_product_types(db: Session) -> list[str]:
+    """products 테이블에서 고유 product_type 목록 조회"""
+    result = db.execute(
+        text("SELECT DISTINCT product_type FROM products")
+    ).fetchall()
+    return [row[0] for row in result]
+
+
+def _load_products_by_types(db: Session, product_types: list[str]) -> list[dict]:
+    """product_type 목록으로 제품 검색"""
+    if not product_types:
+        return []
+
+    placeholders = ", ".join([f":pt_{i}" for i in range(len(product_types))])
+    params = {f"pt_{i}": pt for i, pt in enumerate(product_types)}
+
+    result = db.execute(
+        text(
+            f"SELECT product_code, product_name, product_type "
+            f"FROM products "
+            f"WHERE product_type IN ({placeholders}) "
+            f"LIMIT 30"
+        ),
+        params,
+    ).fetchall()
+
+    return [
+        {
+            "product_code": row[0],
+            "product_name": row[1],
+            "product_type": row[2],
+        }
+        for row in result
+    ]
+
+
+# ── Step 1: 성분 합산 ──────────────────────────────────────
+def _aggregate_ingredients(supplements: list[dict], master: dict) -> dict:
+    """
+    같은 ingredient_id 합산.
+    amount는 이미 하루치이므로 바로 합산.
+    단위가 다를 경우 ingredient_master.unit 기준으로 변환.
+    """
+    totals = {}
+
+    for supp in supplements:
+        for ing in supp.get("ingredients", []):
+            iid = ing["ingredient_id"]
+            amount = float(ing["amount"])
+            unit = ing["unit"]
+            name = ing.get("ingredient_name", "")
+
+            # master에 등록된 기준 단위 가져오기
+            master_unit = master.get(iid, {}).get("unit", unit)
+
+            # 단위 변환: 입력 → mg → 기준 단위
+            if unit != master_unit:
+                amount_mg = _convert_to_mg(amount, unit, name)
+                amount = _convert_from_mg(amount_mg, master_unit, name)
+
+            if iid in totals:
+                totals[iid]["amount"] += amount
+            else:
+                totals[iid] = {
+                    "ingredient_id": iid,
+                    "ingredient_name": name,
+                    "amount": amount,
+                    "unit": master_unit,
+                }
+
+    return totals
+
+
+# ── Step 2: 과잉/부족 분석 ─────────────────────────────────
+def _analyze_ingredients(totals: dict, master: dict, ri_col: str, ul_col: str) -> list[dict]:
+    """
+    RI/UL 기반 과잉·부족 분석.
+    - RI/UL이 NULL인 성분은 skip
+    - 합산량 > UL → EXCESS
+    - 합산량 < RI × 0.5 → DEFICIENCY
+    - 그 외 → NORMAL
+    """
+    analysis = []
+
+    for iid, total in totals.items():
+        info = master.get(iid)
+        if not info:
+            continue
+
+        ri = info.get(ri_col)
+        ul = info.get(ul_col)
+
+        # RI/UL 둘 다 없으면 분석 불가 → skip
+        if ri is None and ul is None:
+            continue
+
+        current = total["amount"]
+        unit = total["unit"]
+        name = info["normalized_name"]
+
+        item = {
+            "ingredient_id": iid,
+            "normalized_ingredient_name": name,
+            "recommended_amount": ri,
+            "current_amount": round(current, 2),
+            "excess_ratio": None,
+            "excess_amount": None,
+            "deficiency_ratio": None,
+            "deficiency_amount": None,
+            "unit": unit,
+            "analysis_type": "NORMAL",
+        }
+
+        # 과잉 판단
+        if ul is not None and current > ul:
+            excess_amount = round(current - ul, 2)
+            excess_ratio = round(excess_amount / ul, 2) if ul > 0 else None
+            item["analysis_type"] = "EXCESS"
+            item["excess_ratio"] = excess_ratio
+            item["excess_amount"] = excess_amount
+
+        # 부족 판단 (RI × 0.5 이하)
+        elif ri is not None and ri > 0 and current < ri * 0.5:
+            deficiency_amount = round(ri - current, 2)
+            deficiency_ratio = round(deficiency_amount / ri, 2) if ri > 0 else None
+            item["analysis_type"] = "DEFICIENCY"
+            item["deficiency_ratio"] = deficiency_ratio
+            item["deficiency_amount"] = deficiency_amount
+
+        analysis.append(item)
+
+    return analysis
+
+
+# ── Step 3: 부족 성분 제품 추천 ─────────────────────────────
+def _recommend_products(
+    analysis: list[dict],
+    db: Session,
+    gender: str,
+    age: int,
+) -> tuple[list[dict], list[dict]]:
+    """
+    DEFICIENCY 성분 중 상위 3개 선정 → product_type LLM 매핑 → 성분당 3개 제품 추천.
+    """
+    deficient = [a for a in analysis if a["analysis_type"] == "DEFICIENCY"]
+
+    if not deficient:
+        return [], []
+
+    # 부족비율 내림차순 정렬
+    deficient.sort(key=lambda x: x.get("deficiency_ratio") or 0, reverse=True)
+
+    # 상위 3개 선정 (동률 시 LLM 판단)
+    if len(deficient) > 3:
+        # 3번째와 4번째의 비율이 같으면 LLM에게 위임
+        if deficient[2].get("deficiency_ratio") == deficient[3].get("deficiency_ratio"):
+            tied = [d for d in deficient if d.get("deficiency_ratio") == deficient[2].get("deficiency_ratio")]
+            non_tied = [d for d in deficient if d.get("deficiency_ratio") != deficient[2].get("deficiency_ratio")]
+            # 확실히 상위인 것 + LLM이 선정한 나머지
+            slots_needed = 3 - len([d for d in non_tied if (d.get("deficiency_ratio") or 0) > (deficient[2].get("deficiency_ratio") or 0)])
+            top_non_tied = [d for d in non_tied if (d.get("deficiency_ratio") or 0) > (deficient[2].get("deficiency_ratio") or 0)]
+
+            llm_selected = select_top_deficient_ingredients(
+                tied_ingredients=tied,
+                slots=slots_needed,
+                gender=gender,
+                age=age,
+            )
+            deficient = top_non_tied + llm_selected
+        else:
+            deficient = deficient[:3]
+    # 3개 이하면 그대로 사용
+
+    # DB에서 고유 product_type 목록 가져오기
+    all_product_types = _load_product_types(db)
+
+    # LLM으로 부족 성분 → product_type 매핑
+    deficient_names = [d["normalized_ingredient_name"] for d in deficient]
+    deficient_ids = {d["normalized_ingredient_name"]: d["ingredient_id"] for d in deficient}
+    type_mapping = match_product_types(deficient_names, all_product_types)
+
+    # 매핑된 product_type으로 제품 검색
+    mapped_types = list(set(type_mapping.values()))
+    products = _load_products_by_types(db, mapped_types)
+
+    # 성분별로 3개씩 추천 구성
+    recommended = []
+    for ing_name, ptype in type_mapping.items():
+        ing_id = deficient_ids.get(ing_name)
+        matched = [p for p in products if p["product_type"] == ptype][:3]
+        for p in matched:
+            recommended.append({
+                "product_code": p["product_code"],
+                "product_name": p["product_name"],
+                "ingredient_id": ing_id,
+            })
+
+    return recommended, deficient
+
+
+# ── Step 4: 섭취 타이밍 추천 ────────────────────────────────
+TIMING_ORDER = [
+    "BEFORE_BREAKFAST", "AFTER_BREAKFAST",
+    "BEFORE_LUNCH", "AFTER_LUNCH",
+    "BEFORE_DINNER", "AFTER_DINNER",
+    "BEFORE_SLEEP",
+]
+
+
+def _recommend_timing(
+    supplements: list[dict],
+    master: dict,
+    interactions: list[dict],
+) -> list[dict]:
+    """
+    영양제별 최적 섭취 타이밍 추천.
+    - 지용성(FAT) / 위자극 → 식후
+    - ENERGY → 아침 / RELAX → 저녁·취침전
+    - ANTAGONIST 상호작용 → 간격 배치
+    - SYNERGY → 동시 배치
+    """
+    # 각 영양제에 포함된 성분의 특성 수집
+    supp_profiles = []
+    for supp in supplements:
+        profile = {
+            "user_supplement_id": supp["user_supplement_id"],
+            "alias": supp.get("alias", ""),
+            "has_fat_soluble": False,
+            "has_gi_irritant": False,
+            "has_energy": False,
+            "has_relax": False,
+            "ingredient_ids": set(),
+        }
+        for ing in supp.get("ingredients", []):
+            iid = ing["ingredient_id"]
+            profile["ingredient_ids"].add(iid)
+            info = master.get(iid, {})
+            if info.get("solubility") == "FAT":
+                profile["has_fat_soluble"] = True
+            if info.get("gi_irritant"):
+                profile["has_gi_irritant"] = True
+            if info.get("effect") == "ENERGY":
+                profile["has_energy"] = True
+            if info.get("effect") == "RELAX":
+                profile["has_relax"] = True
+        supp_profiles.append(profile)
+
+    # 기본 타이밍 결정
+    for p in supp_profiles:
+        if p["has_relax"]:
+            p["timing"] = "BEFORE_SLEEP"
+        elif p["has_energy"]:
+            if p["has_fat_soluble"] or p["has_gi_irritant"]:
+                p["timing"] = "AFTER_BREAKFAST"
+            else:
+                p["timing"] = "BEFORE_BREAKFAST"
+        elif p["has_fat_soluble"] or p["has_gi_irritant"]:
+            p["timing"] = "AFTER_BREAKFAST"
+        else:
+            p["timing"] = "AFTER_BREAKFAST"  # 기본값
+
+    # ANTAGONIST 상호작용 처리: 같은 타이밍에 배치된 영양제 간격 분리
+    antagonist_pairs = [
+        ia for ia in interactions if ia["type"] == "ANTAGONIST"
+    ]
+
+    for pair in antagonist_pairs:
+        a_id = pair["ingredient_a"]
+        b_id = pair["ingredient_b"]
+
+        # 어떤 영양제에 속하는지 찾기
+        supp_with_a = [p for p in supp_profiles if a_id in p["ingredient_ids"]]
+        supp_with_b = [p for p in supp_profiles if b_id in p["ingredient_ids"]]
+
+        for sa in supp_with_a:
+            for sb in supp_with_b:
+                if sa["user_supplement_id"] == sb["user_supplement_id"]:
+                    continue
+                # 같은 타이밍이면 하나를 다른 시간대로 이동
+                if sa["timing"] == sb["timing"]:
+                    current_idx = TIMING_ORDER.index(sb["timing"])
+                    # 최소 2칸(약 4-6시간) 뒤로 이동
+                    new_idx = min(current_idx + 2, len(TIMING_ORDER) - 1)
+                    sb["timing"] = TIMING_ORDER[new_idx]
+
+    # SYNERGY 상호작용 처리: 같은 타이밍으로 합치기
+    synergy_pairs = [
+        ia for ia in interactions if ia["type"] == "SYNERGY"
+    ]
+
+    for pair in synergy_pairs:
+        a_id = pair["ingredient_a"]
+        b_id = pair["ingredient_b"]
+
+        supp_with_a = [p for p in supp_profiles if a_id in p["ingredient_ids"]]
+        supp_with_b = [p for p in supp_profiles if b_id in p["ingredient_ids"]]
+
+        for sa in supp_with_a:
+            for sb in supp_with_b:
+                if sa["user_supplement_id"] == sb["user_supplement_id"]:
+                    continue
+                # 시너지 → 같은 타이밍으로
+                sb["timing"] = sa["timing"]
+
+    return [
+        {
+            "user_supplement_id": p["user_supplement_id"],
+            "alias": p["alias"],
+            "intake_timing": p["timing"],
+        }
+        for p in supp_profiles
+    ]
+
+
+# ── 메인 빌드 함수 ─────────────────────────────────────────
+def build_report(req: dict, db: Session) -> dict:
+    """레포트 생성 메인 함수"""
+    user_id = req["user_id"]
+    gender = req["gender"]
+    birth_date = req["birth_date"]
+    supplements = req["supplements"]
+
+    age = _calculate_age(birth_date)
+    ri_col, ul_col = _get_ri_ul_columns(gender, age)
+
+    # 모든 ingredient_id 수집
+    all_ingredient_ids = list(set(
+        ing["ingredient_id"]
+        for supp in supplements
+        for ing in supp.get("ingredients", [])
+    ))
+
+    # DB 조회 (언제나 전체 성분을 조회하여 아예 안 먹는 성분도 결핍 모델에 포함시킴)
+    master = _load_ingredient_master(db)
+
+    interactions = _load_interactions(db, all_ingredient_ids)
+
+    # Step 1: 성분 합산 (단위 변환 포함)
+    totals = _aggregate_ingredients(supplements, master)
+
+    # 빈 성분 처리: 사용자가 전혀 섭취하지 않는 성분들도 current_amount를 0으로 초기화
+    for iid, info in master.items():
+        if iid not in totals:
+            totals[iid] = {
+                "ingredient_id": iid,
+                "ingredient_name": info["normalized_name"],
+                "amount": 0.0,
+                "unit": info.get("unit", ""),
+            }
+
+    # Step 2: 과잉/부족 분석
+    analysis = _analyze_ingredients(totals, master, ri_col, ul_col)
+
+    # Step 3: 부족 성분 제품 추천
+    recommended_products, selected_deficient = _recommend_products(analysis, db, gender, age)
+
+    # 분석 데이터 필터링: 현재 섭취 중인 성분 + 제품 추천이 내려진 상위 3개 부족 성분만 남김
+    selected_deficient_ids = {d["ingredient_id"] for d in selected_deficient}
+    filtered_analysis = [
+        item for item in analysis
+        if item["current_amount"] > 0 or item["ingredient_id"] in selected_deficient_ids
+    ]
+
+    # Step 4: 섭취 타이밍 추천
+    timing_recommendations = _recommend_timing(supplements, master, interactions)
+
+    # Step 5: LLM 코멘트 생성 (필터링된 데이터 사용)
+    comments = generate_report_comments(
+        analysis=filtered_analysis,
+        recommended_products=recommended_products,
+        timing_recommendations=timing_recommendations,
+        gender=gender,
+        age=age,
+    )
+
+    return {
+        "ingredient_analysis": filtered_analysis,
+        "recommended_products": recommended_products,
+        "timing_recommendations": timing_recommendations,
+        "comments": comments,
+    }

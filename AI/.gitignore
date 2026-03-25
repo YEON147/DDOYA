@@ -33,3 +33,6 @@ dist/
 Thumbs.db
 *~
 *.swp
+
+# 로컬 스크립트
+import_data.py
