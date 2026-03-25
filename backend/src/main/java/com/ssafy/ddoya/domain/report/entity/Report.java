@@ -50,4 +50,20 @@ public class Report {
         this.user = user;
         this.needsRefresh = needsRefresh != null ? needsRefresh : false;
     }
+
+    /**
+     * 리포트 갱신 완료 시 needsRefresh 플래그를 초기화합니다.
+     * @UpdateTimestamp에 의해 updated_at도 자동 갱신됩니다.
+     */
+    public void markRefreshed() {
+        this.needsRefresh = false;
+    }
+
+    /**
+     * 리포트가 새로 생성/갱신되었을 때 프론트에 갱신이 필요함을 알립니다.
+     * DB 저장 성공 후 호출하여 needs_refresh = true 로 세팅합니다.
+     */
+    public void markNeedsRefresh() {
+        this.needsRefresh = true;
+    }
 }
