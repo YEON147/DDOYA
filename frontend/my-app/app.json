@@ -72,7 +72,8 @@
           "cameraPermission": "Allow $(PRODUCT_NAME) to use the camera to photograph supplement labels."
         }
       ],
-      "expo-notifications"
+      "expo-notifications",
+      "expo-localization"
     ],
     "experiments": {
       "typedRoutes": true,

@@ -1,14 +1,15 @@
-import { View, Text, Pressable } from 'react-native';
+import { View, Text, Pressable, Image } from 'react-native';
 import { Camera, Check } from 'lucide-react-native';
 import { colors } from '@/constants/theme/colors';
 import { softWellnessCard } from '@/constants/theme/neumorphism';
 import { AppIcon } from '@/src/components/common/AppIcon';
 import type { DailyIntakeScheduleSlotItem } from '@/src/types/intakeRoutine';
+import { getBodyPartImageSource } from '@/constants/bodyPartImages';
 
 export type HomeIntakeSlotProps = {
   timeLabel: string;
   items: DailyIntakeScheduleSlotItem[];
-  onPressCamera?: () => void;
+  onPressCamera?: (scheduleIds: number[]) => void;
 };
 
 /** MISSED도 강한 빨강 대신 낮은 대비 톤으로 통일 */
@@ -16,22 +17,22 @@ function statusStyle(status: DailyIntakeScheduleSlotItem['status']) {
   switch (status) {
     case 'TAKEN':
       return {
-        bg: `${colors.primary}14`,
         track: `${colors.primary}4D`,
         showCheck: true,
+        captionBg: `${colors.primary}18`,
       };
     case 'MISSED':
       return {
-        bg: `${colors.shadowDark}12`,
         track: `${colors.textMuted}33`,
         showCheck: false,
+        captionBg: `${colors.shadowDark}10`,
       };
     case 'SKIPPED':
     default:
       return {
-        bg: `${colors.shadowLight}E6`,
         track: `${colors.shadowDark}2E`,
         showCheck: false,
+        captionBg: `${colors.shadowLight}CC`,
       };
   }
 }
@@ -43,7 +44,10 @@ export function HomeIntakeSlot({ timeLabel, items, onPressCamera }: HomeIntakeSl
       <View className="px-4 py-4" style={softWellnessCard(20)}>
         <View className="mb-3 flex-row items-center justify-between">
           <View className="min-w-0 flex-1 flex-row items-center">
-            <View className="mr-2 h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: colors.primary }} />
+            <View
+              className="mr-2 h-2 w-2 shrink-0 rounded-full"
+              style={{ backgroundColor: colors.primary }}
+            />
             <View
               className="rounded-full px-2.5 py-1"
               style={{
@@ -65,7 +69,7 @@ export function HomeIntakeSlot({ timeLabel, items, onPressCamera }: HomeIntakeSl
             </Text>
           </View>
           <Pressable
-            onPress={onPressCamera}
+            onPress={() => onPressCamera?.(items.map((item) => item.scheduleId))}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             className="h-9 w-9 shrink-0 items-center justify-center rounded-full"
             style={({ pressed }) => ({
@@ -90,42 +94,49 @@ export function HomeIntakeSlot({ timeLabel, items, onPressCamera }: HomeIntakeSl
               return (
                 <View
                   key={item.intakeRecordId ?? `${item.scheduleId}-${i}`}
-                  className="mb-2 rounded-2xl p-1.5"
+                  className="mb-3 overflow-hidden rounded-2xl"
                   style={{
                     width: '31.5%',
-                    aspectRatio: 1,
                     marginRight: (i + 1) % 3 === 0 ? 0 : '2.75%',
-                    backgroundColor: `${colors.cardIvory}`,
+                    backgroundColor: colors.cardIvory,
                     borderWidth: 1,
                     borderColor: `${colors.shadowDark}16`,
                   }}
                 >
                   <View
-                    className="relative mb-1.5 flex-1 justify-center rounded-xl px-1 py-1"
-                    style={{
-                      minHeight: 44,
-                      backgroundColor: s.bg,
-                      borderWidth: 1,
-                      borderColor: `${colors.shadowDark}18`,
-                    }}
+                    className="relative w-full items-center justify-center"
+                    style={{ aspectRatio: 1, backgroundColor: `${colors.input}66`, padding: 6 }}
                   >
+                    <Image
+                      source={getBodyPartImageSource(item.bodyPartId)}
+                      style={{ width: '100%', height: '100%' }}
+                      resizeMode="contain"
+                    />
                     {s.showCheck ? (
-                      <View className="absolute right-0.5 top-0.5">
-                        <AppIcon icon={Check} size={12} color={colors.primary} strokeWidth={2.2} />
+                      <View
+                        className="absolute right-2 top-2 h-7 w-7 items-center justify-center rounded-full"
+                        style={{ backgroundColor: `${colors.cardIvory}F0`, borderWidth: 1, borderColor: `${colors.primary}55` }}
+                      >
+                        <AppIcon icon={Check} size={16} color={colors.primary} strokeWidth={2.2} />
                       </View>
                     ) : null}
+                  </View>
+                  <View
+                    className="px-2.5 pb-2.5 pt-2"
+                    style={{ backgroundColor: s.captionBg, borderTopWidth: 1, borderTopColor: `${colors.shadowDark}14` }}
+                  >
                     <Text
-                      className="pr-3 text-[10px] font-scdream-medium leading-tight"
+                      className="text-[13px] font-scdream-medium leading-snug"
                       style={{ color: colors.text }}
-                      numberOfLines={3}
+                      numberOfLines={2}
                     >
                       {item.alias}
                     </Text>
-                    <Text className="mt-0.5 text-[9px] font-scdream" style={{ color: colors.textMuted }}>
-                      {item.dosePerIntake}정
+                    <Text className="mt-1 text-[11px] font-scdream" style={{ color: colors.textMuted }}>
+                      1회 {item.dosePerIntake}정 섭취
                     </Text>
                   </View>
-                  <View className="h-[3px] rounded-full" style={{ backgroundColor: s.track }} />
+                  <View className="h-[3px]" style={{ backgroundColor: s.track }} />
                 </View>
               );
             })

@@ -6,10 +6,10 @@ import { ScreenContainer } from '@/src/components/common/ScreenContainer';
 import { TodayRoutineHeroCard } from '@/src/components/common/TodayRoutineHeroCard';
 import { HomeIntakeSlot } from '@/src/components/home/HomeIntakeSlot';
 import { colors } from '@/constants/theme/colors';
-import { neuInset, neuRaised } from '@/constants/theme/neumorphism';
+import { neuInset, neuRaised, softWellnessCard } from '@/constants/theme/neumorphism';
 import { AppIcon } from '@/src/components/common/AppIcon';
 import { useDailyIntakeSchedule } from '@/hooks/useIntakeRoutine';
-import { formatKoreanTime } from '@/src/utils/nextIntake';
+import { formatKoreanTime, formatKoreanTodayParts } from '@/src/utils/nextIntake';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -17,6 +17,7 @@ export default function HomeScreen() {
   const { data: schedule, isPending, isError, refetch, isRefetching } = useDailyIntakeSchedule();
   const timeSlots = schedule?.timeSlots ?? [];
   const slotCount = timeSlots.length;
+  const { monthDay, weekday } = formatKoreanTodayParts();
 
   return (
     <ScreenContainer
@@ -59,11 +60,34 @@ export default function HomeScreen() {
             isError={isError}
           />
 
-          <Text className="mt-6 text-[13px] font-scdream-medium" style={{ color: colors.text }}>
-            시간대별 섭취 루틴
-          </Text>
+          <View
+            className="mt-6 flex-row overflow-hidden"
+            style={[softWellnessCard(18), { alignItems: 'stretch' }]}
+          >
+            <View style={{ width: 4, backgroundColor: colors.primary }} />
+            <View className="flex-1 flex-row items-center justify-between py-3.5 pl-3 pr-4">
+              <Text
+                className="font-scdream-medium ml-2"
+                style={{ color: colors.text, fontSize: 18, letterSpacing: -0.4 }}
+              >
+                {monthDay}
+              </Text>
+              <View
+                className="rounded-full px-3 py-1.5"
+                style={{
+                  backgroundColor: `${colors.primary}12`,
+                  borderWidth: 1,
+                  borderColor: `${colors.primary}33`,
+                }}
+              >
+                <Text className="text-[12px] font-scdream-medium" style={{ color: colors.primary }}>
+                  {weekday}
+                </Text>
+              </View>
+            </View>
+          </View>
 
-          <View className="mt-3 gap-5">
+          <View className="mt-4 gap-5">
         {isPending ? (
           <View className="items-center py-10">
             <ActivityIndicator color={colors.primary} />
@@ -91,7 +115,9 @@ export default function HomeScreen() {
               key={slot.plannedAt}
               timeLabel={formatKoreanTime(slot.intakeTime)}
               items={slot.items}
-              onPressCamera={() => router.push('/intake-verify' as never)}
+              onPressCamera={(scheduleIds: number[]) =>
+                router.push(`/intake-verify?scheduleIds=${encodeURIComponent(scheduleIds.join(','))}` as never)
+              }
             />
           ))
         )}

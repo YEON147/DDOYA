@@ -1,4 +1,39 @@
+import * as Localization from 'expo-localization';
 import type { DailyIntakeTimeSlot } from '@/src/types/intakeRoutine';
+
+export type TodayParts = { monthDay: string; weekday: string };
+
+/** `auto`: 기기 선호 언어, `en` / `ko`: 캘린더 문구 언어 고정 */
+export type TodayLocaleMode = 'auto' | 'ko' | 'en';
+
+function resolveIntlLocale(mode: TodayLocaleMode): string {
+  if (mode === 'ko') return 'ko-KR';
+  if (mode === 'en') return 'en-US';
+  const forced = process.env.EXPO_PUBLIC_HOME_DATE_LOCALE?.toLowerCase();
+  if (forced === 'en') return 'en-US';
+  if (forced === 'ko') return 'ko-KR';
+  const tag = Localization.getLocales()[0]?.languageTag ?? 'en-US';
+  return tag;
+}
+
+/** 홈 날짜 헤더 등 — 월·일 / 요일 분리 (기기가 영어면 March 25 / Tuesday) */
+export function formatTodayParts(date: Date = new Date(), mode: TodayLocaleMode = 'auto'): TodayParts {
+  const locale = resolveIntlLocale(mode);
+  const monthDay = new Intl.DateTimeFormat(locale, { month: 'long', day: 'numeric' }).format(date);
+  const weekday = new Intl.DateTimeFormat(locale, { weekday: 'long' }).format(date);
+  return { monthDay, weekday };
+}
+
+/** 한국어 고정 — `formatTodayParts(date, 'ko')`와 동일 */
+export function formatKoreanTodayParts(date: Date = new Date()): TodayParts {
+  return formatTodayParts(date, 'ko');
+}
+
+/** 한국어 한 줄 (예: 3월 25일 화요일) */
+export function formatKoreanTodayLine(date: Date = new Date()): string {
+  const { monthDay, weekday } = formatTodayParts(date, 'ko');
+  return `${monthDay} ${weekday}`;
+}
 
 export function formatKoreanTime(hhmm: string): string {
   const [hStr, mStr] = hhmm.split(':');

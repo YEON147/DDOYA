@@ -5,6 +5,8 @@ import {
   IntakeRoutineUpdateRequest,
   DailyIntakeScheduleResponse,
   DailyIntakeScheduleQuery,
+  IntakeCertificationRequest,
+  IntakeCertificationResponse,
 } from '../types/intakeRoutine';
 
 export const intakeRoutineApi = {
@@ -19,4 +21,24 @@ export const intakeRoutineApi = {
   /** 일별 섭취 스케줄 조회 (`date` 미입력 시 서버에서 오늘 기준) */
   getDailySchedule: (params?: DailyIntakeScheduleQuery) =>
     apiClient.get<DailyIntakeScheduleResponse>('/intake-schedules', { params }),
+
+  /** 복용 인증 (이미지 + request JSON) */
+  postIntakeCertification: (formData: FormData) =>
+    apiClient.post<IntakeCertificationResponse>('/intake-records/verify', formData),
 };
+
+export function buildIntakeCertificationFormData(
+  imageUri: string,
+  request: IntakeCertificationRequest,
+  mimeType = 'image/jpeg',
+): FormData {
+  const fd = new FormData();
+  const ext = mimeType.split('/')[1] || 'jpg';
+  fd.append('image', {
+    uri: imageUri,
+    type: mimeType,
+    name: `intake-verify.${ext}`,
+  } as any);
+  fd.append('request', JSON.stringify(request));
+  return fd;
+}
