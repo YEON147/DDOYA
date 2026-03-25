@@ -63,6 +63,7 @@ public class IntakeService {
                             .scheduleId(schedule.getScheduleId())
                             .userSupplementId(schedule.getSupplement().getUserSupplementId())
                             .alias(schedule.getSupplement().getAlias())
+                            .bodyPartId(schedule.getSupplement().getBodyPart() != null ? schedule.getSupplement().getBodyPart().getBodyPartId() : null)
                             .dosePerIntake(schedule.getDosePerIntake())
                             .intakeRecordId(record.getIntakeRecordId())
                             .status(record.getStatus().name())

@@ -70,6 +70,11 @@ public class SupplementListResponse {
         private List<String> primaryIngredientNames;
 
         /**
+         * 영양제가 연결된 신체 부위 ID
+         */
+        private Byte bodyPartId;
+
+        /**
          * 현재 남은 재고 수량
          */
         private Integer stockQuantity;
