@@ -7,6 +7,7 @@ import com.ssafy.ddoya.domain.intake.entity.IntakeSchedule;
 import com.ssafy.ddoya.domain.intake.entity.IntakeStatus;
 import com.ssafy.ddoya.domain.intake.entity.ScheduleType;
 import com.ssafy.ddoya.domain.intake.repository.IntakeRecordRepository;
+import com.ssafy.ddoya.domain.notification.service.RepurchaseNotificationService;
 import com.ssafy.ddoya.domain.supplement.entity.Supplement;
 import com.ssafy.ddoya.domain.supplement.entity.SupplementInventory;
 import com.ssafy.ddoya.domain.supplement.repository.SupplementInventoryRepository;
@@ -46,6 +47,7 @@ public class IntakeRecordService {
     private final ObjectMapper objectMapper;
     private final SupplementInventoryRepository supplementInventoryRepository;
     private final IntakeRecordRepository intakeRecordRepository;
+    private final RepurchaseNotificationService repurchaseNotificationService;
 
     @Value("${app.fastapi.url}")
     private String fastApiUrl;
@@ -182,6 +184,8 @@ public class IntakeRecordService {
                     if (stockAdjusted) {
                         log.warn("[재고 부족] 일부만 복용 처리됨. supplementId={}, 필요수량={}, 현재재고=0(보정됨)", suppId, expectedDose);
                     }
+                    // 재고 차감 직후 재구매 알림 조건 확인 및 실시간 발송 트리거
+                    repurchaseNotificationService.checkAndSendRepurchaseReminder(inventory);
                 }
             }
 

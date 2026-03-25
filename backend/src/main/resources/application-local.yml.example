@@ -23,10 +23,13 @@ logging:
     org.hibernate.orm.jdbc.bind: TRACE
 
 app:
-  s3:
-    enabled: false
   fastapi:
     mock_enabled: true
 
 cors:
   allowed-origins:
+
+notification:
+  scheduler:
+    carry-enabled: false
+    intake-enabled: false

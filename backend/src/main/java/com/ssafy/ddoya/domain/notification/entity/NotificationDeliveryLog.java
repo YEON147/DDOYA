@@ -1,5 +1,6 @@
 package com.ssafy.ddoya.domain.notification.entity;
 
+import com.ssafy.ddoya.domain.intake.entity.IntakeRecord;
 import com.ssafy.ddoya.domain.intake.entity.IntakeSchedule;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -32,6 +33,10 @@ public class NotificationDeliveryLog {
     @JoinColumn(name = "schedule_id", nullable = false)
     private IntakeSchedule schedule;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "intake_record_id")
+    private IntakeRecord intakeRecord;
+
     @Column(name = "sent_at", nullable = false)
     private LocalDateTime sentAt;
 
@@ -42,9 +47,10 @@ public class NotificationDeliveryLog {
     private boolean isDeleted;
 
     @Builder
-    private NotificationDeliveryLog(IntakeSchedule schedule, LocalDateTime sentAt,
+    private NotificationDeliveryLog(IntakeSchedule schedule, IntakeRecord intakeRecord, LocalDateTime sentAt,
             Integer attemptNo, Boolean isDeleted) {
         this.schedule = schedule;
+        this.intakeRecord = intakeRecord;
         this.sentAt = sentAt;
         this.attemptNo = attemptNo;
         this.isDeleted = isDeleted != null ? isDeleted : false;

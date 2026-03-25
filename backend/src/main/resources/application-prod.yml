@@ -41,3 +41,8 @@ cloud:
       static: ${AWS_REGION}
     s3:
       bucket: ${AWS_S3_BUCKET}
+
+notification:
+  scheduler:
+    carry-enabled: true
+    intake-enabled: true
