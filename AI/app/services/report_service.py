@@ -363,6 +363,26 @@ TIMING_ORDER = [
 ]
 
 
+def _distribute_timings(base_timing: str, daily_dose: int) -> list[str]:
+    """일일 섭취 횟수(daily_dose)에 따라 섭취 스케줄 분배"""
+    if daily_dose <= 1:
+        return [base_timing]
+
+    # 식전/식후 속성 파악 (수면 유도제 등 예외 상황 제외)
+    prefix = "BEFORE" if "BEFORE" in base_timing else "AFTER"
+
+    if daily_dose == 2:
+        if base_timing == "BEFORE_SLEEP":
+            return ["AFTER_DINNER", "BEFORE_SLEEP"]
+        return [f"{prefix}_BREAKFAST", f"{prefix}_DINNER"]
+
+    # 3회 섭취일 경우
+    if base_timing == "BEFORE_SLEEP":
+        return ["AFTER_LUNCH", "AFTER_DINNER", "BEFORE_SLEEP"]
+    
+    return [f"{prefix}_BREAKFAST", f"{prefix}_LUNCH", f"{prefix}_DINNER"]
+
+
 def _recommend_timing(
     supplements: list[dict],
     master: dict,
@@ -372,10 +392,10 @@ def _recommend_timing(
     영양제별 최적 섭취 타이밍 추천.
     - 지용성(FAT) / 위자극 → 식후
     - ENERGY → 아침 / RELAX → 저녁·취침전
-    - ANTAGONIST 상호작용 → 간격 배치
-    - SYNERGY → 동시 배치
+    - daily_dose 에 맞춰 여러 번의 타이밍 분할
+    - ANTAGONIST 상호작용 → 겹치는 시간대 분리
+    - SYNERGY → 가급적 동시 배치
     """
-    # 각 영양제에 포함된 성분의 특성 수집
     supp_profiles = []
     for supp in supplements:
         profile = {
@@ -402,30 +422,29 @@ def _recommend_timing(
                 profile["has_relax"] = True
         supp_profiles.append(profile)
 
-    # 기본 타이밍 결정
+    # 1. 1차 기본 타이밍(base_timing) 배정 및 횟수(daily_dose) 기반 분배
     for p in supp_profiles:
         if p["has_relax"]:
-            p["timing"] = "BEFORE_SLEEP"
+            base_t = "BEFORE_SLEEP"
         elif p["has_energy"]:
             if p["has_fat_soluble"] or p["has_gi_irritant"]:
-                p["timing"] = "AFTER_BREAKFAST"
+                base_t = "AFTER_BREAKFAST"
             else:
-                p["timing"] = "BEFORE_BREAKFAST"
+                base_t = "BEFORE_BREAKFAST"
         elif p["has_fat_soluble"] or p["has_gi_irritant"]:
-            p["timing"] = "AFTER_BREAKFAST"
+            base_t = "AFTER_BREAKFAST"
         else:
-            p["timing"] = "AFTER_BREAKFAST"  # 기본값
+            base_t = "AFTER_BREAKFAST"  # 기본값
 
-    # ANTAGONIST 상호작용 처리: 같은 타이밍에 배치된 영양제 간격 분리
-    antagonist_pairs = [
-        ia for ia in interactions if ia["type"] == "ANTAGONIST"
-    ]
+        # 횟수에 맞게 쪼개기
+        p["timings"] = _distribute_timings(base_t, p["daily_dose"])
 
+    # 2. ANTAGONIST(길항작용) 상호작용 처리: 혹시라도 배열 안에서 타이밍이 겹치면 뒤로 밀어내기
+    antagonist_pairs = [ia for ia in interactions if ia["type"] == "ANTAGONIST"]
     for pair in antagonist_pairs:
         a_id = pair["ingredient_a"]
         b_id = pair["ingredient_b"]
 
-        # 어떤 영양제에 속하는지 찾기
         supp_with_a = [p for p in supp_profiles if a_id in p["ingredient_ids"]]
         supp_with_b = [p for p in supp_profiles if b_id in p["ingredient_ids"]]
 
@@ -433,18 +452,29 @@ def _recommend_timing(
             for sb in supp_with_b:
                 if sa["user_supplement_id"] == sb["user_supplement_id"]:
                     continue
-                # 같은 타이밍이면 하나를 다른 시간대로 이동
-                if sa["timing"] == sb["timing"]:
-                    current_idx = TIMING_ORDER.index(sb["timing"])
-                    # 최소 2칸(약 4-6시간) 뒤로 이동
-                    new_idx = min(current_idx + 2, len(TIMING_ORDER) - 1)
-                    sb["timing"] = TIMING_ORDER[new_idx]
+                
+                # 두 영양제의 타이밍 배열 중 겹치는 교집합 찾기
+                common_timings = set(sa["timings"]).intersection(set(sb["timings"]))
+                if common_timings:
+                    new_b_timings = []
+                    for t in sb["timings"]:
+                        if t in common_timings:
+                            current_idx = TIMING_ORDER.index(t)
+                            # 최소 2칸 뒤로 밀어냄 (충돌 피하기)
+                            new_idx = min(current_idx + 2, len(TIMING_ORDER) - 1)
+                            # 밀어낸 자리도 겹친다면 한 번 더 뒤로 밀어냄
+                            while TIMING_ORDER[new_idx] in sa["timings"] and new_idx < len(TIMING_ORDER) - 1:
+                                new_idx += 1
+                            new_b_timings.append(TIMING_ORDER[new_idx])
+                        else:
+                            new_b_timings.append(t)
+                            
+                    # 리스트 중복 제거 후 오름차순(TIMING_ORDER 기준) 정렬
+                    unique_timings = list(set(new_b_timings))
+                    sb["timings"] = sorted(unique_timings, key=lambda x: TIMING_ORDER.index(x))
 
-    # SYNERGY 상호작용 처리: 같은 타이밍으로 합치기
-    synergy_pairs = [
-        ia for ia in interactions if ia["type"] == "SYNERGY"
-    ]
-
+    # 3. SYNERGY(시너지) 상호작용 처리: 가급적 배열을 동기화하여 동시에 먹게 만듦
+    synergy_pairs = [ia for ia in interactions if ia["type"] == "SYNERGY"]
     for pair in synergy_pairs:
         a_id = pair["ingredient_a"]
         b_id = pair["ingredient_b"]
@@ -456,14 +486,23 @@ def _recommend_timing(
             for sb in supp_with_b:
                 if sa["user_supplement_id"] == sb["user_supplement_id"]:
                     continue
-                # 시너지 → 같은 타이밍으로
-                sb["timing"] = sa["timing"]
+                
+                # 횟수(daily_dose)가 같다면 아예 똑같이 복사
+                if len(sa["timings"]) == len(sb["timings"]):
+                    sb["timings"] = sa["timings"].copy()
+                else:
+                    # 횟수가 다르다면 앞쪽 타이밍만이라도 강제로 동기화
+                    min_len = min(len(sa["timings"]), len(sb["timings"]))
+                    for i in range(min_len):
+                        sb["timings"][i] = sa["timings"][i]
+                    # 동기화 후 정렬
+                    sb["timings"] = sorted(set(sb["timings"]), key=lambda x: TIMING_ORDER.index(x))
 
     return [
         {
             "user_supplement_id": p["user_supplement_id"],
             "alias": p["alias"],
-            "intake_timings": [p["timing"]],
+            "intake_timings": p["timings"],
         }
         for p in supp_profiles
     ]
