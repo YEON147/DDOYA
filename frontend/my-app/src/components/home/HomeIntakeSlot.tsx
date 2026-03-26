@@ -114,7 +114,7 @@ export function HomeIntakeSlot({ timeLabel, items, onPressCamera }: HomeIntakeSl
                         elevation: 1,
                       })}
                     >
-                      <AppIcon icon={Camera} size={20} color={colors.primary} strokeWidth={1.9} />
+                      <AppIcon icon={Camera} size={20} color={colors.primary} strokeWidth={2.2} />
                     </Pressable>
                   )}
                 </View>

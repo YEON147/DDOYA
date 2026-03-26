@@ -58,7 +58,7 @@ export default function HomeScreen() {
               className="absolute right-2 top-3 h-10 w-10 items-center justify-center rounded-full"
               style={({ pressed }) => [neuRaised(999, colors.surface), { opacity: pressed ? 0.82 : 1 }]}
             >
-              <AppIcon icon={Bell} size={19} color={colors.iconMuted} strokeWidth={1.75} />
+              <AppIcon icon={Bell} size={20} color={colors.iconMuted} strokeWidth={2.5} />
               {unreadCount > 0 && (
                 <View
                   className="absolute -right-0.5 -top-0.5 min-w-[18px] items-center rounded-full px-1 py-[1px]"
