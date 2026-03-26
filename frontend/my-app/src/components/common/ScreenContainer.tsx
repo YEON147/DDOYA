@@ -30,7 +30,7 @@ export function ScreenContainer({
 
   if (!scrollable) {
     return (
-      <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
+      <SafeAreaView className="flex-1" style={{ backgroundColor: bg }} edges={['top', 'left', 'right']}>
         {header}
         <View className="flex-1" style={{ padding, backgroundColor: bg }}>
           {children}
@@ -40,7 +40,7 @@ export function ScreenContainer({
   }
 
   return (
-    <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
+    <SafeAreaView className="flex-1" style={{ backgroundColor: bg }} edges={['top', 'left', 'right']}>
       {header}
       <ScrollView
         ref={scrollRef}

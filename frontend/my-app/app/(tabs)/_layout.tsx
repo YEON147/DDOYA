@@ -1,4 +1,4 @@
-import { Platform } from 'react-native';
+import { Platform, View } from 'react-native';
 import { Redirect, Tabs, usePathname } from 'expo-router';
 import { House, UserRound } from 'lucide-react-native';
 
@@ -71,14 +71,36 @@ export default function TabLayout() {
         name="(home)"
         options={{
           title: '홈',
-          tabBarIcon: ({ color }) => <AppIcon icon={House} size={28} color={color} />,
+          tabBarIcon: ({ color, focused }) => (
+            <View
+              className="items-center justify-center rounded-full"
+              style={{
+                width: 36,
+                height: 36,
+                backgroundColor: focused ? `${colors.primary}1A` : 'transparent',
+              }}
+            >
+              <AppIcon icon={House} size={24} color={color} />
+            </View>
+          ),
         }}
       />
       <Tabs.Screen
         name="(profile)"
         options={{
           title: '프로필',
-          tabBarIcon: ({ color }) => <AppIcon icon={UserRound} size={28} color={color} />,
+          tabBarIcon: ({ color, focused }) => (
+            <View
+              className="items-center justify-center rounded-full"
+              style={{
+                width: 36,
+                height: 36,
+                backgroundColor: focused ? `${colors.primary}1A` : 'transparent',
+              }}
+            >
+              <AppIcon icon={UserRound} size={24} color={color} />
+            </View>
+          ),
         }}
       />
     </Tabs>

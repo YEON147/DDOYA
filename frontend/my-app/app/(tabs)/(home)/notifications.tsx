@@ -26,11 +26,11 @@ export default function NotificationsScreen() {
               <View className="mr-2 h-7 w-7 items-center justify-center rounded-full" style={{ backgroundColor: `${colors.primary}1A` }}>
                 <AppIcon icon={Bell} size={14} color={colors.primary} />
               </View>
-              <Text className="text-[13px] font-scdream-medium" style={{ color: colors.text }}>
+              <Text className="text-md font-scdream-medium" style={{ color: colors.text }}>
                 {item.title}
               </Text>
             </View>
-            <Text className="text-[12px] font-scdream leading-5" style={{ color: colors.textMuted }}>
+            <Text className="text-base font-scdream leading-5" style={{ color: colors.textMuted }}>
               {item.message}
             </Text>
           </View>
