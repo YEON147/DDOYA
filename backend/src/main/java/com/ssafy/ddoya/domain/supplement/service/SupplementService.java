@@ -152,13 +152,14 @@ public class SupplementService {
      * FastAPI를 통해 성분표 이미지 분석(OCR)을 실행합니다. (FastAPI 호출)
      */
     private IngredientAnalyzeResponse runOcr(MultipartFile ingredientsImg) {
+        FastApiOcrResponse ocrResponse;
         // fastApi 준비 완료 시 제거
         if (isFastApiMockEnabled) {
-            return generateMockOcrResponse();
+            ocrResponse = generateMockOcrResponse();
+        }else {
+            String url = fastApiUrl + "/api/ai/ocr/analyze";
+            ocrResponse = postImageToFastApi(url, ingredientsImg, FastApiOcrResponse.class);
         }
-
-        String url = fastApiUrl + "/api/ai/ocr/analyze";
-        FastApiOcrResponse ocrResponse = postImageToFastApi(url, ingredientsImg, FastApiOcrResponse.class);
 
         // 서버 오류 (응답 본문 없음)
         if (ocrResponse == null) {
@@ -207,8 +208,14 @@ public class SupplementService {
             for (FastApiOcrResponse.OcrIngredient aiItem : ocrResponse.getData().getIngredients()) {
                 Long id = aiItem.getIngredientId();
 
-                // 일괄 조회된 Map 에서 이름 매핑 (조회되지 않았거나 id 가 null 이면 null)
-                String normalizedName = (id != null) ? masterNameMap.get(id) : null;
+                // 성분 ID가 없으면 리스트에서 제외 (DB 저장 방지)
+                if (id == null) {
+                    log.info("[SupplementService] ingredient_id가 null인 성분을 분석 결과에서 제외합니다: originalName={}", aiItem.getOriginalName());
+                    continue;
+                }
+
+                // 일괄 조회된 Map 에서 이름 매핑 (id 가 존재하므로 masterNameMap 에서 이름을 찾아야 함)
+                String normalizedName = masterNameMap.get(id);
                 boolean isPrimary = (aiItem.getIsPrimary() != null && aiItem.getIsPrimary() == 1);
 
                 mappedIngredients.add(IngredientAnalyzeResponse.IngredientDto.builder()
@@ -339,24 +346,48 @@ public class SupplementService {
      * fastApi 준비 완료 시 제거
      * Mock OCR 분석 결과 생성 (테스트용)
      */
-    private IngredientAnalyzeResponse generateMockOcrResponse() {
-        List<IngredientAnalyzeResponse.IngredientDto> mockIngredients = new ArrayList<>();
-        mockIngredients.add(IngredientAnalyzeResponse.IngredientDto.builder()
-                .normalizedIngredientId(1L)
-                .normalizedName("비타민C")
-                .rawName("Vitamin C")
+    private FastApiOcrResponse generateMockOcrResponse() {
+//        List<IngredientAnalyzeResponse.IngredientDto> mockIngredients = new ArrayList<>();
+//        mockIngredients.add(IngredientAnalyzeResponse.IngredientDto.builder()
+//                .normalizedIngredientId(1L)
+//                .normalizedName("비타민C")
+//                .rawName("Vitamin C")
+//                .unit("mg")
+//                .amount(BigDecimal.valueOf(500.0))
+//                .isPrimary(true)
+//                .build());
+//
+//        return IngredientAnalyzeResponse.builder()
+//                .success(true)
+//                .message("OCR 분석 완료 (Mock)")
+//                .bodyPartId((byte) 3)
+//                .dailyDose(2)
+//                .dosePerIntake(1)
+//                .ingredients(mockIngredients)
+//                .build();
+        FastApiOcrResponse.OcrIngredient ingredient1 = FastApiOcrResponse.OcrIngredient.builder()
+                .ingredientId(null)
+                .originalName("Vitamin C (L-ascorbate)")
                 .unit("mg")
                 .amount(BigDecimal.valueOf(500.0))
-                .isPrimary(true)
-                .build());
+                .isPrimary(1)
+                .build();
 
-        return IngredientAnalyzeResponse.builder()
-                .success(true)
-                .message("OCR 분석 완료 (Mock)")
-                .bodyPartId((byte) 3)
+        FastApiOcrResponse.ServingInfo servingInfo = FastApiOcrResponse.ServingInfo.builder()
                 .dailyDose(2)
                 .dosePerIntake(1)
-                .ingredients(mockIngredients)
+                .build();
+
+        FastApiOcrResponse.OcrData data = FastApiOcrResponse.OcrData.builder()
+                .bodyPartId((byte) 3)
+                .ingredients(List.of(ingredient1))
+                .servingInfo(servingInfo)
+                .build();
+
+        return FastApiOcrResponse.builder()
+                .success(true)
+                .message("OCR 분석 완료 (Mock FastAPI)")
+                .data(data)
                 .build();
     }
 
@@ -439,6 +470,7 @@ public class SupplementService {
         List<SupplementRegisterResponse.IngredientDto> dtos = new ArrayList<>();
 
         for (SupplementRegisterRequest.IngredientDto dto : ingredients) {
+            // 성분 ID가 null 이면 저장에서 제외
             if (dto.getNormalizedIngredientId() == null)
                 continue;
 

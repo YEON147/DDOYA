@@ -1,6 +1,7 @@
 package com.ssafy.ddoya.domain.supplement.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Builder;
 import lombok.Getter;
 
 import java.math.BigDecimal;
@@ -9,6 +10,7 @@ import java.util.List;
 /**
  * FastAPI 서버로부터 받은 OCR 분석 원본 응답을 담는 DTO 클래스입니다.
  */
+@Builder
 @Getter
 public class FastApiOcrResponse {
 
@@ -30,6 +32,7 @@ public class FastApiOcrResponse {
     /**
      * OCR 분석 상세 데이터를 담은 클래스
      */
+    @Builder
     @Getter
     public static class OcrData {
         /**
@@ -65,6 +68,7 @@ public class FastApiOcrResponse {
     /**
      * 섭취 관련 정보를 담은 클래스
      */
+    @Builder
     @Getter
     public static class ServingInfo {
         /**
@@ -83,6 +87,7 @@ public class FastApiOcrResponse {
     /**
      * 개별 성분 분석 데이터를 담은 클래스
      */
+    @Builder
     @Getter
     public static class OcrIngredient {
         /**
