@@ -10,7 +10,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { ChevronRight, Pill, Plus } from 'lucide-react-native';
+import { ChevronRight, Plus } from 'lucide-react-native';
 import type { SupplementSummaryDto } from '@/src/types/types';
 import { useSupplementsList } from '@/hooks/useSupplement';
 import { useAuthStore } from '@/src/store/authStore';
@@ -19,6 +19,7 @@ import { neuRaised } from '@/constants/theme/neumorphism';
 import { ScreenContainer } from '@/src/components/common/ScreenContainer';
 import { TopHeader } from '@/src/components/common/TopHeader';
 import { AppIcon } from '@/src/components/common/AppIcon';
+import { getBodyPartImageSource } from '@/constants/bodyPartImages';
 
 export default function SupplementsScreen() {
   const router = useRouter();
@@ -64,23 +65,11 @@ export default function SupplementsScreen() {
             }
           />
         ) : (
-          <View className="items-center">
-            <View
-              className="items-center justify-center rounded-full"
-              style={{
-                width: 42,
-                height: 42,
-                backgroundColor: `${colors.shadowLight}AA`,
-                borderWidth: 1,
-                borderColor: `${colors.shadowDark}44`,
-              }}
-            >
-              <AppIcon icon={Pill} size={22} color={colors.textMuted} />
-            </View>
-            <Text className="mt-1.5 text-[11px] font-scdream" style={{ color: colors.textMuted }}>
-              이미지 없음
-            </Text>
-          </View>
+          <Image
+            source={getBodyPartImageSource(item.bodyPartId)}
+            style={{ width: '100%', height: '100%' }}
+            resizeMode="cover"
+          />
         )}
       </View>
 

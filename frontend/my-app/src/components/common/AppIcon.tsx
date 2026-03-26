@@ -9,6 +9,8 @@ type AppIconProps = {
   strokeWidth?: number;
 } & Omit<ComponentProps<LucideIcon>, 'size' | 'color' | 'strokeWidth'>;
 
+const ICON_SCALE = 1.1;
+
 export function AppIcon({
   icon: Icon,
   size = 20,
@@ -16,5 +18,5 @@ export function AppIcon({
   strokeWidth = 1.75,
   ...rest
 }: AppIconProps) {
-  return <Icon size={size} color={color} strokeWidth={strokeWidth} {...rest} />;
+  return <Icon size={size * ICON_SCALE} color={color} strokeWidth={strokeWidth} {...rest} />;
 }

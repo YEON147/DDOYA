@@ -132,9 +132,12 @@ export default function IntakeRoutineEditScreen() {
                 <Text className="text-[14px] font-scdream" style={{ color: colors.textMuted }}>
                   {item.intakeTiming}
                 </Text>
-                <Text className="text-[18px] font-scdream-medium mt-1" style={{ color: colors.text }}>
-                  {item.intakeTime}
-                </Text>
+                <View className="mt-1 flex-row items-center">
+                  <View className="mr-2 h-2 w-2 rounded-full" style={{ backgroundColor: colors.primary }} />
+                  <Text className="text-[18px] font-scdream-medium" style={{ color: colors.text }}>
+                    {item.intakeTime}
+                  </Text>
+                </View>
               </View>
 
               <Pressable

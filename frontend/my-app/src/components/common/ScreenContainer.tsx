@@ -21,15 +21,18 @@ export function ScreenContainer({
   scrollRef,
 }: ScreenContainerProps) {
   const baseContentStyle = {
-    padding,
+    paddingTop: padding,
+    paddingHorizontal: padding,
     paddingBottom: 32,
   };
 
+  const bg = colors.background;
+
   if (!scrollable) {
     return (
-      <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }}>
+      <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
         {header}
-        <View className="flex-1" style={{ padding, backgroundColor: colors.background }}>
+        <View className="flex-1" style={{ padding, backgroundColor: bg }}>
           {children}
         </View>
       </SafeAreaView>
@@ -37,12 +40,12 @@ export function ScreenContainer({
   }
 
   return (
-    <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }}>
+    <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
       {header}
       <ScrollView
         ref={scrollRef}
         className="flex-1"
-        style={{ backgroundColor: colors.background }}
+        style={{ backgroundColor: bg }}
         contentContainerStyle={[baseContentStyle, contentContainerStyle]}
       >
         {children}

@@ -35,22 +35,22 @@ public class ReportComments {
 
     /** 과잉 섭취 관련 코멘트 */
     @Lob
-    @Column(name = "excess_comment", nullable = false)
+    @Column(name = "excess_comment", nullable = false, columnDefinition = "TEXT")
     private String excessComment;
 
     /** 부족 섭취 관련 코멘트 */
     @Lob
-    @Column(name = "deficiency_comment", nullable = false)
+    @Column(name = "deficiency_comment", nullable = false, columnDefinition = "TEXT")
     private String deficiencyComment;
 
     /** 추천 제품 관련 코멘트 */
     @Lob
-    @Column(name = "product_comment", nullable = false)
+    @Column(name = "product_comment", nullable = false, columnDefinition = "TEXT")
     private String productComment;
 
     /** 섭취 일정/타이밍 관련 코멘트 */
     @Lob
-    @Column(name = "schedule_comment", nullable = false)
+    @Column(name = "schedule_comment", nullable = false, columnDefinition = "TEXT")
     private String scheduleComment;
 
     @Column(name = "created_at", nullable = false)

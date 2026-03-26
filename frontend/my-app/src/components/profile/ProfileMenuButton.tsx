@@ -37,13 +37,11 @@ export function ProfileMenuButton({
     >
       {({ pressed }) => (
         <View className="w-full flex-row items-center" style={{ opacity: pressed ? 0.72 : 1 }}>
-          <View className="mr-3 h-10 w-10 items-center justify-center">
-            {icon}
-          </View>
+          <View className="mr-3 h-10 w-10 items-center justify-center">{icon}</View>
           <Text className="flex-1 text-[14px] font-scdream-medium" style={{ color: colors.text }}>
             {label}
           </Text>
-          <AppIcon icon={ChevronRight} size={18} color={colors.textMuted} />
+          <AppIcon icon={ChevronRight} size={18} color={colors.iconMuted} strokeWidth={1.75} />
         </View>
       )}
     </Pressable>

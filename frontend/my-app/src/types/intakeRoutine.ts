@@ -25,6 +25,8 @@ export interface DailyIntakeScheduleSlotItem {
   scheduleId: number;
   userSupplementId: number;
   alias: string;
+  /** 서버 `IntakeItemDto.bodyPartId` — 부위 일러스트 매칭용 */
+  bodyPartId?: number | null;
   dosePerIntake: number;
   intakeRecordId: number;
   status: IntakeScheduleItemStatus;
@@ -47,3 +49,30 @@ export type DailyIntakeScheduleResponse = SuccessResponse<DailyIntakeScheduleDat
 export interface DailyIntakeScheduleQuery {
   date?: string;
 }
+
+export interface IntakeCertificationExpectedSchedule {
+  scheduleId: number;
+}
+
+export interface IntakeCertificationRequest {
+  expectedSchedules: IntakeCertificationExpectedSchedule[];
+}
+
+export interface IntakeCertificationResultItem {
+  scheduleId: number;
+  userSupplementId: number;
+  dosePerIntake: number;
+  detectedAmount: number;
+  matched: boolean;
+  beforeStatus: 'TAKEN' | 'MISSED' | 'SKIPPED';
+  afterStatus: 'TAKEN' | 'MISSED' | 'SKIPPED';
+  stockAdjusted: boolean;
+}
+
+export interface IntakeCertificationResultData {
+  success: boolean;
+  message: string;
+  results: IntakeCertificationResultItem[];
+}
+
+export type IntakeCertificationResponse = SuccessResponse<IntakeCertificationResultData>;

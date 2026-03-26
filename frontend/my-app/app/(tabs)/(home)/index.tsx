@@ -1,94 +1,117 @@
 import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Bell } from 'lucide-react-native';
-import { NicknameHeader } from '@/src/components/common/HeaderMessage';
 import { ScreenContainer } from '@/src/components/common/ScreenContainer';
+import { TodayRoutineHeroCard } from '@/src/components/common/TodayRoutineHeroCard';
 import { HomeIntakeSlot } from '@/src/components/home/HomeIntakeSlot';
 import { colors } from '@/constants/theme/colors';
 import { neuInset, neuRaised } from '@/constants/theme/neumorphism';
 import { AppIcon } from '@/src/components/common/AppIcon';
 import { useDailyIntakeSchedule } from '@/hooks/useIntakeRoutine';
-import type { DailyIntakeTimeSlot } from '@/src/types/intakeRoutine';
+import { formatKoreanTime, formatKoreanTodayParts } from '@/src/utils/nextIntake';
+import { SvgXml } from 'react-native-svg';
+import { useAuthStore } from '@/src/store/authStore';
 
-function formatKoreanTime(hhmm: string): string {
-  const [hStr, mStr] = hhmm.split(':');
-  const h = parseInt(hStr, 10);
-  const m = parseInt(mStr, 10);
-  if (Number.isNaN(h) || Number.isNaN(m)) return hhmm;
-  const isPm = h >= 12;
-  const h12 = h % 12 === 0 ? 12 : h % 12;
-  const period = isPm ? '오후' : '오전';
-  return `${period} ${h12}:${m.toString().padStart(2, '0')}`;
-}
-
-function nextIntakeSummary(slots: DailyIntakeTimeSlot[]): string {
-  const needsAttention = (s: DailyIntakeTimeSlot) =>
-    s.items.some((i) => i.status !== 'TAKEN' && i.status !== 'SKIPPED');
-  const next = slots.find(needsAttention);
-  if (!next) return '오늘 일정을 모두 마쳤어요';
-  return `다음 섭취 ${formatKoreanTime(next.intakeTime)}`;
-}
+const DDOYA_LOGO_XML = `<svg width="1106" height="479" viewBox="0 0 1106 479" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g clip-path="url(#clip0_428_3034)">
+<path d="M374.262 77.9967H517.232C568.76 77.9967 608.547 92.2747 636.596 120.831C664.644 149.26 678.668 183.59 678.668 223.822C678.668 249.459 672.259 273.7 659.441 296.545C646.749 319.263 628.092 336.967 603.471 349.659C578.849 362.223 549.088 368.506 514.186 368.506H374.262V77.9967ZM502.764 189.175V257.328H506C521.484 257.328 532.652 254.663 539.506 249.332C546.486 243.875 549.976 234.991 549.976 222.68C549.976 200.343 536.967 189.175 510.95 189.175H502.764Z" fill="#FF8B1F"/>
+<path d="M358.162 77.9967H215.192C163.664 77.9967 123.876 92.2747 95.8281 120.831C67.7798 149.26 53.7557 183.59 53.7557 223.822C53.7557 249.459 60.1649 273.7 72.9833 296.545C85.6749 319.263 104.331 336.967 128.953 349.659C153.575 362.223 183.336 368.506 218.238 368.506H358.162V77.9967ZM229.66 189.175V257.328H226.424C210.94 257.328 199.772 254.663 192.918 249.332C185.938 243.875 182.448 234.991 182.448 222.68C182.448 200.343 195.457 189.175 221.474 189.175H229.66Z" fill="#54C3A8"/>
+<path d="M684.728 371.827C663.977 371.827 646.368 364.561 631.9 350.03C617.495 335.434 610.292 317.666 610.292 296.725C610.292 275.848 617.495 258.175 631.9 243.706C646.368 229.175 663.977 221.909 684.728 221.909C705.542 221.909 723.152 229.175 737.557 243.706C752.025 258.175 759.259 275.848 759.259 296.725C759.259 317.666 752.025 335.434 737.557 350.03C723.152 364.561 705.542 371.827 684.728 371.827ZM684.728 277.593C680.603 277.593 677.177 279.052 674.448 281.971C671.719 284.827 670.355 288.444 670.355 292.823C670.355 297.201 671.719 300.85 674.448 303.769C677.177 306.625 680.603 308.052 684.728 308.052C688.916 308.052 692.375 306.625 695.103 303.769C697.832 300.85 699.196 297.201 699.196 292.823C699.196 288.444 697.832 284.827 695.103 281.971C692.375 279.052 688.916 277.593 684.728 277.593ZM869.009 369.448H804.663V306.054L749.265 224.193H814.372L836.836 257.128L859.205 224.193H924.312L869.009 306.054V369.448ZM961.34 369.448H896.994L947.443 224.193H1039.11L1089.56 369.448H1025.31L1016.93 344.89H969.716L961.34 369.448ZM981.424 310.622H1005.22L993.323 274.547L981.424 310.622Z" fill="#3F2207"/>
+</g>
+<defs>
+<clipPath id="clip0_428_3034">
+<rect width="1105.6" height="479" fill="white"/>
+</clipPath>
+</defs>
+</svg>`;
 
 export default function HomeScreen() {
   const router = useRouter();
   const unreadCount = 3;
+  const nickname = useAuthStore((s) => s.nickname);
   const { data: schedule, isPending, isError, refetch, isRefetching } = useDailyIntakeSchedule();
   const timeSlots = schedule?.timeSlots ?? [];
   const slotCount = timeSlots.length;
+  const { monthDay, weekday } = formatKoreanTodayParts();
 
   return (
-    <ScreenContainer>
-      <View className="relative">
-        <NicknameHeader message="잊지말고 섭취 인증을 해주세요!" messageTone="subtle" />
-        <Pressable
-          onPress={() => router.push('/notifications' as never)}
-          hitSlop={10}
-          className="absolute right-2 top-3 h-10 w-10 items-center justify-center rounded-full"
-          style={({ pressed }) => [neuRaised(999, colors.surface), { opacity: pressed ? 0.82 : 1 }]}
-        >
-          <AppIcon icon={Bell} size={19} color={colors.text} />
-          {unreadCount > 0 && (
-            <View
-              className="absolute -right-0.5 -top-0.5 min-w-[18px] rounded-full px-1 py-[1px] items-center"
-              style={{ backgroundColor: '#EF4444' }}
+    <ScreenContainer
+      contentContainerStyle={{
+        paddingHorizontal: 0,
+        paddingTop: 18,
+        paddingBottom: 32,
+      }}
+    >
+        <View className="px-[18px]">
+          <View className="relative">
+            <View className="flex-row items-center pr-12">
+              <SvgXml xml={DDOYA_LOGO_XML} width={124} height={50} />
+            </View>
+            <Pressable
+              onPress={() => router.push('/notifications' as never)}
+              hitSlop={10}
+              className="absolute right-2 top-3 h-10 w-10 items-center justify-center rounded-full"
+              style={({ pressed }) => [neuRaised(999, colors.surface), { opacity: pressed ? 0.82 : 1 }]}
             >
-              <Text className="text-[10px] font-scdream-medium text-white">
-                {unreadCount > 99 ? '99+' : unreadCount}
+              <AppIcon icon={Bell} size={19} color={colors.iconMuted} strokeWidth={1.75} />
+              {unreadCount > 0 && (
+                <View
+                  className="absolute -right-0.5 -top-0.5 min-w-[18px] items-center rounded-full px-1 py-[1px]"
+                  style={{ backgroundColor: colors.primary }}
+                >
+                  <Text className="text-[10px] font-scdream-medium text-white">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </Text>
+                </View>
+              )}
+            </Pressable>
+          </View>
+
+          {/* 날짜 카드 (헤더 바로 아래) */}
+          <View
+            className="mt-4 flex-row overflow-hidden rounded-[20px]"
+            style={{
+              backgroundColor: colors.surface,
+              borderWidth: 1,
+              borderColor: `${colors.shadowDark}1F`,
+            }}
+          >
+            <View style={{ width: 4, backgroundColor: colors.primary }} />
+            <View className="flex-1 px-6 py-4">
+              <Text
+                className="font-scdream-medium"
+                style={{ color: colors.text, fontSize: 16, letterSpacing: -0.2 }}
+                numberOfLines={1}
+              >
+                {(nickname ?? '회원') + '님 환영합니다'}
               </Text>
             </View>
-          )}
-        </Pressable>
-      </View>
+          </View>
 
-      <View className="mt-1 rounded-2xl px-4 py-3" style={neuInset(18, colors.surface)}>
-        <View className="flex-row items-center justify-between">
-          <Text className="text-[12px] font-scdream" style={{ color: colors.textMuted }}>
-            오늘 루틴
-          </Text>
-          <Text className="text-[12px] font-scdream-medium" style={{ color: colors.text }}>
-            {isPending ? '…' : `${slotCount}회`}
-          </Text>
-        </View>
-        <View
-          className="mt-2.5 flex-row items-center justify-between border-t pt-2.5"
-          style={{ borderColor: `${colors.shadowDark}44` }}
-        >
-          <Text className="text-[12px] font-scdream" style={{ color: colors.textMuted }}>
-            다음 섭취
-          </Text>
-          <Text className="text-[12px] font-scdream-medium" style={{ color: colors.text }}>
-            {isPending ? '불러오는 중…' : isError ? '일정을 불러오지 못했어요' : nextIntakeSummary(timeSlots)}
-          </Text>
-        </View>
-      </View>
+          <TodayRoutineHeroCard
+            className="mt-3"
+            timeSlots={timeSlots}
+            isPending={isPending}
+            isError={isError}
+          />
 
-      <View className="mt-4 px-1">
-        <Text className="text-[13px] font-scdream-medium" style={{ color: colors.text }}>
-          시간대별 섭취 루틴
-        </Text>
-      </View>
+          {/* 날짜 바 (좌우 여백 없이 구분선 느낌) */}
+          <View
+            className="-mx-[18px] mb-4 items-center justify-center"
+            style={{
+              height: 34,
+              backgroundColor: `${colors.shadowDark}14`,
+              borderTopWidth: 1,
+              borderBottomWidth: 1,
+              borderColor: `${colors.shadowDark}22`,
+            }}
+          >
+            <Text className="text-[12px] font-scdream-medium" style={{ color: colors.textMuted }}>
+              {monthDay} · {weekday}
+            </Text>
+          </View>
 
-      <View className="mt-4 gap-4">
+          <View className="gap-2">
         {isPending ? (
           <View className="items-center py-10">
             <ActivityIndicator color={colors.primary} />
@@ -96,7 +119,7 @@ export default function HomeScreen() {
         ) : isError ? (
           <Pressable
             onPress={() => refetch()}
-            className="rounded-2xl px-4 py-6"
+            className="rounded-[20px] px-4 py-6"
             style={neuInset(14, colors.surface)}
           >
             <Text className="text-center text-[13px] font-scdream" style={{ color: colors.textMuted }}>
@@ -116,11 +139,14 @@ export default function HomeScreen() {
               key={slot.plannedAt}
               timeLabel={formatKoreanTime(slot.intakeTime)}
               items={slot.items}
-              onPressCamera={() => router.push('/intake-verify' as never)}
+              onPressCamera={(scheduleIds: number[]) =>
+                router.push(`/intake-verify?scheduleIds=${encodeURIComponent(scheduleIds.join(','))}` as never)
+              }
             />
           ))
         )}
-      </View>
+          </View>
+        </View>
     </ScreenContainer>
   );
 }
