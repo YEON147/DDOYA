@@ -16,6 +16,12 @@ export const notificationService = {
   registerForPushNotificationsAsync: async () => {
     let token;
 
+    // 0. 웹 환경은 Web Push(VAPID) 별도 설정이 필요하므로 우선 건너뜁니다.
+    if (Platform.OS === 'web') {
+      console.log('💡 [DEBUG] 웹 환경이므로 푸시 토큰 발급을 건너뜁니다.');
+      return null;
+    }
+
     // 1. 물리 디바이스인지 확인 (에뮬레이터/시뮬레이터에서는 푸시 알림이 제한적일 수 있음)
     if (!Device.isDevice) {
       return null;
@@ -35,10 +41,11 @@ export const notificationService = {
     // 3. 토큰 획득 (Actual FCM/APNs token)
     // projectId는 app.json의 expo.extra.eas.projectId에서 가져오거나 수동으로 입력합니다.
     try {
-        const projectId = Constants?.expoConfig?.extra?.eas?.projectId ?? Constants?.easConfig?.projectId;
-        token = (await Notifications.getDevicePushTokenAsync()).data;
+      const projectId = Constants?.expoConfig?.extra?.eas?.projectId ?? Constants?.easConfig?.projectId;
+      token = (await Notifications.getDevicePushTokenAsync()).data;
+      console.log('💡 [DEBUG] 현재 기기 푸시 토큰:', token);
     } catch (e) {
-        console.error('토큰 획득 실패:', e);
+      console.error('토큰 획득 실패:', e);
     }
 
     // 4. Android용 채널 설정 (필수)
