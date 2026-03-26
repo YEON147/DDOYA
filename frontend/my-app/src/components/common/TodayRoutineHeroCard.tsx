@@ -23,6 +23,7 @@ const CHARACTER_IMAGE = require('../../../assets/images/character.png');
 /** 홈 — 오늘 루틴 요약 박스 (2행 + 구분선, 와이어 이미지와 동일 구조) */
 export function TodayRoutineHeroCard({ timeSlots, isPending, isError, className = '' }: Props) {
   const { width } = useWindowDimensions();
+  const bubbleBg = `${colors.cardIvory}CC`;
   const slotCount = timeSlots.length;
   const nextSlot = useMemo(() => findNextAttentionSlot(timeSlots), [timeSlots]);
   const nickname = useAuthStore((s) => s.nickname);
@@ -87,7 +88,7 @@ export function TodayRoutineHeroCard({ timeSlots, isPending, isError, className 
             <View
               className="relative rounded-3xl"
               style={{
-                backgroundColor: colors.cardIvory,
+                backgroundColor: bubbleBg,
                 borderWidth: 1,
                 borderColor: `${colors.shadowDark}22`,
                 paddingHorizontal: scaleByWidth(width, 18, { min: 14, max: 22 }),
@@ -134,7 +135,7 @@ export function TodayRoutineHeroCard({ timeSlots, isPending, isError, className 
                   bottom: scaleByWidth(width, 18, { min: 14, max: 24 }),
                   width: scaleByWidth(width, 12, { min: 10, max: 14 }),
                   height: scaleByWidth(width, 12, { min: 10, max: 14 }),
-                  backgroundColor: colors.cardIvory,
+                  backgroundColor: bubbleBg,
                   borderRightWidth: 1,
                   borderTopWidth: 1,
                   borderColor: `${colors.shadowDark}22`,
