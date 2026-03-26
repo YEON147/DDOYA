@@ -24,12 +24,12 @@ logging:
 
 app:
   fastapi:
-    mock_enabled: true
+    mock_enabled: false
 
 cors:
   allowed-origins:
 
 notification:
   scheduler:
-    carry-enabled: false
-    intake-enabled: false
+    carry-enabled: true
+    intake-enabled: true

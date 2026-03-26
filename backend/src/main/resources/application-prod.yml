@@ -46,3 +46,8 @@ notification:
   scheduler:
     carry-enabled: true
     intake-enabled: true
+
+firebase:
+  config:
+    # 운영 환경에서는 시크릿(base64)을 우선 사용
+    base64: ${FIREBASE_CONFIG_BASE64:}
