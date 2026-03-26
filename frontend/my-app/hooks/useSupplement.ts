@@ -54,6 +54,7 @@ export const useUpdateSupplement = () => {
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: ['supplement', id] });
       queryClient.invalidateQueries({ queryKey: SUPPLEMENTS_LIST_KEY });
+      queryClient.invalidateQueries({ queryKey: ['report'] });
     },
   });
 };
@@ -65,6 +66,7 @@ export const useDeleteSupplement = () => {
     mutationFn: (id: number) => supplementApi.deleteSupplement(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: SUPPLEMENTS_LIST_KEY });
+      queryClient.invalidateQueries({ queryKey: ['report'] });
     },
   });
 };

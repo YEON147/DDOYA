@@ -3,6 +3,8 @@ import { View, Text, ScrollView, ActivityIndicator, Alert, TouchableOpacity } fr
 import { router, useLocalSearchParams } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { reportApi } from '@/src/api/report';
+import { useSupplementsList } from '@/hooks/useSupplement';
+import { intakeRoutineApi } from '@/src/api/intakeRoutine';
 import { useUserProfileStore } from '@/src/store/userProfileStore';
 import { AnalysisReport } from '@/src/components/profile/report/AnalysisReport';
 import { ProductRecommendation } from '@/src/components/profile/report/ProductRecommendation';
@@ -14,10 +16,20 @@ import { TimePicker } from '@/src/components/common/TimePicker';
 import { colors } from '@/constants/theme/colors';
 import { Ionicons } from '@expo/vector-icons';
 
+const TIMING_DISPLAY_MAP: Record<string, string> = {
+  BEFORE_BREAKFAST: '아침 식전',
+  AFTER_BREAKFAST: '아침 식후',
+  BEFORE_LUNCH: '점심 식전',
+  AFTER_LUNCH: '점심 식후',
+  BEFORE_DINNER: '저녁 식전',
+  AFTER_DINNER: '저녁 식후',
+  BEFORE_SLEEP: '취침 전',
+};
+
 export default function ReportsScreen() {
   const queryClient = useQueryClient();
   const { profile } = useUserProfileStore();
-  const params = useLocalSearchParams<{ mode?: 'view' | 'edit' }>();
+  const params = useLocalSearchParams<{ mode?: 'view' | 'edit'; from?: 'banner' }>();
   
   // 화면 모드: 'view' (마이페이지 진입 시), 'edit' (갱신 버튼 클릭 시 또는 파라미터로 전달 시)
   const [mode, setMode] = useState<'view' | 'edit'>(params.mode || 'view');
@@ -25,10 +37,11 @@ export default function ReportsScreen() {
   // 시간 수정 관련 상태
   const [isTimePickerVisible, setTimePickerVisible] = useState(false);
   const [selectedSupplementId, setSelectedSupplementId] = useState<number | null>(null);
+  const [selectedTiming, setSelectedTiming] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState('09:00');
   
-  // 수정된 시간들을 보관하는 로컬 맵 { userSupplementId: 'HH:mm' }
-  const [tempTimes, setTempTimes] = useState<Record<number, string>>({});
+  // 수정된 시간들을 보관하는 로컬 맵 { INTAKE_TIMING_ENUM: 'HH:mm' }
+  const [tempTimes, setTempTimes] = useState<Record<string, string>>({});
 
   // 리포트 데이터 조회
   const { data: reportResponse, isLoading, error, refetch } = useQuery({
@@ -36,16 +49,43 @@ export default function ReportsScreen() {
     queryFn: () => reportApi.getReport(),
   });
 
-  const report = reportResponse?.data.data;
+  const { data: supplementsResponse } = useSupplementsList();
+  const report = reportResponse?.data?.data;
+
+  // 데이터 변동 감지 (백엔드 needsRefresh 보완)
+  const isDataMismatch = React.useMemo(() => {
+    if (!report || !supplementsResponse?.supplements) return false;
+
+    const currentIds = (supplementsResponse.supplements as any[])
+      .map((s: any) => s.userSupplementId)
+      .sort((a: number, b: number) => a - b)
+      .join(',');
+
+    const reportedIds = (report.timing_recommendations || [])
+      .map((r: any) => r.user_supplement_id)
+      .sort((a: number, b: number) => a - b)
+      .join(',');
+
+    return currentIds !== reportedIds;
+  }, [report, supplementsResponse?.supplements]);
+
+  const needsRefresh = !!report?.needsRefresh || isDataMismatch;
+
+  // 유저 섭취 시간 설정 조회
+  const { data: settingsResponse } = useQuery({
+    queryKey: ['intakeSettings'],
+    queryFn: () => intakeRoutineApi.getSettings(),
+  });
+  const settings = settingsResponse?.data?.data?.settings || [];
 
   // 갱신 모드로 진입 시 초기 데이터 설정
   useEffect(() => {
     if (mode === 'edit' && report) {
-      const initialTimes: Record<number, string> = {};
+      const initialTimes: Record<string, string> = {};
       report.timing_recommendations.forEach(rec => {
         rec.intake_timings.forEach(info => {
           if (info.intake_time) {
-            initialTimes[rec.user_supplement_id] = info.intake_time;
+            initialTimes[info.intake_timing] = info.intake_time;
           }
         });
       });
@@ -57,18 +97,22 @@ export default function ReportsScreen() {
   const refreshMutation = useMutation({
     mutationFn: () => reportApi.updateReport(),
     onSuccess: (res) => {
+      // 갱신된 데이터를 캐시에 즉시 반영
+      queryClient.setQueryData(['report'], res.data);
       queryClient.invalidateQueries({ queryKey: ['report'] });
       setMode('edit');
       
-      const newReport = res.data.data;
-      if (newReport) {
-        const initialTimes: Record<number, string> = {};
+      const newReport = res?.data?.data;
+      if (newReport && newReport.timing_recommendations) {
+        const initialTimes: Record<string, string> = {};
         newReport.timing_recommendations.forEach(rec => {
-          rec.intake_timings.forEach(info => {
-            if (info.intake_time) {
-              initialTimes[rec.user_supplement_id] = info.intake_time;
-            }
-          });
+          if (rec.intake_timings) {
+            rec.intake_timings.forEach(info => {
+              if (info.intake_time) {
+                initialTimes[info.intake_timing] = info.intake_time;
+              }
+            });
+          }
         });
         setTempTimes(initialTimes);
       }
@@ -90,11 +134,24 @@ export default function ReportsScreen() {
 
     setIsSaving(true);
     try {
-      const promises = Object.entries(tempTimes).map(([id, time]) => 
-        reportApi.updateRecommendedTime(Number(id), time)
-      );
+      // tempTimes: { BREAKFAST: '09:00' }
+      // settings에서 해당 enum에 맞는 display명을 갖는 settingId 탐색
+      // (백엔드 DTO가 intakeTiming에 displayName을 넣어주므로 매핑 필요)
+      const savePromises = Object.entries(tempTimes).map(([timingEnum, time]) => {
+        const displayName = TIMING_DISPLAY_MAP[timingEnum];
+        const setting = settings.find((s: any) => s.intakeTiming === displayName);
+        
+        if (setting) {
+          return intakeRoutineApi.updateSetting(setting.userIntakeTimingSettingId, { intakeTime: time });
+        }
+        return Promise.resolve();
+      });
       
-      await Promise.all(promises);
+      await Promise.all(savePromises);
+      
+      // 저장 성공 후 리포트/세팅 쿼리 갱신
+      queryClient.invalidateQueries({ queryKey: ['report'] });
+      queryClient.invalidateQueries({ queryKey: ['intakeSettings'] });
       
       Alert.alert('저장 완료', '맞춤 복용 시간이 반영되었습니다.', [
         { text: '확인', onPress: () => router.replace('/(tabs)/(home)') }
@@ -106,15 +163,16 @@ export default function ReportsScreen() {
     }
   };
 
-  const handleEditTime = (userSupplementId: number, initialTime: string) => {
+  const handleEditTime = (userSupplementId: number, intakeTiming: string, initialTime: string) => {
     setSelectedSupplementId(userSupplementId);
-    setCurrentTime(tempTimes[userSupplementId] || initialTime);
+    setSelectedTiming(intakeTiming);
+    setCurrentTime(tempTimes[intakeTiming] || initialTime);
     setTimePickerVisible(true);
   };
 
   const handleTimeConfirm = (time: string) => {
-    if (selectedSupplementId !== null) {
-      setTempTimes(prev => ({ ...prev, [selectedSupplementId]: time }));
+    if (selectedTiming) {
+      setTempTimes(prev => ({ ...prev, [selectedTiming]: time }));
     }
   };
 
@@ -144,7 +202,7 @@ export default function ReportsScreen() {
   }
 
   // 추천 제품 평탄화 (Flat list for UI)
-  const flatProducts = report.recommendedProductsByIngredient.flatMap(group => 
+  const flatProducts = (report.recommendedProductsByIngredient || []).flatMap(group => 
     group.recommendedProducts.map(p => ({
       productCode: p.productCode,
       productName: p.productName,
@@ -163,17 +221,20 @@ export default function ReportsScreen() {
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 100 }}
       >
         <View className="py-2">
-          {/* 리포트 갱신 배너 */}
-          {mode === 'view' && report.needsRefresh && (
+          {/* 리포트 갱신 버튼 (최상단 노출 - 배너 진입이 아니며 갱신이 필요할 때만 노출) */}
+          {needsRefresh && params.from !== 'banner' && (
             <TouchableOpacity 
               onPress={() => refreshMutation.mutate()}
               disabled={refreshMutation.isPending}
-              className="mb-8 p-5 rounded-3xl bg-orange-50 border border-orange-100 flex-row items-center justify-between"
+              className="mb-8 p-5 rounded-3xl bg-orange-50 border border-orange-100 flex-row items-center justify-between shadow-sm"
               activeOpacity={0.7}
             >
               <View className="flex-1 mr-3">
-                <Text className="text-sm font-bold text-orange-600 mb-1">영양제 정보가 변경되었습니다!</Text>
-                <Text className="text-xs text-orange-400" numberOfLines={1}>최신 정보를 반영해 리포트를 갱신해 보세요.</Text>
+                <View className="flex-row items-center mb-1">
+                  <Ionicons name="sparkles" size={16} color="#EA580C" className="mr-2" />
+                  <Text className="text-sm font-bold text-orange-600">리포트 갱신하기</Text>
+                </View>
+                <Text className="text-xs text-orange-400" numberOfLines={1}>변경된 영양제 정보를 바탕으로 AI 분석을 다시 실행합니다.</Text>
               </View>
               <View className="w-10 h-10 rounded-full bg-orange-500 items-center justify-center">
                 {refreshMutation.isPending ? (
@@ -199,12 +260,15 @@ export default function ReportsScreen() {
           {mode === 'edit' && (
             <View className="mt-4">
               <TimeRecommendation
-                recommendations={report.timing_recommendations.map(rec => ({
-                  userSupplementId: rec.user_supplement_id,
-                  name: rec.alias,
-                  recommendedIntakeTime: tempTimes[rec.user_supplement_id] || (rec.intake_timings[0]?.intake_time || '09:00'),
-                  reason: '' // backend doesn't provide reason in this DTO
-                }))}
+                recommendations={(report.timing_recommendations || []).flatMap(rec => 
+                  rec.intake_timings.map((info, idx) => ({
+                    userSupplementId: rec.user_supplement_id * 100 + idx, // 고유 키용 임시 조합
+                    name: rec.alias,
+                    intakeTiming: info.intake_timing,
+                    recommendedIntakeTime: tempTimes[info.intake_timing] || (info.intake_time || '09:00'),
+                    reason: `${TIMING_DISPLAY_MAP[info.intake_timing] || info.intake_timing} 추천`
+                  }))
+                )}
                 onEditTime={handleEditTime}
               />
 
