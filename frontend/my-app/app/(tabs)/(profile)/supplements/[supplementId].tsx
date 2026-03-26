@@ -11,7 +11,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronRight, Minus, Pill, Plus, Trash2 } from 'lucide-react-native';
+import { ChevronRight, Minus, Plus, Trash2 } from 'lucide-react-native';
 import { TimePicker } from '@/src/components/common/TimePicker';
 import { colors } from '@/constants/theme/colors';
 import { neuRaised } from '@/constants/theme/neumorphism';
@@ -24,20 +24,9 @@ import {
   useDeleteSupplement
 } from '@/hooks/useSupplement';
 import { useReport } from '@/hooks/useReport';
+import { getBodyPartImageSource } from '@/constants/bodyPartImages';
 
 const line = `${colors.shadowDark}44`;
-const BODY_PART_IMAGE_BY_ID = {
-  1: require('../../../../assets/images/bodypart/뇌 · 신경계.png'),
-  2: require('../../../../assets/images/bodypart/눈 · 귀 · 구강.png'),
-  3: require('../../../../assets/images/bodypart/심장 · 혈관 · 혈액.png'),
-  4: require('../../../../assets/images/bodypart/폐 · 호흡기.png'),
-  5: require('../../../../assets/images/bodypart/위 · 장 · 소화기관.png'),
-  6: require('../../../../assets/images/bodypart/간 · 췌장 · 담낭.png'),
-  7: require('../../../../assets/images/bodypart/신장 · 방광 · 요로.png'),
-  8: require('../../../../assets/images/bodypart/뼈 · 관절 · 근육.png'),
-  9: require('../../../../assets/images/bodypart/피부 · 모발 · 손톱.png'),
-} as const;
-const DEFAULT_BODY_PART_IMAGE = BODY_PART_IMAGE_BY_ID[1];
 
 const smallNeuBtn = (disabled?: boolean) => [
   neuRaised(14, colors.input),
@@ -200,9 +189,7 @@ export default function SupplementDetailScreen() {
   };
 
   if (detailLoading || !supplement) return null;
-  const bodyPartImageSource =
-    (bodyPartId && BODY_PART_IMAGE_BY_ID[bodyPartId as keyof typeof BODY_PART_IMAGE_BY_ID]) ||
-    DEFAULT_BODY_PART_IMAGE;
+  const bodyPartImageSource = getBodyPartImageSource(bodyPartId);
   const useRemotePillImage = !!pillImageUrl?.trim() && !pillImageLoadFailed;
 
   return (

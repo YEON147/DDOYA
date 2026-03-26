@@ -36,6 +36,39 @@ export function neuRaised(radius: number, fill: string = colors.surface): ViewSt
   };
 }
 
+/** 홈 핵심 카드 — 아이보리 + 아주 약한 그림자 (Soft Wellness) */
+export function softWellnessCard(radius: number = 20): ViewStyle {
+  const base: ViewStyle = {
+    backgroundColor: colors.cardIvory,
+    borderRadius: radius,
+    borderWidth: 1,
+    borderColor: `${colors.shadowDark}18`,
+  };
+
+  if (Platform.OS === 'web') {
+    return {
+      ...base,
+      boxShadow: `0 2px 14px ${colors.shadowDark}18`,
+    } as ViewStyle;
+  }
+
+  return {
+    ...base,
+    ...Platform.select<ViewStyle>({
+      ios: {
+        shadowColor: colors.shadowDark,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.07,
+        shadowRadius: 10,
+      },
+      android: {
+        elevation: 1,
+      },
+      default: {},
+    }),
+  };
+}
+
 /** 오목 — 입력 필드 등 */
 export function neuInset(radius: number, fill: string = colors.input): ViewStyle {
   const base: ViewStyle = {

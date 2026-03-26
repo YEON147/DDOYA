@@ -39,6 +39,8 @@ export interface IntakeScheduleItem {
 export interface SupplementSummaryDto {
   userSupplementId: number;
   pillImageUrl: string;
+  /** 목록 API(`SupplementListResponse`)에서 내려오는 신체 부위 ID (1~9) */
+  bodyPartId?: number | null;
   primaryIngredientNames?: string[];
   alias: string;
   stockQuantity: number;
@@ -92,4 +94,3 @@ export interface SupplementUpdateResponse {
   stockNotificationEnabled: boolean;
   intakeSchedules: IntakeScheduleItem[];
 }
-
