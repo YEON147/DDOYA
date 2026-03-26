@@ -1,7 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
-import { View, Text, Image } from 'react-native';
+import { View, Text, Image, useWindowDimensions } from 'react-native';
 import { colors } from '@/constants/theme/colors';
 import type { DailyIntakeTimeSlot } from '@/src/types/intakeRoutine';
+import { useAuthStore } from '@/src/store/authStore';
+import { scaleByWidth } from '@/src/utils/responsive';
 import {
   findNextAttentionSlot,
   formatCountdownTimer,
@@ -20,8 +22,11 @@ const CHARACTER_IMAGE = require('../../../assets/images/character.png');
 
 /** 홈 — 오늘 루틴 요약 박스 (2행 + 구분선, 와이어 이미지와 동일 구조) */
 export function TodayRoutineHeroCard({ timeSlots, isPending, isError, className = '' }: Props) {
+  const { width } = useWindowDimensions();
   const slotCount = timeSlots.length;
   const nextSlot = useMemo(() => findNextAttentionSlot(timeSlots), [timeSlots]);
+  const nickname = useAuthStore((s) => s.nickname);
+  const bubbleHeight = scaleByWidth(width, 148, { min: 140, max: 170 });
 
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
@@ -72,73 +77,114 @@ export function TodayRoutineHeroCard({ timeSlots, isPending, isError, className 
     <View className={className}>
       <View className="flex-row items-stretch">
           {/* 말풍선 */}
-          <View className="flex-1 mr-6" style={{ maxWidth: 340 }}>
+          <View
+            className="flex-1"
+            style={{
+              marginRight: scaleByWidth(width, 24, { min: 14, max: 28 }),
+              maxWidth: scaleByWidth(width, 340, { min: 300, max: 420 }),
+            }}
+          >
             <View
-              className="relative rounded-3xl p-5"
+              className="relative rounded-3xl"
               style={{
                 backgroundColor: colors.cardIvory,
                 borderWidth: 1,
-                borderColor: `${colors.shadowDark}80`,
+                borderColor: `${colors.primary}66`,
+                paddingHorizontal: scaleByWidth(width, 18, { min: 14, max: 22 }),
+                paddingVertical: scaleByWidth(width, 22, { min: 18, max: 28 }),
+                height: bubbleHeight,
               }}
             >
               {/* 꼬리 */}
               <View
                 style={{
                   position: 'absolute',
-                  right: -6,
-                  bottom: 18,
-                  width: 12,
-                  height: 12,
+                  right: -scaleByWidth(width, 6, { min: 5, max: 8 }),
+                  bottom: scaleByWidth(width, 18, { min: 14, max: 24 }),
+                  width: scaleByWidth(width, 12, { min: 10, max: 14 }),
+                  height: scaleByWidth(width, 12, { min: 10, max: 14 }),
                   backgroundColor: colors.cardIvory,
                   borderRightWidth: 1,
                   borderTopWidth: 1,
-                  borderColor: `${colors.shadowDark}80`,
+                  borderColor: `${colors.primary}66`,
                   transform: [{ rotate: '45deg' }],
                 }}
               />
 
               <View className="flex-row items-start justify-between gap-3">
                 <View className="flex-1">
-                  <Text
-                    className="text-[15px] font-scdream-medium p-2"
-                    style={{ color: colors.text, letterSpacing: -0.2 }}
-                  >
-                    {speechTitle}
-                  </Text>
-                  <View className="mt-1.5 p-2">
+                  <View className="px-1">
+                    <Text
+                      className="text-[17px] font-scdream-bold"
+                      style={{ color: colors.text, letterSpacing: -0.2 }}
+                      numberOfLines={1}
+                      ellipsizeMode="tail"
+                    >
+                      {(nickname ?? '회원') + '님, 오셨군요 !!'}
+                    </Text>
+                    <Text
+                      className="mt-2 text-[17px] font-scdream-bold"
+                      style={{ color: colors.text, letterSpacing: -0.2 }}
+                      numberOfLines={1}
+                      ellipsizeMode="tail"
+                    >
+                      {speechTitle}
+                    </Text>
+                    <View
+                      className="mt-2"
+                      style={{ height: 1, backgroundColor: `${colors.shadowDark}55` }}
+                    />
+                  </View>
+                  <View className="mt-3 px-1">
                     {showTimerStyle ? (
-                      <View>
-                        <Text className="text-[12px] font-scdream" style={{ color: colors.textMuted }}>
-                          다음 섭취까지{' '}
-                          <Text className="font-scdream-bold" style={{ color: colors.text }}>
-                            {timerLine}
-                          </Text>
-                          {' '}남았어요
+                      <View className="py-1">
+                        <Text
+                          className="text-[14px] font-scdream"
+                          style={{ color: colors.textMuted }}
+                          numberOfLines={1}
+                          ellipsizeMode="tail"
+                        >
+                          다음 복용까지 남은 시간
                         </Text>
-                        {scheduledTimeLine ? (
-                          <Text className="mt-1 text-[11px] font-scdream" style={{ color: colors.textMuted }}>
-                            예정 시각 · {scheduledTimeLine}
-                          </Text>
-                        ) : null}
+                        <Text
+                          className="mt-1 text-[20px] font-scdream-bold tracking-tight"
+                          style={{ color: colors.text }}
+                          numberOfLines={1}
+                          ellipsizeMode="clip"
+                        >
+                          {timerLine}
+                        </Text>
                       </View>
                     ) : (
-                      <Text className="text-[12px] font-scdream leading-5" style={{ color: colors.textMuted }}>
+                      <Text
+                        className="text-[14px] font-scdream leading-5"
+                        style={{ color: colors.textMuted }}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                      >
                         {speechBody}
                       </Text>
                     )}
                   </View>
                 </View>
-
-                {/* 우측 요약 박스 제거 (중복 정보 방지) */}
               </View>
             </View>
           </View>
 
           {/* 캐릭터 */}
-          <View className="w-[90px] items-center justify-end mt-10">
+          <View
+            className="items-center justify-end"
+            style={{
+              width: scaleByWidth(width, 90, { min: 76, max: 110 }),
+              marginTop: scaleByWidth(width, 40, { min: 24, max: 50 }),
+            }}
+          >
             <Image
               source={CHARACTER_IMAGE}
-              style={{ width: 96, height: 132 }}
+              style={{
+                width: scaleByWidth(width, 96, { min: 82, max: 120 }),
+                height: scaleByWidth(width, 132, { min: 112, max: 158 }),
+              }}
               resizeMode="contain"
             />
           </View>

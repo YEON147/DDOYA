@@ -13,7 +13,11 @@ export default function ProfileScreen() {
   const { nickname } = useAuthStore();
 
   return (
-    <ScreenContainer>
+    <ScreenContainer
+      contentContainerStyle={{
+        paddingBottom: 0,
+      }}
+    >
         <View
           className="relative mb-3 mt-1 overflow-hidden rounded-[20px] px-5 py-5"
           style={[
@@ -29,13 +33,13 @@ export default function ProfileScreen() {
               <AppIcon icon={User} size={34} color={colors.textMuted} strokeWidth={1.75} />
             </View>
             <Text
-              className="mt-3 text-[24px] font-scdream-bold tracking-tight"
+              className="mt-3 text-[26px] font-scdream-bold tracking-tight"
               style={{ color: colors.text }}
               numberOfLines={1}
             >
               {nickname || '회원'}
             </Text>
-            <Text className="mt-3 text-[13px] font-scdream" style={{ color: colors.textMuted }}>
+            <Text className="mt-3 text-[15px] font-scdream" style={{ color: colors.textMuted }}>
               DDOYA와 건강해지기 : 2일차
             </Text>
           </View>

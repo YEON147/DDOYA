@@ -36,13 +36,13 @@ export default function MyInfoWeightScreen() {
     >
       <View className="flex-1 w-full items-center px-6 pb-6 pt-6">
         <View className="w-full max-w-[340px] flex-1">
-          <Text className="mb-2 ml-1 text-[12px] font-scdream tracking-wide" style={{ color: colors.textMuted }}>
+          <Text className="mb-2 ml-1 text-[14px] font-scdream tracking-wide" style={{ color: colors.textMuted }}>
             몸무게 변경
           </Text>
           <View className="px-4" style={neuInset(16)}>
             <View className="relative">
               <TextInput
-                className="h-[52px] w-full pr-11 text-[15px] font-scdream"
+                className="h-[52px] w-full pr-11 text-[17px] font-scdream"
                 style={{ color: colors.text }}
                 placeholderTextColor={colors.textMuted}
                 placeholder="몸무게를 입력해주세요"
@@ -50,7 +50,7 @@ export default function MyInfoWeightScreen() {
                 value={value}
                 onChangeText={(text) => setValue(text.replace(/[^0-9.]/g, ''))}
               />
-              <Text className="absolute right-1 top-[16px] text-[14px] font-scdream" style={{ color: colors.textMuted }}>
+              <Text className="absolute right-1 top-[16px] text-[16px] font-scdream" style={{ color: colors.textMuted }}>
                 kg
               </Text>
             </View>

@@ -38,7 +38,7 @@ export default function MyInfoGenderScreen() {
     >
       <View className="flex-1 w-full items-center px-6 pb-6 pt-6">
         <View className="w-full max-w-[340px] flex-1">
-          <Text className="mb-2 ml-1 text-[12px] font-scdream tracking-wide" style={{ color: colors.textMuted }}>
+          <Text className="mb-2 ml-1 text-[14px] font-scdream tracking-wide" style={{ color: colors.textMuted }}>
             성별 변경
           </Text>
           <View className="flex-row gap-2 px-1">
@@ -53,7 +53,7 @@ export default function MyInfoGenderScreen() {
               onPress={() => setValue('MALE')}
             >
               <Text
-                className="text-[14px] font-scdream-medium"
+                className="text-[16px] font-scdream-medium"
                 style={{ color: isMaleSelected ? '#FFFFFF' : colors.text }}
               >
                 남성
@@ -70,7 +70,7 @@ export default function MyInfoGenderScreen() {
               onPress={() => setValue('FEMALE')}
             >
               <Text
-                className="text-[14px] font-scdream-medium"
+                className="text-[16px] font-scdream-medium"
                 style={{ color: isFemaleSelected ? '#FFFFFF' : colors.text }}
               >
                 여성

@@ -44,7 +44,7 @@ export function TopHeader({
             <AppIcon icon={ChevronLeft} size={28} color={colors.text} />
           </Pressable>
         )}
-        <Text className="text-[21px] font-scdream-medium" style={{ color: colors.text }}>
+        <Text className="text-[23px] font-scdream-medium" style={{ color: colors.text }}>
           {title}
         </Text>
       </View>

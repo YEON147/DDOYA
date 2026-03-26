@@ -110,7 +110,7 @@ export default function IntakeRoutineEditScreen() {
         <TouchableOpacity onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={28} color={colors.text} />
         </TouchableOpacity>
-        <Text className="text-[20px] font-scdream-medium" style={{ color: colors.text }}>
+        <Text className="text-[22px] font-scdream-medium" style={{ color: colors.text }}>
           섭취 루틴 수정
         </Text>
         <View style={{ width: 28 }} />
@@ -129,12 +129,12 @@ export default function IntakeRoutineEditScreen() {
               }}
             >
               <View>
-                <Text className="text-[14px] font-scdream" style={{ color: colors.textMuted }}>
+                <Text className="text-[16px] font-scdream" style={{ color: colors.textMuted }}>
                   {item.intakeTiming}
                 </Text>
                 <View className="mt-1 flex-row items-center">
                   <View className="mr-2 h-2 w-2 rounded-full" style={{ backgroundColor: colors.primary }} />
-                  <Text className="text-[18px] font-scdream-medium" style={{ color: colors.text }}>
+                  <Text className="text-[20px] font-scdream-medium" style={{ color: colors.text }}>
                     {item.intakeTime}
                   </Text>
                 </View>

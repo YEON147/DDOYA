@@ -104,7 +104,7 @@ export const SignupForm = () => {
               ]}
             >
               <Text
-                className="text-[12px] font-scdream-medium"
+                className="text-[14px] font-scdream-medium"
                 style={{ color: isCheckingEmail ? colors.textMuted : colors.text }}
               >
                 {isCheckingEmail ? '확인 중...' : '중복확인'}

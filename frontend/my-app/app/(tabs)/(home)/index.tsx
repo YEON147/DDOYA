@@ -1,4 +1,4 @@
-import { View, Text, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Bell } from 'lucide-react-native';
 import { ScreenContainer } from '@/src/components/common/ScreenContainer';
@@ -11,6 +11,7 @@ import { useDailyIntakeSchedule } from '@/hooks/useIntakeRoutine';
 import { formatKoreanTime, formatKoreanTodayParts } from '@/src/utils/nextIntake';
 import { SvgXml } from 'react-native-svg';
 import { useAuthStore } from '@/src/store/authStore';
+import { scaleByWidth } from '@/src/utils/responsive';
 
 const DDOYA_LOGO_XML = `<svg width="1106" height="479" viewBox="0 0 1106 479" fill="none" xmlns="http://www.w3.org/2000/svg">
 <g clip-path="url(#clip0_428_3034)">
@@ -26,6 +27,7 @@ const DDOYA_LOGO_XML = `<svg width="1106" height="479" viewBox="0 0 1106 479" fi
 </svg>`;
 
 export default function HomeScreen() {
+  const { width } = useWindowDimensions();
   const router = useRouter();
   const unreadCount = 3;
   const nickname = useAuthStore((s) => s.nickname);
@@ -33,19 +35,22 @@ export default function HomeScreen() {
   const timeSlots = schedule?.timeSlots ?? [];
   const slotCount = timeSlots.length;
   const { monthDay, weekday } = formatKoreanTodayParts();
+  const horizontalPadding = scaleByWidth(width, 18, { min: 14, max: 22 });
+  const topPadding = scaleByWidth(width, 18, { min: 14, max: 24 });
+  const dateBarHeight = scaleByWidth(width, 40, { min: 34, max: 48 });
 
   return (
     <ScreenContainer
       contentContainerStyle={{
         paddingHorizontal: 0,
-        paddingTop: 18,
-        paddingBottom: 32,
+        paddingTop: topPadding,
+        paddingBottom: 0,
       }}
     >
-        <View className="px-[18px]">
+        <View style={{ paddingHorizontal: horizontalPadding }}>
           <View className="relative">
             <View className="flex-row items-center pr-12">
-              <SvgXml xml={DDOYA_LOGO_XML} width={124} height={50} />
+              <SvgXml xml={DDOYA_LOGO_XML} width={132} height={58} />
             </View>
             <Pressable
               onPress={() => router.push('/notifications' as never)}
@@ -53,7 +58,7 @@ export default function HomeScreen() {
               className="absolute right-2 top-3 h-10 w-10 items-center justify-center rounded-full"
               style={({ pressed }) => [neuRaised(999, colors.surface), { opacity: pressed ? 0.82 : 1 }]}
             >
-              <AppIcon icon={Bell} size={19} color={colors.iconMuted} strokeWidth={1.75} />
+              <AppIcon icon={Bell} size={20} color={colors.iconMuted} strokeWidth={2.5} />
               {unreadCount > 0 && (
                 <View
                   className="absolute -right-0.5 -top-0.5 min-w-[18px] items-center rounded-full px-1 py-[1px]"
@@ -67,27 +72,6 @@ export default function HomeScreen() {
             </Pressable>
           </View>
 
-          {/* 날짜 카드 (헤더 바로 아래) */}
-          <View
-            className="mt-4 flex-row overflow-hidden rounded-[20px]"
-            style={{
-              backgroundColor: colors.surface,
-              borderWidth: 1,
-              borderColor: `${colors.shadowDark}1F`,
-            }}
-          >
-            <View style={{ width: 4, backgroundColor: colors.primary }} />
-            <View className="flex-1 px-6 py-4">
-              <Text
-                className="font-scdream-medium"
-                style={{ color: colors.text, fontSize: 16, letterSpacing: -0.2 }}
-                numberOfLines={1}
-              >
-                {(nickname ?? '회원') + '님 환영합니다'}
-              </Text>
-            </View>
-          </View>
-
           <TodayRoutineHeroCard
             className="mt-3"
             timeSlots={timeSlots}
@@ -97,16 +81,17 @@ export default function HomeScreen() {
 
           {/* 날짜 바 (좌우 여백 없이 구분선 느낌) */}
           <View
-            className="-mx-[18px] mb-4 items-center justify-center"
+            className="mb-2 items-center justify-center"
             style={{
-              height: 34,
+              marginHorizontal: -horizontalPadding,
+              height: dateBarHeight,
               backgroundColor: `${colors.shadowDark}14`,
               borderTopWidth: 1,
               borderBottomWidth: 1,
               borderColor: `${colors.shadowDark}22`,
             }}
           >
-            <Text className="text-[12px] font-scdream-medium" style={{ color: colors.textMuted }}>
+            <Text className="text-[15px] font-scdream-medium" style={{ color: colors.textMuted }}>
               {monthDay} · {weekday}
             </Text>
           </View>

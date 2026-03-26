@@ -33,10 +33,10 @@ export default function PasswordChangeScreen() {
       }
     >
       <View className="flex-1 px-6 pt-8">
-        <Text className="mb-2 ml-1 text-[12px] font-scdream tracking-wide" style={{ color: colors.textMuted }}>
+        <Text className="mb-2 ml-1 text-[14px] font-scdream tracking-wide" style={{ color: colors.textMuted }}>
           비밀번호 변경
         </Text>
-        <Text className="mb-3 text-[13px] font-scdream" style={{ color: colors.text }}>
+        <Text className="mb-3 text-[15px] font-scdream" style={{ color: colors.text }}>
           현재 비밀번호
         </Text>
         <TextInput
@@ -45,11 +45,11 @@ export default function PasswordChangeScreen() {
           placeholder="현재 비밀번호를 입력해주세요"
           secureTextEntry
           placeholderTextColor={colors.textMuted}
-          className="rounded-2xl px-4 py-4 text-[15px] font-scdream"
+          className="rounded-2xl px-4 py-4 text-[17px] font-scdream"
           style={{ backgroundColor: colors.surfaceWarm, color: colors.text }}
         />
 
-        <Text className="mb-3 mt-7 text-[13px] font-scdream" style={{ color: colors.text }}>
+        <Text className="mb-3 mt-7 text-[15px] font-scdream" style={{ color: colors.text }}>
           새로운 비밀번호
         </Text>
         <TextInput
@@ -58,7 +58,7 @@ export default function PasswordChangeScreen() {
           placeholder="새로운 비밀번호를 입력해주세요"
           secureTextEntry
           placeholderTextColor={colors.textMuted}
-          className="rounded-2xl px-4 py-4 text-[15px] font-scdream"
+          className="rounded-2xl px-4 py-4 text-[17px] font-scdream"
           style={{ backgroundColor: colors.surfaceWarm, color: colors.text }}
         />
         <TextInput
@@ -67,7 +67,7 @@ export default function PasswordChangeScreen() {
           placeholder="비밀번호 확인"
           secureTextEntry
           placeholderTextColor={colors.textMuted}
-          className="mt-3 rounded-2xl px-4 py-4 text-[15px] font-scdream"
+          className="mt-3 rounded-2xl px-4 py-4 text-[17px] font-scdream"
           style={{ backgroundColor: colors.surfaceWarm, color: colors.text }}
         />
 
@@ -78,7 +78,7 @@ export default function PasswordChangeScreen() {
             className="items-center rounded-full py-4"
             style={{ backgroundColor: colors.text }}
           >
-            <Text className="text-[16px] font-scdream-medium" style={{ color: '#FFFFFF' }}>
+            <Text className="text-[18px] font-scdream-medium" style={{ color: '#FFFFFF' }}>
               저장
             </Text>
           </TouchableOpacity>

@@ -1,10 +1,9 @@
-import { View, Text, Pressable, Image } from 'react-native';
-import { Camera, Check } from 'lucide-react-native';
+import { View, Text, Pressable, Image, useWindowDimensions } from 'react-native';
+import { Camera } from 'lucide-react-native';
 import { colors } from '@/constants/theme/colors';
-import { softWellnessCard } from '@/constants/theme/neumorphism';
 import { AppIcon } from '@/src/components/common/AppIcon';
 import type { DailyIntakeScheduleSlotItem } from '@/src/types/intakeRoutine';
-import { getBodyPartImageSource } from '@/constants/bodyPartImages';
+import { scaleByWidth } from '@/src/utils/responsive';
 
 export type HomeIntakeSlotProps = {
   timeLabel: string;
@@ -12,62 +11,70 @@ export type HomeIntakeSlotProps = {
   onPressCamera?: (scheduleIds: number[]) => void;
 };
 
-/** MISSED도 강한 빨강 대신 낮은 대비 톤으로 통일 */
-function statusStyle(status: DailyIntakeScheduleSlotItem['status']) {
-  switch (status) {
-    case 'TAKEN':
-      return {
-        track: `${colors.primary}4D`,
-        showCheck: true,
-        captionBg: `${colors.primary}18`,
-      };
-    case 'MISSED':
-      return {
-        track: `${colors.textMuted}33`,
-        showCheck: false,
-        captionBg: `${colors.shadowDark}10`,
-      };
-    case 'SKIPPED':
-    default:
-      return {
-        track: `${colors.shadowDark}2E`,
-        showCheck: false,
-        captionBg: `${colors.shadowLight}CC`,
-      };
-  }
-}
-
 /** 홈 — 시간대별 섭취 인증 카드 (Soft Wellness) */
 export function HomeIntakeSlot({ timeLabel, items, onPressCamera }: HomeIntakeSlotProps) {
+  const { width } = useWindowDimensions();
   const scheduleIds = items.map((i) => i.scheduleId);
   const hasItems = items.length > 0;
   const completedCount = items.filter((i) => i.status === 'TAKEN' || i.status === 'SKIPPED').length;
   const remainingCount = Math.max(0, items.length - completedCount);
+  const isSlotCompleted = hasItems && remainingCount === 0;
   const success = '#2FB58A';
   const successBg = `${success}12`;
   const successBorder = `${success}33`;
+  const STAMP_IMAGE = require('../../../assets/images/DDOYA_stamp.png');
 
-  const BUBBLE_W = 310;
-  const BUBBLE_PAD = 'px-6 py-5';
+  const bubblePaddingH = scaleByWidth(width, 24, { min: 16, max: 26 });
+  const bubblePaddingV = scaleByWidth(width, 20, { min: 14, max: 24 });
   const BUBBLE_RADIUS = 'rounded-3xl';
-  const TAIL_SIZE = 12;
-  const TAIL_OFFSET = 18;
+  const tailSize = scaleByWidth(width, 12, { min: 10, max: 14 });
+  const tailOffset = scaleByWidth(width, 18, { min: 14, max: 24 });
+  const stampSize = scaleByWidth(width, 150, { min: 112, max: 182 });
 
   return (
-    <View className="gap-3.5">
-      <View className="flex-row items-end justify-between">
-        <View style={{ width: BUBBLE_W }}>
+    <View className="w-full">
+      <View className="w-full">
+        <View className="w-full">
           <View
-            className={`relative ${BUBBLE_RADIUS} ${BUBBLE_PAD}`}
-            style={{ backgroundColor: colors.cardIvory, borderWidth: 1, borderColor: `${colors.shadowDark}80` }}
+            className={`relative ${BUBBLE_RADIUS}`}
+            style={{
+              backgroundColor: colors.cardIvory,
+              borderWidth: 1,
+              borderColor: `${colors.shadowDark}80`,
+              paddingHorizontal: bubblePaddingH,
+              paddingVertical: bubblePaddingV,
+            }}
           >
+            {isSlotCompleted ? (
+              <View
+                pointerEvents="none"
+                style={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  transform: [
+                    { translateX: -(stampSize / 2) + scaleByWidth(width, 26, { min: 18, max: 34 }) },
+                    { translateY: -(stampSize / 2) + scaleByWidth(width, 18, { min: 12, max: 26 }) },
+                  ],
+                  zIndex: 50,
+                  opacity: 0.92,
+                }}
+              >
+                <Image
+                  source={STAMP_IMAGE}
+                  style={{ width: stampSize, height: stampSize, alignSelf: 'center' }}
+                  resizeMode="contain"
+                />
+              </View>
+            ) : null}
+
             <View
               style={{
                 position: 'absolute',
                 left: -6,
-                bottom: TAIL_OFFSET,
-                width: TAIL_SIZE,
-                height: TAIL_SIZE,
+                bottom: tailOffset,
+                width: tailSize,
+                height: tailSize,
                 backgroundColor: colors.cardIvory,
                 borderLeftWidth: 1,
                 borderBottomWidth: 1,
@@ -77,24 +84,57 @@ export function HomeIntakeSlot({ timeLabel, items, onPressCamera }: HomeIntakeSl
             />
 
             <View>
-              <View className="flex-row items-center p-1">
-                <View className="mr-3 h-2 w-2 rounded-full" style={{ backgroundColor: colors.primary }} />
-                <Text className="text-[16px] font-scdream-bold" style={{ color: colors.text }} numberOfLines={1}>
-                  {timeLabel}
-                </Text>
+              <View className="flex-row items-center justify-between p-1">
+                <View className="flex-row items-center pr-3">
+                  <View className="mr-3 h-2 w-2 rounded-full" style={{ backgroundColor: colors.primary }} />
+                  <Text className="text-[18px] font-scdream-bold" style={{ color: colors.text }} numberOfLines={1}>
+                    {timeLabel}
+                  </Text>
+                </View>
+
+                {/* 우측 영역 폭 고정 (완료/카메라 전환 시 레이아웃 흔들림 방지) */}
+                <View className="h-10 w-10 items-center justify-center">
+                  {isSlotCompleted ? (
+                    <View />
+                  ) : (
+                    <Pressable
+                      disabled={!hasItems}
+                      onPress={() => onPressCamera?.(scheduleIds)}
+                      hitSlop={10}
+                      className="h-10 w-10 items-center justify-center rounded-full"
+                      style={({ pressed }) => ({
+                        opacity: !hasItems ? 0.42 : pressed ? 0.86 : 1,
+                        backgroundColor: `${colors.primary}14`,
+                        borderWidth: 1,
+                        borderColor: `${colors.primary}33`,
+                        shadowColor: colors.shadowDark,
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.08,
+                        shadowRadius: 6,
+                        elevation: 1,
+                      })}
+                    >
+                      <AppIcon icon={Camera} size={20} color={colors.primary} strokeWidth={2.2} />
+                    </Pressable>
+                  )}
+                </View>
               </View>
-              <Text className="mt-1 p-1 text-[12px] font-scdream" style={{ color: colors.textMuted }}>
-                {hasItems ? '사진으로 섭취 인증을 해주세요' : '이 시간대엔 등록된 영양제가 없어요.'}
+              <Text className="mt-1 p-1 text-[14px] font-scdream" style={{ color: colors.textMuted }}>
+                {!hasItems
+                  ? '이 시간대엔 등록된 영양제가 없어요.'
+                  : isSlotCompleted
+                    ? '이 시간대 섭취를 완료했어요'
+                    : '사진으로 섭취 인증을 해주세요'}
               </Text>
             </View>
 
             {hasItems ? (
               <View className="mt-3">
                 <View className="mb-2 flex-row items-center justify-between">
-                  <Text className="text-[11px] font-scdream-medium tracking-wide" style={{ color: colors.textMuted }}>
+                  <Text className="text-[13px] font-scdream-medium tracking-wide" style={{ color: colors.textMuted }}>
                     섭취할 영양제
                   </Text>
-                  <Text className="text-[11px] font-scdream" style={{ color: colors.textMuted }}>
+                  <Text className="text-[13px] font-scdream" style={{ color: colors.textMuted }}>
                     남은 {remainingCount} · 완료 {completedCount}
                   </Text>
                 </View>
@@ -120,7 +160,7 @@ export function HomeIntakeSlot({ timeLabel, items, onPressCamera }: HomeIntakeSl
                             style={{ backgroundColor: badgeBg, borderWidth: 1, borderColor: badgeBorder }}
                           >
                             <Text
-                              className="text-[11px] font-scdream-medium"
+                              className="text-[13px] font-scdream-medium"
                               style={{ color: badgeText }}
                               numberOfLines={1}
                             >
@@ -132,54 +172,8 @@ export function HomeIntakeSlot({ timeLabel, items, onPressCamera }: HomeIntakeSl
                     </View>
                   </View>
                 </View>
-
-                <View className="mt-3 flex-row flex-wrap gap-2">
-                  {items.slice(0, 6).map((it, idx) => (
-                    <View
-                      key={`${it.scheduleId}-${idx}`}
-                      className="h-10 w-10 overflow-hidden rounded-xl"
-                      style={{ borderWidth: 1, borderColor: `${colors.shadowDark}22`, backgroundColor: `${colors.input}66` }}
-                    >
-                      <Image source={getBodyPartImageSource(it.bodyPartId)} style={{ width: '100%', height: '100%' }} resizeMode="contain" />
-                    </View>
-                  ))}
-                </View>
               </View>
             ) : null}
-          </View>
-        </View>
-
-        <View className="w-[64px] self-stretch">
-          <View className="flex-1 items-center justify-center">
-            <Pressable
-              disabled={!hasItems}
-              onPress={() => onPressCamera?.(scheduleIds)}
-              hitSlop={10}
-              className="h-10 w-10 items-center justify-center rounded-full"
-              style={({ pressed }) => ({
-                opacity: !hasItems ? 0.42 : pressed ? 0.86 : 1,
-                backgroundColor: `${colors.primary}14`,
-                borderWidth: 1,
-                borderColor: `${colors.primary}33`,
-                shadowColor: colors.shadowDark,
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.08,
-                shadowRadius: 6,
-                elevation: 1,
-              })}
-            >
-              <AppIcon icon={Camera} size={16} color={colors.primary} strokeWidth={1.9} />
-            </Pressable>
-          </View>
-          <View className="mb-3 flex-row items-center pl-2" style={{ width: '100%' }}>
-            <Text
-              className="text-[11px] font-scdream"
-              style={{ color: colors.textMuted, width: '100%' }}
-              numberOfLines={1}
-              ellipsizeMode="tail"
-            >
-              {timeLabel}
-            </Text>
           </View>
         </View>
       </View>

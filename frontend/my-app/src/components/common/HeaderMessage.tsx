@@ -18,14 +18,14 @@ export function NicknameHeader({
     <View className="mt-1 mb-2 p-3">
       <View>
         <Text
-          className="mb-2 text-[26px] font-scdream-medium leading-[32px]"
+          className="mb-2 text-[28px] font-scdream-medium leading-[34px]"
           style={{ color: colors.text }}
         >
           {nickname || '회원'}님
         </Text>
         <Text
           className={
-            messageTone === 'subtle' ? 'text-[14px] font-scdream leading-5' : 'text-[17px] font-scdream-medium leading-6'
+            messageTone === 'subtle' ? 'text-[16px] font-scdream leading-5' : 'text-[19px] font-scdream-medium leading-6'
           }
           style={{ color: messageTone === 'subtle' ? colors.textMuted : colors.text }}
         >
