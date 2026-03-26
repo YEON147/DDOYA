@@ -45,7 +45,7 @@ export default function SupplementsScreen() {
       style={[styles.card, { paddingHorizontal: 18, paddingVertical: 18 }]}
     >
       <View className="flex-row items-start justify-between">
-        <Text className="text-[13px] font-scdream-medium leading-4" style={{ color: colors.textMuted }}>
+        <Text className="text-sm font-scdream-medium leading-4" style={{ color: colors.textMuted }}>
           {`No.${index + 1}`}
         </Text>
         <AppIcon icon={ChevronRight} size={18} color={colors.textMuted} />
@@ -53,7 +53,7 @@ export default function SupplementsScreen() {
 
       <View
         className="mt-2.5 items-center justify-center overflow-hidden rounded-2xl"
-        style={{ backgroundColor: colors.input, borderWidth: 1, borderColor: `${colors.shadowDark}30`, aspectRatio: 1 }}
+        style={{ backgroundColor: colors.input, borderWidth: 1, borderColor: `${colors.shadowDark}30`, height: 132 }}
       >
         {item.pillImageUrl?.trim() && !failedImageIds[item.userSupplementId] ? (
           <Image
@@ -75,22 +75,23 @@ export default function SupplementsScreen() {
 
       <View className="mt-3">
         <Text
-          className="text-[18px] font-scdream-medium leading-5"
+          className="text-[17px] font-scdream-medium leading-6 pb-2"
           style={{ color: colors.text }}
-          numberOfLines={1}
+          numberOfLines={2}
+          ellipsizeMode="tail"
         >
           {item.alias}
         </Text>
         <Text
-          className="mt-1 text-[14px] font-scdream leading-4"
-          style={{ color: colors.textMuted, minHeight: 16 }}
+          className="text-sm font-scdream leading-5"
+          style={{ color: colors.textMuted, minHeight: 20 }}
           numberOfLines={1}
           ellipsizeMode="tail"
         >
           {(item.primaryIngredientNames ?? []).filter(Boolean).join(' · ') || '성분 정보 없음'}
         </Text>
         <Text
-          className="mt-0.5 text-[14px] font-scdream leading-4"
+          className="text-sm font-scdream leading-5"
           style={{ color: colors.textMuted }}
           numberOfLines={1}
         >
@@ -98,7 +99,7 @@ export default function SupplementsScreen() {
         </Text>
       </View>
 
-      <View className="mt-3">
+      <View className="mt-auto pt-3">
         <View
           className="h-6 w-[54px] flex-row overflow-hidden rounded-full"
           style={{ borderWidth: 1, borderColor: `${colors.shadowDark}33` }}
@@ -215,8 +216,8 @@ const styles = StyleSheet.create({
   card: {
     ...neuRaised(22, colors.surface),
     width: '48.5%',
-    height: 296,
-    justifyContent: 'space-between',
+    minHeight: 296,
+    justifyContent: 'flex-start',
   },
   row: {
     justifyContent: 'space-between',

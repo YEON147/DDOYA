@@ -14,11 +14,11 @@ type UserProfileState = {
 };
 
 const initialProfile: UserProfile = {
-  nickname: '도요',
-  gender: '여성',
-  birthDate: '1999-05-21',
-  heightCm: '163',
-  weightKg: '53',
+  nickname: '',
+  gender: '',
+  birthDate: '',
+  heightCm: '',
+  weightKg: '',
 };
 
 export const useUserProfileStore = create<UserProfileState>((set) => ({

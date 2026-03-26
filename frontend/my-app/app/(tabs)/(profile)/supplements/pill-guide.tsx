@@ -153,11 +153,6 @@ export default function SupplementPillGuideScreen() {
       return;
     }
 
-    console.log('[supplement-register][bodyPart]', {
-      bodyPartId: register.bodyPartId,
-      bodyPartName: register.bodyPartName,
-    });
-
     createMutation.mutate(
       {
         pillUri: pillImageUri,
@@ -227,7 +222,7 @@ export default function SupplementPillGuideScreen() {
                 opacity: createMutation.isPending || validatePhase === 'checking' ? 0.45 : 1,
               }}
             >
-              <Text className="text-[15px] font-scdream-medium" style={{ color: '#FFFFFF' }}>
+              <Text className="text-md font-scdream-medium" style={{ color: '#FFFFFF' }}>
                 다시찍기
               </Text>
             </TouchableOpacity>
@@ -269,11 +264,11 @@ export default function SupplementPillGuideScreen() {
             <Text className="text-xs font-scdream-medium tracking-wide" style={{ color: colors.textMuted }}>
               등록 정보
             </Text>
-            <Text className="text-[13px] font-scdream-medium" style={{ color: '#DC2626' }}>
+            <Text className="text-sm font-scdream-medium" style={{ color: '#DC2626' }}>
               * 필수 입력
             </Text>
           </View>
-          <Text className="mt-1.5 text-[13px] font-scdream" style={{ color: colors.textMuted }}>
+          <Text className="mt-1.5 text-sm font-scdream" style={{ color: colors.textMuted }}>
             아래 항목을 입력해야 등록할 수 있어요.
           </Text>
 
@@ -301,7 +296,7 @@ export default function SupplementPillGuideScreen() {
             editable={!createMutation.isPending}
           />
           {showInputErrors && !alias.trim() ? (
-            <Text className="mt-1 text-[13px] font-scdream" style={{ color: '#DC2626' }}>
+            <Text className="mt-1 text-sm font-scdream" style={{ color: '#DC2626' }}>
               별칭을 입력해 주세요.
             </Text>
           ) : null}
@@ -333,7 +328,7 @@ export default function SupplementPillGuideScreen() {
             editable={!createMutation.isPending}
           />
           {showInputErrors && !(Number.isFinite(Number(capacityInput)) && Number(capacityInput) > 0) ? (
-            <Text className="mt-1 text-[13px] font-scdream" style={{ color: '#DC2626' }}>
+            <Text className="mt-1 text-sm font-scdream" style={{ color: '#DC2626' }}>
               재고는 1 이상 숫자로 입력해 주세요.
             </Text>
           ) : null}

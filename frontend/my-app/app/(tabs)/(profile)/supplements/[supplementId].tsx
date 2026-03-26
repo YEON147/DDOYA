@@ -31,8 +31,8 @@ const line = `${colors.shadowDark}44`;
 const smallNeuBtn = (disabled?: boolean) => [
   neuRaised(14, colors.input),
   {
-    width: 44,
-    height: 44,
+    width: 40,
+    height: 40,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
     opacity: disabled ? 0.38 : 1,
@@ -203,7 +203,7 @@ export default function SupplementDetailScreen() {
           right={
             <View className="flex-row items-center">
               <TouchableOpacity onPress={handleDelete}>
-                <AppIcon icon={Trash2} size={24} color="#ef4444" />
+                <AppIcon icon={Trash2} size={22} color="#ef4444" />
               </TouchableOpacity>
             </View>
           }
@@ -239,7 +239,7 @@ export default function SupplementDetailScreen() {
               onChangeText={setAlias}
               placeholder="별칭을 입력해 주세요"
               placeholderTextColor={`${colors.textMuted}88`}
-              className="rounded-2xl px-4 py-3 text-center text-[18px] font-scdream-medium"
+              className="rounded-2xl px-4 py-3 text-center text-xl font-scdream-medium"
               style={{
                 color: colors.text,
                 backgroundColor: colors.input,
@@ -251,10 +251,10 @@ export default function SupplementDetailScreen() {
           </View>
         </View>
 
-        <Text className="mb-1.5 text-[14px] font-scdream tracking-wide" style={{ color: colors.textMuted }}>
+        <Text className="mb-1.5 text-sm font-scdream tracking-wide" style={{ color: colors.textMuted }}>
           일일 섭취 횟수
         </Text>
-        <View className="flex-row items-center justify-between border-b py-3.5" style={{ borderColor: line }}>
+        <View className="flex-row items-center justify-between border-b py-4" style={{ borderColor: line }}>
           <TouchableOpacity
             onPress={handleDecreaseDose}
             disabled={dailyDose <= 1}
@@ -263,7 +263,7 @@ export default function SupplementDetailScreen() {
           >
             <AppIcon icon={Minus} size={22} color={colors.text} />
           </TouchableOpacity>
-          <Text className="text-[23px] font-scdream-bold" style={{ color: colors.text }}>
+          <Text className="text-2xl font-scdream-bold" style={{ color: colors.text }}>
             {dailyDose}회
           </Text>
           <TouchableOpacity onPress={handleIncreaseDose} activeOpacity={0.88} style={smallNeuBtn()}>
@@ -272,7 +272,7 @@ export default function SupplementDetailScreen() {
         </View>
 
         <Text
-          className="mb-1.5 mt-7 text-[14px] font-scdream tracking-wide"
+          className="mb-1.5 mt-7 text-sm font-scdream tracking-wide"
           style={{ color: colors.textMuted, alignSelf: 'flex-start' }}
         >
           섭취 시점
@@ -281,22 +281,22 @@ export default function SupplementDetailScreen() {
           <TouchableOpacity
             key={index}
             activeOpacity={0.65}
-            className="flex-row items-center justify-between border-b py-3.5"
+            className="flex-row items-center justify-between border-b py-4"
             style={{ borderColor: line }}
             onPress={() => {
               setActiveTimeIndex(index);
               setPickerVisible(true);
             }}
           >
-            <Text className="text-[17px] font-scdream" style={{ color: colors.text }}>
+            <Text className="text-lg font-scdream" style={{ color: colors.text }}>
               {index + 1}회차
             </Text>
             <View className="flex-row items-center">
               <Text
                 className={
                   schedule.intakeTime
-                    ? 'mr-1 text-[20px] font-scdream-bold'
-                    : 'mr-1 text-[20px] font-scdream-medium'
+                    ? 'mr-1 text-xl font-scdream-bold'
+                    : 'mr-1 text-xl font-scdream-medium'
                 }
                 style={{ color: schedule.intakeTime ? colors.text : `${colors.textMuted}99` }}
               >
@@ -308,41 +308,41 @@ export default function SupplementDetailScreen() {
         ))}
 
         <Text
-          className="mb-1.5 mt-7 text-[14px] font-scdream tracking-wide"
+          className="mb-1.5 mt-7 text-sm font-scdream tracking-wide"
           style={{ color: colors.textMuted, alignSelf: 'flex-start' }}
         >
           재고 관리
         </Text>
-        <View className="border-b py-3.5" style={{ borderColor: line }}>
+        <View className="border-b py-4" style={{ borderColor: line }}>
           <View className="flex-row items-center justify-between">
-            <Text className="text-[17px] font-scdream" style={{ color: colors.text }}>
+            <Text className="text-lg font-scdream" style={{ color: colors.text }}>
               현재 재고
             </Text>
-            <View className="w-[80px] items-end pr-8">
-              <Text className="text-[20px] font-scdream-bold" style={{ color: colors.text }}>
+            <View className="items-end">
+              <Text className="text-xl font-scdream-bold" style={{ color: colors.text }}>
                 {stockQuantity}
               </Text>
             </View>
           </View>
         </View>
-        <View className="flex-row items-center justify-between border-b py-3.5" style={{ borderColor: line }}>
-          <Text className="text-[17px] font-scdream" style={{ color: colors.text }}>
+        <View className="flex-row items-center justify-between border-b py-4" style={{ borderColor: line }}>
+          <Text className="text-lg font-scdream" style={{ color: colors.text }}>
             재고 알림
           </Text>
-          <View className="pr-4">
-            <Switch
-              value={stockNotificationEnabled}
-              onValueChange={setStockNotificationEnabled}
-              trackColor={{ false: '#d1d5db', true: colors.primary }}
-            />
-          </View>
+          <Switch
+            value={stockNotificationEnabled}
+            onValueChange={setStockNotificationEnabled}
+            trackColor={{ false: '#D1D1D1', true: colors.primary }}
+            thumbColor="#FFFFFF"
+            ios_backgroundColor="#D1D1D1"
+          />
         </View>
 
         <View className="h-10" />
       </ScrollView>
 
       <View
-        className="px-7 pb-6 pt-3"
+        className="px-6 pb-6 pt-3"
         style={{
           backgroundColor: colors.background,
           borderTopWidth: 1,
@@ -355,7 +355,7 @@ export default function SupplementDetailScreen() {
           className="h-12 items-center justify-center rounded-2xl"
           style={{ backgroundColor: colors.primary }}
         >
-          <Text className="text-[18px] font-scdream-bold" style={{ color: '#ffffff' }}>
+          <Text className="text-xl font-scdream-bold" style={{ color: '#ffffff' }}>
             저장
           </Text>
         </TouchableOpacity>
@@ -394,8 +394,8 @@ export default function SupplementDetailScreen() {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingHorizontal: 26,
-    paddingTop: 34,
+    paddingHorizontal: 22,
+    paddingTop: 24,
     paddingBottom: 24,
   },
 });

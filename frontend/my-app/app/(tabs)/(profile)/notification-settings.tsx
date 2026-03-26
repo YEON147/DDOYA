@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, Switch, StyleSheet, Alert, TouchableOpacity } from 'react-native';
 import { ScreenContainer } from '@/src/components/common/ScreenContainer';
-import { NicknameHeader } from '@/src/components/common/HeaderMessage';
+import { TopHeader } from '@/src/components/common/TopHeader';
 import { TimePicker } from '@/src/components/common/TimePicker';
 import { colors } from '@/constants/theme/colors';
 import { neuRaised } from '@/constants/theme/neumorphism';
@@ -36,9 +36,7 @@ export default function NotificationSettingsScreen() {
         if (timeResponse.data && timeResponse.data.data) {
           setCarryTime(timeResponse.data.data.carry_notification_time);
         }
-      } catch (error) {
-        console.error('알림 설정 로드 실패:', error);
-        // API 미구현 시에도 UI 테스트를 위해 에러 처리는 생략 가능하지만, 사용자 경험을 위해 기본값 유지
+      } catch {
       } finally {
         setIsLoading(false);
       }
@@ -59,8 +57,7 @@ export default function NotificationSettingsScreen() {
       } else if (key === 'carryNotificationEnabled') {
         await notificationApi.updateCarryNotificationSetting(value);
       }
-    } catch (error) {
-      console.error(`${key} 업데이트 실패:`, error);
+    } catch {
       Alert.alert('오류', '알림 설정을 저장하지 못했습니다.');
       // 실패 시 롤백
       setSettings(settings);
@@ -72,8 +69,7 @@ export default function NotificationSettingsScreen() {
     try {
       await notificationApi.updateCarryNotificationTime(selectedTime);
       setCarryTime(selectedTime);
-    } catch (error) {
-      console.error('챙김 알림 시각 업데이트 실패:', error);
+    } catch {
       Alert.alert('오류', '알림 시각을 저장하지 못했습니다.');
     } finally {
       setIsTimePickerVisible(false);
@@ -83,10 +79,16 @@ export default function NotificationSettingsScreen() {
   if (isLoading) return null;
 
   return (
-    <ScreenContainer>
-      <NicknameHeader message="알림 설정을 관리하세요" messageTone="subtle" />
+    <ScreenContainer
+      header={
+        <TopHeader
+          // title="알림 설정"
+          title=""
+        />
+      }
+    >
 
-      <View className="mt-4 gap-4 px-1">
+      <View className="mt-5 gap-3 px-1">
         {/* 섭취 알림 설정 */}
         <SettingItem
           label="섭취 알림"
@@ -113,22 +115,21 @@ export default function NotificationSettingsScreen() {
 
         {/* 챙김 알림 시각 설정 (챙김 알림이 활성화되어 있을 때만 표시) */}
         {settings.carryNotificationEnabled && (
-          <View 
-            className="flex-row items-center justify-between rounded-2xl px-5 py-5" 
+          <View
+            className="flex-row items-center justify-between rounded-2xl px-5 py-5"
             style={neuRaised(16, colors.surface)}
           >
             <View>
-              <Text className="text-[18px] font-scdream-bold mb-1" style={{ color: colors.text }}>
+              <Text className="mb-1 text-md font-scdream-bold" style={{ color: colors.text }}>
                 챙김 알림 시각
               </Text>
             </View>
             <TouchableOpacity 
               activeOpacity={0.7} 
               onPress={() => setIsTimePickerVisible(true)}
-              className="px-3 py-1.5 rounded-lg"
-              style={{ backgroundColor: `${colors.primary}15` }}
+              className="rounded-lg px-3 py-1.5"
             >
-              <Text className="text-[18px] font-scdream-bold" style={{ color: colors.primary }}>
+              <Text className="text-md font-scdream-bold" style={{ color: colors.text }}>
                 {carryTime || '설정 필요'}
               </Text>
             </TouchableOpacity>
@@ -168,10 +169,10 @@ function SettingItem({
       style={neuRaised(16, colors.surface)}
     >
       <View className="flex-1 mr-3">
-        <Text className="text-[18px] font-scdream-bold mb-1" style={{ color: colors.text }}>
+        <Text className="mb-1 text-md font-scdream-bold" style={{ color: colors.text }}>
           {label}
         </Text>
-        <Text className="text-[14px] font-scdream-regular" style={{ color: colors.textMuted }}>
+        <Text className="text-sm font-scdream" style={{ color: colors.textMuted }}>
           {description}
         </Text>
       </View>
@@ -180,6 +181,7 @@ function SettingItem({
         onValueChange={onValueChange}
         trackColor={{ false: '#D1D1D1', true: colors.primary }}
         thumbColor="#FFFFFF"
+        ios_backgroundColor="#D1D1D1"
       />
     </View>
   );

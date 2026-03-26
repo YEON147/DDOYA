@@ -23,9 +23,8 @@ export function HomeIntakeSlot({ timeLabel, items, onPressCamera }: HomeIntakeSl
   const successBg = `${success}12`;
   const successBorder = `${success}33`;
   const STAMP_IMAGE = require('../../../assets/images/DDOYA_stamp.png');
-
-  const bubblePaddingH = scaleByWidth(width, 24, { min: 16, max: 26 });
-  const bubblePaddingV = scaleByWidth(width, 20, { min: 14, max: 24 });
+  const bubblePaddingH = scaleByWidth(width, 22, { min: 16, max: 24 });
+  const bubblePaddingV = scaleByWidth(width, 18, { min: 14, max: 22 });
   const BUBBLE_RADIUS = 'rounded-3xl';
   const tailSize = scaleByWidth(width, 12, { min: 10, max: 14 });
   const tailOffset = scaleByWidth(width, 18, { min: 14, max: 24 });
@@ -40,7 +39,7 @@ export function HomeIntakeSlot({ timeLabel, items, onPressCamera }: HomeIntakeSl
             style={{
               backgroundColor: colors.cardIvory,
               borderWidth: 1,
-              borderColor: `${colors.shadowDark}80`,
+              borderColor: `${colors.shadowDark}22`,
               paddingHorizontal: bubblePaddingH,
               paddingVertical: bubblePaddingV,
             }}
@@ -57,7 +56,7 @@ export function HomeIntakeSlot({ timeLabel, items, onPressCamera }: HomeIntakeSl
                     { translateY: -(stampSize / 2) + scaleByWidth(width, 18, { min: 12, max: 26 }) },
                   ],
                   zIndex: 50,
-                  opacity: 0.92,
+                  opacity: 0.88,
                 }}
               >
                 <Image
@@ -78,7 +77,7 @@ export function HomeIntakeSlot({ timeLabel, items, onPressCamera }: HomeIntakeSl
                 backgroundColor: colors.cardIvory,
                 borderLeftWidth: 1,
                 borderBottomWidth: 1,
-                borderColor: `${colors.shadowDark}80`,
+                borderColor: `${colors.shadowDark}22`,
                 transform: [{ rotate: '45deg' }],
               }}
             />
@@ -104,14 +103,9 @@ export function HomeIntakeSlot({ timeLabel, items, onPressCamera }: HomeIntakeSl
                       className="h-10 w-10 items-center justify-center rounded-full"
                       style={({ pressed }) => ({
                         opacity: !hasItems ? 0.42 : pressed ? 0.86 : 1,
-                        backgroundColor: `${colors.primary}14`,
+                        backgroundColor: `${colors.primary}0F`,
                         borderWidth: 1,
-                        borderColor: `${colors.primary}33`,
-                        shadowColor: colors.shadowDark,
-                        shadowOffset: { width: 0, height: 2 },
-                        shadowOpacity: 0.08,
-                        shadowRadius: 6,
-                        elevation: 1,
+                        borderColor: `${colors.shadowDark}18`,
                       })}
                     >
                       <AppIcon icon={Camera} size={20} color={colors.primary} strokeWidth={2.2} />
@@ -119,7 +113,7 @@ export function HomeIntakeSlot({ timeLabel, items, onPressCamera }: HomeIntakeSl
                   )}
                 </View>
               </View>
-              <Text className="mt-1 p-1 text-[14px] font-scdream" style={{ color: colors.textMuted }}>
+              <Text className="mt-1 p-1 text-base font-scdream" style={{ color: colors.textMuted }}>
                 {!hasItems
                   ? '이 시간대엔 등록된 영양제가 없어요.'
                   : isSlotCompleted
@@ -131,10 +125,10 @@ export function HomeIntakeSlot({ timeLabel, items, onPressCamera }: HomeIntakeSl
             {hasItems ? (
               <View className="mt-3">
                 <View className="mb-2 flex-row items-center justify-between">
-                  <Text className="text-[13px] font-scdream-medium tracking-wide" style={{ color: colors.textMuted }}>
+                  <Text className="text-sm font-scdream-medium tracking-wide" style={{ color: colors.textMuted }}>
                     섭취할 영양제
                   </Text>
-                  <Text className="text-[13px] font-scdream" style={{ color: colors.textMuted }}>
+                  <Text className="text-sm font-scdream" style={{ color: colors.textMuted }}>
                     남은 {remainingCount} · 완료 {completedCount}
                   </Text>
                 </View>
@@ -160,7 +154,7 @@ export function HomeIntakeSlot({ timeLabel, items, onPressCamera }: HomeIntakeSl
                             style={{ backgroundColor: badgeBg, borderWidth: 1, borderColor: badgeBorder }}
                           >
                             <Text
-                              className="text-[13px] font-scdream-medium"
+                              className="text-sm font-scdream-medium"
                               style={{ color: badgeText }}
                               numberOfLines={1}
                             >
