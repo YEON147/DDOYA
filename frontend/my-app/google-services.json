@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "800395572102",
+    "project_id": "ddoya-push-test",
+    "storage_bucket": "ddoya-push-test.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:800395572102:android:76dc7847e5cde913563207",
+        "android_client_info": {
+          "package_name": "com.ssafy.ddoya"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBsXzGAid7X3b1p_HZr0nBSZe4gGCw1YuM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

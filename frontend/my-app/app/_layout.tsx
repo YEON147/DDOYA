@@ -9,19 +9,37 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
+import { useRouter } from 'expo-router';
 
 import { useColorScheme } from '@/hooks/theme/use-color-scheme';
 import { useAuthStore } from '@/src/store/authStore';
+import * as Notifications from 'expo-notifications';
+import { notificationService } from '@/src/services/notificationService';
 
 export const unstable_settings = {
   anchor: '(tabs)',
 };
 
 SplashScreen.preventAutoHideAsync();
+
+// 알림이 도착했을 때(포그라운드) 어떻게 보여줄지 설정합니다.
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
+
 const queryClient = new QueryClient();
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+  const router = useRouter();
+  const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
+  const hasHydratedFromStorage = useAuthStore((state) => state.hasHydratedFromStorage);
 
   const [loaded] = useFonts({
     SCoreDreamThin: require('../assets/fonts/SCDream1.otf'),
@@ -43,6 +61,44 @@ export default function RootLayout() {
 
   useEffect(() => {
     void useAuthStore.getState().loadToken();
+  }, []);
+
+  // 로그인 상태 복원 완료 후, 알림 토큰 서버 동기화
+  useEffect(() => {
+    if (hasHydratedFromStorage && isLoggedIn) {
+      notificationService.syncTokenWithServer();
+    }
+  }, [hasHydratedFromStorage, isLoggedIn]);
+
+  // 알림 리스너 환경 구성
+  useEffect(() => {
+    // 1. 알림 수신 리스너 (포그라운드 환경)
+    const notificationListener = Notifications.addNotificationReceivedListener(notification => {
+      // 포그라운드 수신 이벤트 처리 (추가 동작 필요 시 구현)
+    });
+
+    // 2. 알림 클릭 리스너 (알림바 클릭 시 동작)
+    const responseListener = Notifications.addNotificationResponseReceivedListener(response => {
+      const data = response.notification.request.content.data;
+      
+      // 알림 Data Payload에 맞춤 라우팅 처리
+      if (data?.url) {
+        // 백엔드에서 명시적 경로(ex '/reports')를 준 경우
+        router.push(data.url as any);
+      } else if (data?.type === 'INTAKE') {
+        // 섭취/챙김 알림 -> 루틴 화면으로
+        router.push('/(tabs)/(home)' as any);
+      } else if (data?.type === 'STOCK' && data.supplementId) {
+        // 재고 알림 -> 해당 영양제 상세 화면으로
+        router.push(`/(tabs)/(profile)/supplements/${data.supplementId}` as any);
+      }
+    });
+
+    // 컴포넌트 언마운트 시 리스너 제거
+    return () => {
+      notificationListener.remove();
+      responseListener.remove();
+    };
   }, []);
 
   if (!loaded) {

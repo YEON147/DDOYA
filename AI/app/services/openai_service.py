@@ -65,7 +65,9 @@ def analyze_supplement_label(ocr_texts: list, ingredient_list: list) -> dict:
        - ingredient_id: 위 등록된 성분 목록에서 가장 유사한 항목의 ingredient_id, 없으면 null
        - amount: 1일 섭취량 기준으로 계산된 함량 (숫자만)
        - unit: 단위 (mg, g, μg, μg RAE, mg α-TE, mg NE, μg DFE, CFU, IU 등)
-       - is_primary: 함량 기준 상위 3개 성분은 1, 나머지는 0
+       - is_primary: 이 영양제의 핵심 효능과 정체성을 나타내는 가장 중요한 기능성 주원료(권장 3개, 최소 1개)는 1, 단순 부원료는 0으로 설정.
+         [중요 판단 1원칙]: 텍스트에 '1일 영양성분 기준치 비율(%)'이 적혀있다면, 그 % 숫자가 가장 높은 상위 3개 성분 모두에 가급적 is_primary=1을 꽉 채워서 부여하세요. (예: 1000%, 514%, 66% 3가지를 모두 1로 설정). 
+         [중요 판단 2원칙]: % 비율이 아예 없는 영양제라도, 전체 성분 종류가 3개 이상이라면 영양제 목적을 추론하여 되도록 핵심 주원료 3가지를 골라 1을 부여하는 것을 권장합니다. 전체 성분이 적을 때만 예외적으로 1~2개를 줍니다.
     3. body_part_id: 성분표에 신체부위/효능이 명시되어 있으면 아래 번호로 반환, 없으면 null
        1: 뇌 · 신경계
        2: 눈 · 귀 · 구강 (감각기관)
@@ -77,6 +79,8 @@ def analyze_supplement_label(ocr_texts: list, ingredient_list: list) -> dict:
        8: 뼈 · 관절 · 근육 (근골격계)
        9: 피부 · 모발 · 손톱
        10: 호르몬 · 생식 · 면역계
+       11: 기초 영양
+       - 팁: 종합비타민이나 비타민 B군 복합제처럼 전반적인 피로 회복, 에너지 대사 보충, 범용적인 영양 보충이 주 목적일 경우 `11` 번호로 반환하세요.
 
     응답 형식:
     {{
@@ -100,7 +104,7 @@ def analyze_supplement_label(ocr_texts: list, ingredient_list: list) -> dict:
     response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[{"role": "user", "content": prompt}],
-        max_tokens=1000
+        max_tokens=2500
     )
 
     return _parse_json(response.choices[0].message.content)
@@ -132,6 +136,10 @@ def determine_body_part_id(ingredients: list) -> int:
     8: 뼈 · 관절 · 근육 (근골격계)
     9: 피부 · 모발 · 손톱
     10: 호르몬 · 생식 · 면역계
+    11: 기초 영양
+    
+    [특별 분류 규칙]
+    - 팁: 종합비타민이나 비타민 B군 복합제처럼 전반적인 피로 회복, 에너지 대사 보충, 범용적인 영양 보충이 주 목적일 경우 `11` 숫자로 답해주세요.
     """
 
     response = client.chat.completions.create(
@@ -296,4 +304,4 @@ def generate_report_comments(
         max_tokens=2000
     )
 
-    return _parse_json(response.choices[0].message.content)
+    return _parse_json(response.choices[0].message.content)

@@ -74,7 +74,7 @@ public class NotificationProcessorService {
 
             try {
                 // 2. 발송 및 결과 상세 집계
-                PushSendResult result = notificationFacade.sendCarryReminder(userId);
+                PushSendResult result = notificationFacade.sendCarryReminder(userId, schedule.getScheduleId());
 
                 switch (result) {
                     case SUCCESS -> {
@@ -163,11 +163,11 @@ public class NotificationProcessorService {
                     : "영양제";
 
             try {
+                // Facade 내부에서 SUCCESS 시 log 저장을 수행함
                 PushSendResult result = notificationFacade.sendIntakeReminder(
-                        userId, record.getSchedule().getScheduleId(), irId, supplementName);
+                        userId, record.getSchedule().getScheduleId(), irId, supplementName, nextAttemptNo);
 
                 if (result == PushSendResult.SUCCESS) {
-                    saveDeliveryLog(record, nextAttemptNo, now); // 성공 시만 이력 기록
                     successCount++;
                 } else if (result == PushSendResult.FAILED) {
                     log.error("[섭취 알림 발송 실패] intakeRecordId={} - 사유: FCM 전송 에러", irId);
@@ -196,15 +196,5 @@ public class NotificationProcessorService {
 
     private int resolveNextAttemptNo(NotificationDeliveryLog lastLog) {
         return (lastLog == null) ? 1 : lastLog.getAttemptNo() + 1;
-    }
-
-    private void saveDeliveryLog(IntakeRecord intakeRecord, int attemptNo, LocalDateTime sentAt) {
-        NotificationDeliveryLog logEntity = NotificationDeliveryLog.builder()
-                .schedule(intakeRecord.getSchedule())
-                .intakeRecord(intakeRecord)
-                .sentAt(sentAt)
-                .attemptNo(attemptNo)
-                .build();
-        deliveryLogRepository.save(logEntity);
     }
 }

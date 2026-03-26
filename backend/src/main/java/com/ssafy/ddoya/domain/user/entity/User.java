@@ -62,4 +62,24 @@ public class User {
         this.heightCm = heightCm;
         this.weightKg = weightKg;
     }
+
+    public void updateNickname(String nickname) {
+        this.nickname = nickname;
+    }
+
+    public void updateBirthDate(LocalDate birthDate) {
+        this.birthDate = birthDate;
+    }
+
+    public void updateHeightCm(BigDecimal heightCm) {
+        this.heightCm = heightCm;
+    }
+
+    public void updateWeightKg(BigDecimal weightKg) {
+        this.weightKg = weightKg;
+    }
+
+    public void changePassword(String encodedPassword) {
+        this.password = encodedPassword;
+    }
 }

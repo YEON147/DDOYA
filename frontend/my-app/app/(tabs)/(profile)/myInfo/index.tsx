@@ -8,6 +8,8 @@ import { useAuthStore } from '@/src/store/authStore';
 import { useUserProfileStore } from '@/src/store/userProfileStore';
 import { authApi } from '@/src/api/auth';
 import { AppIcon } from '@/src/components/common/AppIcon';
+import * as Notifications from 'expo-notifications';
+import { notificationService } from '@/src/services/notificationService';
 
 const line = `${colors.shadowDark}44`;
 
@@ -84,6 +86,16 @@ export default function MyInfoScreen() {
         text: '로그아웃',
         style: 'destructive',
         onPress: async () => {
+          try {
+            // 로그아웃 시 토큰 비활성화 먼저 시도
+            const token = (await Notifications.getDevicePushTokenAsync()).data;
+            if (token) {
+              await notificationService.deactivateTokenOnServer(token);
+            }
+          } catch (e) {
+            console.error('토큰 비활성화 중 오류 발생', e);
+          }
+
           try {
             await authApi.logout();
           } catch {
