@@ -7,6 +7,7 @@ export default function HomeLayout() {
         headerShown: false,
       }}
     >
+      <Stack.Screen name="index" />
       <Stack.Screen name="intake-verify" />
       <Stack.Screen name="notifications" />
     </Stack>
