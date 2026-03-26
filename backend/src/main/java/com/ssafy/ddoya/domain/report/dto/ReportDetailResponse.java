@@ -1,6 +1,6 @@
 package com.ssafy.ddoya.domain.report.dto;
 
-import com.ssafy.ddoya.domain.report.entity.IntakeTiming;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -20,7 +20,9 @@ public class ReportDetailResponse {
     private Boolean isEditable;
     private ReportCommentsDto comments;
     private List<RecommendedProductsByIngredientDto> recommendedProductsByIngredient;
-    private List<IntakeRecommendationSummaryDto> intakeRecommendationSummary;
+
+    @JsonProperty("timing_recommendations")
+    private List<TimingRecommendationDto> timingRecommendations;
 
     @Getter
     @Builder
@@ -46,11 +48,29 @@ public class ReportDetailResponse {
         private String productName;
     }
 
+    /** 영양제 1개당 복수 섭취 타이밍 목록을 담는 DTO */
     @Getter
     @Builder
-    public static class IntakeRecommendationSummaryDto {
-        private IntakeTiming intakeTiming;
-        private String intakeTime;
-        private List<String> supplements;
+    public static class TimingRecommendationDto {
+
+        @JsonProperty("user_supplement_id")
+        private Long userSupplementId;
+
+        private String alias;
+
+        @JsonProperty("intake_timings")
+        private List<IntakeTimingInfo> intakeTimings;
+
+        @Getter
+        @Builder
+        public static class IntakeTimingInfo {
+
+            @JsonProperty("intake_timing")
+            private String intakeTiming;
+
+            /** 사용자 설정 기준 실제 섭취 시각 (HH:mm), 설정이 없으면 null */
+            @JsonProperty("intake_time")
+            private String intakeTime;
+        }
     }
 }

@@ -165,23 +165,30 @@ public class ReportService {
                 })
                 .collect(Collectors.toList());
 
-        // 4. 섭취 타이밍 그룹화
-        List<ReportDetailResponse.IntakeRecommendationSummaryDto> intakeSummary = timingRecommendations.stream()
-                .collect(Collectors.groupingBy(ReportIntakeTimingRecommendation::getIntakeTiming))
+        // 4. 섭취 타이밍 그룹화 (영양제 기준 → 영양제 1개당 여러 타이밍 리스트)
+        List<ReportDetailResponse.TimingRecommendationDto> timingRecommendationDtos = timingRecommendations.stream()
+                .collect(Collectors.groupingBy(r -> r.getSupplement().getUserSupplementId()))
                 .entrySet().stream()
                 .map(entry -> {
-                    IntakeTiming timing = entry.getKey();
-                    LocalTime settingTime = timingSettingMap.get(timing);
-                    String intakeTimeStr = (settingTime != null) ? settingTime.format(TIME_FORMATTER) : null;
+                    List<ReportIntakeTimingRecommendation> group = entry.getValue();
+                    String alias = group.get(0).getSupplement().getAlias();
 
-                    List<String> supplementAliases = entry.getValue().stream()
-                            .map(ritr -> ritr.getSupplement().getAlias())
+                    List<ReportDetailResponse.TimingRecommendationDto.IntakeTimingInfo> timingInfos = group.stream()
+                            .map(r -> {
+                                IntakeTiming timing = r.getIntakeTiming();
+                                LocalTime settingTime = timingSettingMap.get(timing);
+                                String intakeTimeStr = (settingTime != null) ? settingTime.format(TIME_FORMATTER) : null;
+                                return ReportDetailResponse.TimingRecommendationDto.IntakeTimingInfo.builder()
+                                        .intakeTiming(timing.name())
+                                        .intakeTime(intakeTimeStr)
+                                        .build();
+                            })
                             .collect(Collectors.toList());
 
-                    return ReportDetailResponse.IntakeRecommendationSummaryDto.builder()
-                            .intakeTiming(timing)
-                            .intakeTime(intakeTimeStr)
-                            .supplements(supplementAliases)
+                    return ReportDetailResponse.TimingRecommendationDto.builder()
+                            .userSupplementId(entry.getKey())
+                            .alias(alias)
+                            .intakeTimings(timingInfos)
                             .build();
                 })
                 .collect(Collectors.toList());
@@ -203,7 +210,7 @@ public class ReportService {
                 .isEditable(false) // 조회 API에서는 항상 false
                 .comments(commentsDto)
                 .recommendedProductsByIngredient(productsByIngredient)
-                .intakeRecommendationSummary(intakeSummary)
+                .timingRecommendations(timingRecommendationDtos)
                 .build();
     }
 
@@ -360,6 +367,8 @@ public class ReportService {
 
     /**
      * FastAPI의 timing_recommendations 목록에 사용자 설정 intake_time을 주입합니다.
+     * FastAPI는 intake_timings를 List<String>으로 내려주며,
+     * 이를 클라이언트 응답용 List<IntakeTimingInfo> 객체로 변환합니다.
      */
     private List<ReportCreateResponse.TimingRecommendationWithTimeDto> buildTimingWithTime(
             List<FastApiReportResponse.TimingRecommendationDto> timingDtos,
@@ -371,29 +380,46 @@ public class ReportService {
 
         List<ReportCreateResponse.TimingRecommendationWithTimeDto> result = new ArrayList<>();
         for (FastApiReportResponse.TimingRecommendationDto dto : timingDtos) {
-            String intakeTimeStr = null;
+            List<ReportCreateResponse.TimingRecommendationWithTimeDto.IntakeTimingInfo> timingInfos = new ArrayList<>();
 
-            if (dto.getIntakeTiming() != null) {
-                try {
-                    IntakeTiming timingEnum = IntakeTiming.valueOf(dto.getIntakeTiming());
-                    LocalTime localTime = timingSettingMap.get(timingEnum);
-                    if (localTime != null) {
-                        intakeTimeStr = localTime.format(TIME_FORMATTER); // "HH:mm"
-                    }
-                } catch (IllegalArgumentException e) {
-                    log.warn("[ReportService] 알 수 없는 intake_timing={}, intake_time을 null로 처리합니다.", dto.getIntakeTiming());
+            List<String> rawTimings = dto.getIntakeTimings();
+            if (rawTimings != null) {
+                for (String timingStr : rawTimings) {
+                    String intakeTimeStr = resolveIntakeTime(timingStr, timingSettingMap);
+                    timingInfos.add(ReportCreateResponse.TimingRecommendationWithTimeDto.IntakeTimingInfo.builder()
+                            .intakeTiming(timingStr)
+                            .intakeTime(intakeTimeStr)
+                            .build());
                 }
             }
 
             result.add(ReportCreateResponse.TimingRecommendationWithTimeDto.builder()
                     .userSupplementId(dto.getUserSupplementId())
                     .alias(dto.getAlias())
-                    .intakeTiming(dto.getIntakeTiming())
-                    .intakeTime(intakeTimeStr)
+                    .intakeTimings(timingInfos)
                     .build());
         }
         return result;
     }
+
+    /**
+     * intakeTiming 문자열을 enum으로 변환하여 사용자 설정 시각을 HH:mm로 반환합니다.
+     * 맵핑 실패 또는 설정값 부재 시 null을 반환합니다.
+     */
+    private String resolveIntakeTime(String intakeTimingStr, Map<IntakeTiming, LocalTime> timingSettingMap) {
+        if (intakeTimingStr == null || intakeTimingStr.isBlank()) {
+            return null;
+        }
+        try {
+            IntakeTiming timingEnum = IntakeTiming.valueOf(intakeTimingStr);
+            LocalTime localTime = timingSettingMap.get(timingEnum);
+            return (localTime != null) ? localTime.format(TIME_FORMATTER) : null;
+        } catch (IllegalArgumentException e) {
+            log.warn("[ReportService] 알 수 없는 intake_timing={}, intake_time을 null로 처리합니다.", intakeTimingStr);
+            return null;
+        }
+    }
+
 
     // ── private helper ──────────────────────────────────────────────────────
 
@@ -498,19 +524,29 @@ public class ReportService {
                 continue;
             }
 
-            IntakeTiming intakeTiming;
-            try {
-                intakeTiming = IntakeTiming.valueOf(dto.getIntakeTiming());
-            } catch (IllegalArgumentException e) {
-                log.warn("[ReportService] 알 수 없는 intake_timing={}, 타이밍 추천 저장을 건너뜁니다.", dto.getIntakeTiming());
+            List<String> rawTimings = dto.getIntakeTimings();
+            if (rawTimings == null || rawTimings.isEmpty()) {
+                log.warn("[ReportService] user_supplement_id={} 의 intake_timings가 비어있어 저장을 건너뜁니다.", dto.getUserSupplementId());
                 continue;
             }
 
-            entities.add(ReportIntakeTimingRecommendation.builder()
-                    .report(report)
-                    .supplement(supplement)
-                    .intakeTiming(intakeTiming)
-                    .build());
+            // 1 영양제당 복수 타이밍 각각 엔티티 생성
+            for (String timingStr : rawTimings) {
+                IntakeTiming intakeTiming;
+                try {
+                    intakeTiming = IntakeTiming.valueOf(timingStr);
+                } catch (IllegalArgumentException e) {
+                    log.warn("[ReportService] 알 수 없는 intake_timing='{}' (supplement_id={}), DB 저장을 건너뜁니다.",
+                            timingStr, dto.getUserSupplementId());
+                    continue;
+                }
+
+                entities.add(ReportIntakeTimingRecommendation.builder()
+                        .report(report)
+                        .supplement(supplement)
+                        .intakeTiming(intakeTiming)
+                        .build());
+            }
         }
         timingRecommendationRepository.saveAll(entities);
     }

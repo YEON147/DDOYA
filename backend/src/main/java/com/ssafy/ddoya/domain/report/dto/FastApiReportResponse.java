@@ -85,8 +85,8 @@ public class FastApiReportResponse {
 
         private String alias;
 
-        @JsonProperty("intake_timing")
-        private String intakeTiming;
+        @JsonProperty("intake_timings")
+        private List<String> intakeTimings;
     }
 
     @Getter

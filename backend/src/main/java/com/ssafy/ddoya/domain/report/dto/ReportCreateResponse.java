@@ -38,7 +38,8 @@ public class ReportCreateResponse {
     private FastApiReportResponse.CommentsDto comments;
 
     /**
-     * FastAPI의 TimingRecommendationDto에 intake_time 필드를 추가한 확장 DTO
+     * FastAPI의 TimingRecommendationDto에 intake_time 필드가 추가된 확장 DTO.
+     * 영양제 1개당 복수의 섭취 타이밍을 지원합니다.
      */
     @Getter
     @Builder
@@ -49,11 +50,20 @@ public class ReportCreateResponse {
 
         private String alias;
 
-        @JsonProperty("intake_timing")
-        private String intakeTiming;
+        @JsonProperty("intake_timings")
+        private List<IntakeTimingInfo> intakeTimings;
 
-        /** 사용자 설정 기준 실제 섭취 시각 (HH:mm), 설정이 없으면 null */
-        @JsonProperty("intake_time")
-        private String intakeTime;
+        /** 섭취 타이밍 1건: timing 이름 + 사용자 설정 시각 */
+        @Getter
+        @Builder
+        public static class IntakeTimingInfo {
+
+            @JsonProperty("intake_timing")
+            private String intakeTiming;
+
+            /** 사용자 설정 기준 실제 섭취 시각 (HH:mm), 설정이 없으면 null */
+            @JsonProperty("intake_time")
+            private String intakeTime;
+        }
     }
 }
