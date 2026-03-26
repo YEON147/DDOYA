@@ -381,6 +381,7 @@ def _recommend_timing(
         profile = {
             "user_supplement_id": supp["user_supplement_id"],
             "alias": supp.get("alias", ""),
+            "daily_dose": supp.get("daily_dose", 1),
             "has_fat_soluble": False,
             "has_gi_irritant": False,
             "has_energy": False,
@@ -462,7 +463,7 @@ def _recommend_timing(
         {
             "user_supplement_id": p["user_supplement_id"],
             "alias": p["alias"],
-            "intake_timing": p["timing"],
+            "intake_timings": [p["timing"]],
         }
         for p in supp_profiles
     ]
