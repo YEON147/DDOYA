@@ -147,7 +147,7 @@ export default function MyInfoScreen() {
           </Text>
         </View>
 
-        <Text className="mb-1 text-[14px] font-scdream tracking-wide" style={{ color: colors.textMuted }}>
+        <Text className="mb-1 text-base font-scdream tracking-wide" style={{ color: colors.textMuted }}>
           계정 정보
         </Text>
         <InfoRow
@@ -183,7 +183,7 @@ export default function MyInfoScreen() {
 
         <View className="h-8" />
 
-        <Text className="mb-1 text-[14px] font-scdream tracking-wide" style={{ color: colors.textMuted }}>
+        <Text className="mb-1 text-base font-scdream tracking-wide" style={{ color: colors.textMuted }}>
           계정 관리
         </Text>
         <ActionRow label="비밀번호 변경" onPress={handlePasswordChange} />

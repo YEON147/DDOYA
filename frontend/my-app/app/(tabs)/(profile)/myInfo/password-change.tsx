@@ -33,10 +33,10 @@ export default function PasswordChangeScreen() {
       }
     >
       <View className="flex-1 px-6 pt-8">
-        <Text className="mb-2 ml-1 text-[14px] font-scdream tracking-wide" style={{ color: colors.textMuted }}>
+        <Text className="mb-2 ml-1 text-base font-scdream tracking-wide" style={{ color: colors.textMuted }}>
           비밀번호 변경
         </Text>
-        <Text className="mb-3 text-[15px] font-scdream" style={{ color: colors.text }}>
+        <Text className="mb-3 text-md font-scdream" style={{ color: colors.text }}>
           현재 비밀번호
         </Text>
         <TextInput
@@ -49,7 +49,7 @@ export default function PasswordChangeScreen() {
           style={{ backgroundColor: colors.surfaceWarm, color: colors.text }}
         />
 
-        <Text className="mb-3 mt-7 text-[15px] font-scdream" style={{ color: colors.text }}>
+        <Text className="mb-3 mt-7 text-md font-scdream" style={{ color: colors.text }}>
           새로운 비밀번호
         </Text>
         <TextInput

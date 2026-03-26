@@ -54,13 +54,13 @@ export function CaptureGuideScreenLayout({
             className="absolute left-3 top-3 z-10 max-w-[88%] rounded-lg px-2.5 py-1.5"
             style={{ backgroundColor: 'rgba(42, 42, 40, 0.58)' }}
           >
-            <Text className="text-[14px] font-scdream leading-snug" style={{ color: '#FCFBF8' }} numberOfLines={3}>
+            <Text className="text-base font-scdream leading-snug" style={{ color: '#FCFBF8' }} numberOfLines={3}>
               {guideLabel}
             </Text>
           </View>
         </View>
         {Platform.OS === 'web' && webNote ? (
-          <Text className="mt-3 text-center text-[14px] font-scdream" style={{ color: colors.textMuted }}>
+          <Text className="mt-3 text-center text-base font-scdream" style={{ color: colors.textMuted }}>
             {webNote}
           </Text>
         ) : null}

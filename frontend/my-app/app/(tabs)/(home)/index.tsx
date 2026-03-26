@@ -48,15 +48,23 @@ export default function HomeScreen() {
       }}
     >
         <View style={{ paddingHorizontal: horizontalPadding }}>
-          <View className="relative">
-            <View className="flex-row items-center pr-12">
-              <SvgXml xml={DDOYA_LOGO_XML} width={132} height={58} />
+          <View
+            className="flex-row items-center justify-between"
+            style={{ minHeight: scaleByWidth(width, 54, { min: 50, max: 60 }) }}
+          >
+            <View className="flex-row items-center">
+              <SvgXml xml={DDOYA_LOGO_XML} width={126} height={54} />
             </View>
             <Pressable
               onPress={() => router.push('/notifications' as never)}
               hitSlop={10}
-              className="absolute right-2 top-3 h-10 w-10 items-center justify-center rounded-full"
-              style={({ pressed }) => [neuRaised(999, colors.surface), { opacity: pressed ? 0.82 : 1 }]}
+              className="h-10 w-10 items-center justify-center rounded-full"
+              style={({ pressed }) => [
+                neuRaised(999, colors.surface),
+                {
+                  opacity: pressed ? 0.82 : 1,
+                },
+              ]}
             >
               <AppIcon icon={Bell} size={20} color={colors.iconMuted} strokeWidth={2.5} />
               {unreadCount > 0 && (
@@ -71,9 +79,13 @@ export default function HomeScreen() {
               )}
             </Pressable>
           </View>
+          <View className="mt-2.5" style={{ height: 3 }}>
+            <View style={{ height: 1, backgroundColor: `${colors.shadowDark}22` }} />
+            <View style={{ height: 1, backgroundColor: `${colors.shadowLight}CC` }} />
+          </View>
 
           <TodayRoutineHeroCard
-            className="mt-3"
+            className="mt-2"
             timeSlots={timeSlots}
             isPending={isPending}
             isError={isError}
@@ -85,13 +97,13 @@ export default function HomeScreen() {
             style={{
               marginHorizontal: -horizontalPadding,
               height: dateBarHeight,
-              backgroundColor: `${colors.shadowDark}14`,
+              backgroundColor: 'transparent',
               borderTopWidth: 1,
               borderBottomWidth: 1,
-              borderColor: `${colors.shadowDark}22`,
+              borderColor: `${colors.shadowDark}18`,
             }}
           >
-            <Text className="text-[15px] font-scdream-medium" style={{ color: colors.textMuted }}>
+            <Text className="text-md font-scdream-medium" style={{ color: colors.textMuted }}>
               {monthDay} · {weekday}
             </Text>
           </View>
@@ -107,7 +119,7 @@ export default function HomeScreen() {
             className="rounded-[20px] px-4 py-6"
             style={neuInset(14, colors.surface)}
           >
-            <Text className="text-center text-[13px] font-scdream" style={{ color: colors.textMuted }}>
+            <Text className="text-center text-sm font-scdream" style={{ color: colors.textMuted }}>
               일별 스케줄을 불러오지 못했습니다. 탭하여 다시 시도
             </Text>
             {isRefetching && (
@@ -115,7 +127,7 @@ export default function HomeScreen() {
             )}
           </Pressable>
         ) : slotCount === 0 ? (
-          <Text className="px-1 text-[13px] font-scdream" style={{ color: colors.textMuted }}>
+          <Text className="px-1 text-sm font-scdream" style={{ color: colors.textMuted }}>
             오늘 등록된 섭취 일정이 없어요.
           </Text>
         ) : (

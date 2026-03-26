@@ -171,7 +171,7 @@ function SettingItem({
         <Text className="text-[18px] font-scdream-bold mb-1" style={{ color: colors.text }}>
           {label}
         </Text>
-        <Text className="text-[14px] font-scdream-regular" style={{ color: colors.textMuted }}>
+        <Text className="text-base font-scdream-regular" style={{ color: colors.textMuted }}>
           {description}
         </Text>
       </View>

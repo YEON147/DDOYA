@@ -71,7 +71,7 @@ export default function MyInfoBirthDateScreen() {
     >
       <View className="flex-1 w-full items-center px-6 pb-6 pt-6">
         <View className="w-full max-w-[340px] flex-1">
-          <Text className="mb-2 ml-1 text-[14px] font-scdream tracking-wide" style={{ color: colors.textMuted }}>
+          <Text className="mb-2 ml-1 text-base font-scdream tracking-wide" style={{ color: colors.textMuted }}>
             생년월일 변경
           </Text>
           <Pressable onPress={openBirthDatePicker} className="px-4" style={neuInset(16)}>

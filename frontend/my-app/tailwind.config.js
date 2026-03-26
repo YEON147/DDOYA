@@ -4,15 +4,16 @@ module.exports = {
   presets: [require("nativewind/preset")],
   theme: {
     extend: {
-      // 앱 전역 글자 크기 +2px (text-xs, text-sm 등)
+      // 앱 전역 폰트 스케일 통일
       fontSize: {
-        xs: ['14px', { lineHeight: '18px' }],
-        sm: ['16px', { lineHeight: '22px' }],
-        base: ['18px', { lineHeight: '26px' }],
-        lg: ['20px', { lineHeight: '28px' }],
-        xl: ['22px', { lineHeight: '30px' }],
-        '2xl': ['26px', { lineHeight: '34px' }],
-        '3xl': ['32px', { lineHeight: '38px' }],
+        xs: ['12px', { lineHeight: '16px' }],
+        sm: ['13px', { lineHeight: '18px' }],
+        base: ['14px', { lineHeight: '20px' }],
+        md: ['15px', { lineHeight: '21px' }],
+        lg: ['16px', { lineHeight: '22px' }],
+        xl: ['18px', { lineHeight: '24px' }],
+        '2xl': ['20px', { lineHeight: '26px' }],
+        '3xl': ['24px', { lineHeight: '30px' }],
       },
       fontFamily: {
         scdream: ['SCoreDreamRegular'],

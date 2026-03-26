@@ -251,7 +251,7 @@ export default function SupplementDetailScreen() {
           </View>
         </View>
 
-        <Text className="mb-1.5 text-[14px] font-scdream tracking-wide" style={{ color: colors.textMuted }}>
+        <Text className="mb-1.5 text-base font-scdream tracking-wide" style={{ color: colors.textMuted }}>
           일일 섭취 횟수
         </Text>
         <View className="flex-row items-center justify-between border-b py-3.5" style={{ borderColor: line }}>
@@ -272,7 +272,7 @@ export default function SupplementDetailScreen() {
         </View>
 
         <Text
-          className="mb-1.5 mt-7 text-[14px] font-scdream tracking-wide"
+          className="mb-1.5 mt-7 text-base font-scdream tracking-wide"
           style={{ color: colors.textMuted, alignSelf: 'flex-start' }}
         >
           섭취 시점
@@ -308,7 +308,7 @@ export default function SupplementDetailScreen() {
         ))}
 
         <Text
-          className="mb-1.5 mt-7 text-[14px] font-scdream tracking-wide"
+          className="mb-1.5 mt-7 text-base font-scdream tracking-wide"
           style={{ color: colors.textMuted, alignSelf: 'flex-start' }}
         >
           재고 관리
