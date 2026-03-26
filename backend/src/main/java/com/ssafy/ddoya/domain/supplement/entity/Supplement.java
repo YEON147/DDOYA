@@ -118,4 +118,11 @@ public class Supplement {
         this.dailyDose = dailyDose;
         this.dosePerIntake = dosePerIntake;
     }
+
+    /**
+     * 리포트에 반영 완료 시 is_reflected를 true로 변경합니다.
+     */
+    public void markReflected() {
+        this.isReflected = true;
+    }
 }
