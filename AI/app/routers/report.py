@@ -13,6 +13,7 @@ REPORT_REQUEST_EXAMPLE = {
     {
       "user_supplement_id": 10,
       "alias": "종합비타민",
+      "daily_dose": 1,
       "ingredients": [
         {
           "ingredient_id": 6,
@@ -37,6 +38,7 @@ REPORT_REQUEST_EXAMPLE = {
     {
       "user_supplement_id": 11,
       "alias": "오메가3",
+      "daily_dose": 2,
       "ingredients": [
         {
           "ingredient_id": 38,
