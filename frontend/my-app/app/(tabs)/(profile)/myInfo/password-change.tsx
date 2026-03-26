@@ -1,8 +1,10 @@
 import { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, TextInput, Alert } from 'react-native';
 import { ScreenContainer } from '@/src/components/common/ScreenContainer';
 import { TopHeader } from '@/src/components/common/TopHeader';
 import { colors } from '@/constants/theme/colors';
+import { neuInset } from '@/constants/theme/neumorphism';
+import { AppButton } from '@/src/components/common/AppButton';
 
 export default function PasswordChangeScreen() {
   const [currentPassword, setCurrentPassword] = useState('');
@@ -32,56 +34,54 @@ export default function PasswordChangeScreen() {
         />
       }
     >
-      <View className="flex-1 px-6 pt-8">
-        <Text className="mb-2 ml-1 text-base font-scdream tracking-wide" style={{ color: colors.textMuted }}>
+      <View className="flex-1 w-full items-center px-6 pb-6 pt-6">
+        <View className="w-full max-w-[340px] flex-1">
+          <Text className="mb-2 ml-1 text-base font-scdream tracking-wide" style={{ color: colors.textMuted }}>
           비밀번호 변경
-        </Text>
-        <Text className="mb-3 text-md font-scdream" style={{ color: colors.text }}>
-          현재 비밀번호
-        </Text>
-        <TextInput
-          value={currentPassword}
-          onChangeText={setCurrentPassword}
-          placeholder="현재 비밀번호를 입력해주세요"
-          secureTextEntry
-          placeholderTextColor={colors.textMuted}
-          className="rounded-2xl px-4 py-4 text-[17px] font-scdream"
-          style={{ backgroundColor: colors.surfaceWarm, color: colors.text }}
-        />
+          </Text>
 
-        <Text className="mb-3 mt-7 text-md font-scdream" style={{ color: colors.text }}>
-          새로운 비밀번호
-        </Text>
-        <TextInput
-          value={newPassword}
-          onChangeText={setNewPassword}
-          placeholder="새로운 비밀번호를 입력해주세요"
-          secureTextEntry
-          placeholderTextColor={colors.textMuted}
-          className="rounded-2xl px-4 py-4 text-[17px] font-scdream"
-          style={{ backgroundColor: colors.surfaceWarm, color: colors.text }}
-        />
-        <TextInput
-          value={confirmPassword}
-          onChangeText={setConfirmPassword}
-          placeholder="비밀번호 확인"
-          secureTextEntry
-          placeholderTextColor={colors.textMuted}
-          className="mt-3 rounded-2xl px-4 py-4 text-[17px] font-scdream"
-          style={{ backgroundColor: colors.surfaceWarm, color: colors.text }}
-        />
+          <Text className="mb-2 ml-1 mt-1 text-sm font-scdream" style={{ color: colors.text }}>
+            현재 비밀번호
+          </Text>
+          <View className="px-4" style={neuInset(16)}>
+            <TextInput
+              value={currentPassword}
+              onChangeText={setCurrentPassword}
+              placeholder="현재 비밀번호를 입력해주세요"
+              secureTextEntry
+              placeholderTextColor={colors.textMuted}
+              className="h-[52px] w-full text-sm font-scdream"
+              style={{ color: colors.text }}
+            />
+          </View>
 
-        <View className="mt-auto pb-8">
-          <TouchableOpacity
-            onPress={handleSave}
-            activeOpacity={0.85}
-            className="items-center rounded-full py-4"
-            style={{ backgroundColor: colors.text }}
-          >
-            <Text className="text-[18px] font-scdream-medium" style={{ color: '#FFFFFF' }}>
-              저장
-            </Text>
-          </TouchableOpacity>
+          <Text className="mb-2 ml-1 mt-5 text-sm font-scdream" style={{ color: colors.text }}>
+            새로운 비밀번호
+          </Text>
+          <View className="px-4" style={neuInset(16)}>
+            <TextInput
+              value={newPassword}
+              onChangeText={setNewPassword}
+              placeholder="새로운 비밀번호를 입력해주세요"
+              secureTextEntry
+              placeholderTextColor={colors.textMuted}
+              className="h-[52px] w-full text-sm font-scdream"
+              style={{ color: colors.text }}
+            />
+          </View>
+          <View className="mt-3 px-4" style={neuInset(16)}>
+            <TextInput
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              placeholder="비밀번호 확인"
+              secureTextEntry
+              placeholderTextColor={colors.textMuted}
+              className="h-[52px] w-full text-sm font-scdream"
+              style={{ color: colors.text }}
+            />
+          </View>
+
+          <AppButton title="저장" onPress={handleSave} className="mt-auto h-[56px] w-full" />
         </View>
       </View>
     </ScreenContainer>

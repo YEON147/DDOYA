@@ -72,8 +72,7 @@ export default function IntakeRoutineEditScreen() {
 
       Alert.alert('성공', '섭취 루틴이 수정되었습니다.');
       router.back();
-    } catch (error) {
-      console.error('Failed to update intake routine:', error);
+    } catch {
       Alert.alert('오류', '수정 중 문제가 발생했습니다.');
     } finally {
       setIsSaving(false);
@@ -106,11 +105,11 @@ export default function IntakeRoutineEditScreen() {
   return (
     <View className="flex-1" style={{ backgroundColor: colors.surface }}>
       {/* Header */}
-      <View className="px-6 pb-4 pt-14 flex-row items-center justify-between">
+      <View className="flex-row items-center justify-between px-6 pb-4 pt-14">
         <TouchableOpacity onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={28} color={colors.text} />
         </TouchableOpacity>
-        <Text className="text-[22px] font-scdream-medium" style={{ color: colors.text }}>
+        <Text className="text-xl font-scdream-medium" style={{ color: colors.text }}>
           섭취 루틴 수정
         </Text>
         <View style={{ width: 28 }} />
@@ -129,12 +128,12 @@ export default function IntakeRoutineEditScreen() {
               }}
             >
               <View>
-                <Text className="text-[16px] font-scdream" style={{ color: colors.textMuted }}>
+                <Text className="text-sm font-scdream" style={{ color: colors.textMuted }}>
                   {item.intakeTiming}
                 </Text>
                 <View className="mt-1 flex-row items-center">
                   <View className="mr-2 h-2 w-2 rounded-full" style={{ backgroundColor: colors.primary }} />
-                  <Text className="text-[20px] font-scdream-medium" style={{ color: colors.text }}>
+                  <Text className="text-xl font-scdream-medium" style={{ color: colors.text }}>
                     {item.intakeTime}
                   </Text>
                 </View>
@@ -151,7 +150,7 @@ export default function IntakeRoutineEditScreen() {
                   }
                 ]}
               >
-                <Text className="font-scdream" style={{ color: colors.primary }}>변경</Text>
+                <Text className="text-sm font-scdream-medium" style={{ color: colors.primary }}>변경</Text>
               </Pressable>
             </View>
           ))}
@@ -170,7 +169,7 @@ export default function IntakeRoutineEditScreen() {
           {isSaving ? (
             <ActivityIndicator color="white" />
           ) : (
-            <Text className="text-white text-lg font-bold">확인</Text>
+            <Text className="text-lg font-scdream-bold text-white">확인</Text>
           )}
         </TouchableOpacity>
       </View>
