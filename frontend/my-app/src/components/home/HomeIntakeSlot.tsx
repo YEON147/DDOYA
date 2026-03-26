@@ -1,8 +1,9 @@
-import { View, Text, Pressable, Image } from 'react-native';
+import { View, Text, Pressable, Image, useWindowDimensions } from 'react-native';
 import { Camera } from 'lucide-react-native';
 import { colors } from '@/constants/theme/colors';
 import { AppIcon } from '@/src/components/common/AppIcon';
 import type { DailyIntakeScheduleSlotItem } from '@/src/types/intakeRoutine';
+import { scaleByWidth } from '@/src/utils/responsive';
 
 export type HomeIntakeSlotProps = {
   timeLabel: string;
@@ -12,6 +13,7 @@ export type HomeIntakeSlotProps = {
 
 /** 홈 — 시간대별 섭취 인증 카드 (Soft Wellness) */
 export function HomeIntakeSlot({ timeLabel, items, onPressCamera }: HomeIntakeSlotProps) {
+  const { width } = useWindowDimensions();
   const scheduleIds = items.map((i) => i.scheduleId);
   const hasItems = items.length > 0;
   const completedCount = items.filter((i) => i.status === 'TAKEN' || i.status === 'SKIPPED').length;
@@ -22,19 +24,26 @@ export function HomeIntakeSlot({ timeLabel, items, onPressCamera }: HomeIntakeSl
   const successBorder = `${success}33`;
   const STAMP_IMAGE = require('../../../assets/images/DDOYA_stamp.png');
 
-  // 말풍선 사이즈
-  const BUBBLE_PAD = 'px-6 py-5';
+  const bubblePaddingH = scaleByWidth(width, 24, { min: 16, max: 26 });
+  const bubblePaddingV = scaleByWidth(width, 20, { min: 14, max: 24 });
   const BUBBLE_RADIUS = 'rounded-3xl';
-  const TAIL_SIZE = 12;
-  const TAIL_OFFSET = 18;
+  const tailSize = scaleByWidth(width, 12, { min: 10, max: 14 });
+  const tailOffset = scaleByWidth(width, 18, { min: 14, max: 24 });
+  const stampSize = scaleByWidth(width, 150, { min: 112, max: 182 });
 
   return (
     <View className="w-full">
       <View className="w-full">
         <View className="w-full">
           <View
-            className={`relative ${BUBBLE_RADIUS} ${BUBBLE_PAD}`}
-            style={{ backgroundColor: colors.cardIvory, borderWidth: 1, borderColor: `${colors.shadowDark}80` }}
+            className={`relative ${BUBBLE_RADIUS}`}
+            style={{
+              backgroundColor: colors.cardIvory,
+              borderWidth: 1,
+              borderColor: `${colors.shadowDark}80`,
+              paddingHorizontal: bubblePaddingH,
+              paddingVertical: bubblePaddingV,
+            }}
           >
             {isSlotCompleted ? (
               <View
@@ -43,12 +52,19 @@ export function HomeIntakeSlot({ timeLabel, items, onPressCamera }: HomeIntakeSl
                   position: 'absolute',
                   top: '50%',
                   left: '50%',
-                  transform: [{ translateX: -56 }, { translateY: -56 }],
+                  transform: [
+                    { translateX: -(stampSize / 2) + scaleByWidth(width, 26, { min: 18, max: 34 }) },
+                    { translateY: -(stampSize / 2) + scaleByWidth(width, 18, { min: 12, max: 26 }) },
+                  ],
                   zIndex: 50,
                   opacity: 0.92,
                 }}
               >
-                <Image source={STAMP_IMAGE} style={{ width: 150, height: 150 }} resizeMode="contain" />
+                <Image
+                  source={STAMP_IMAGE}
+                  style={{ width: stampSize, height: stampSize, alignSelf: 'center' }}
+                  resizeMode="contain"
+                />
               </View>
             ) : null}
 
@@ -56,9 +72,9 @@ export function HomeIntakeSlot({ timeLabel, items, onPressCamera }: HomeIntakeSl
               style={{
                 position: 'absolute',
                 left: -6,
-                bottom: TAIL_OFFSET,
-                width: TAIL_SIZE,
-                height: TAIL_SIZE,
+                bottom: tailOffset,
+                width: tailSize,
+                height: tailSize,
                 backgroundColor: colors.cardIvory,
                 borderLeftWidth: 1,
                 borderBottomWidth: 1,
