@@ -75,7 +75,7 @@ export function TodayRoutineHeroCard({ timeSlots, isPending, isError, className 
 
   return (
     <View className={className}>
-      <View className="mb-2 flex-row items-stretch">
+      <View className="flex-row items-stretch">
           {/* 말풍선 */}
           <View
             className="flex-1"

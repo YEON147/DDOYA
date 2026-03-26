@@ -44,7 +44,7 @@ export default function HomeScreen() {
       contentContainerStyle={{
         paddingHorizontal: 0,
         paddingTop: topPadding,
-        paddingBottom: 32,
+        paddingBottom: 0,
       }}
     >
         <View style={{ paddingHorizontal: horizontalPadding }}>
@@ -72,19 +72,6 @@ export default function HomeScreen() {
             </Pressable>
           </View>
 
-          {/* 날짜 카드 (헤더 바로 아래) */}
-          <View
-            className="mt-4 flex-row overflow-hidden rounded-[20px]"
-            style={{
-              backgroundColor: colors.surface,
-              borderWidth: 1,
-              borderColor: `${colors.shadowDark}1F`,
-            }}
-          >
-            <View style={{ width: 4, backgroundColor: colors.primary }} />
-
-          </View>
-
           <TodayRoutineHeroCard
             className="mt-3"
             timeSlots={timeSlots}
@@ -94,7 +81,7 @@ export default function HomeScreen() {
 
           {/* 날짜 바 (좌우 여백 없이 구분선 느낌) */}
           <View
-            className="mb-4 items-center justify-center"
+            className="mb-2 items-center justify-center"
             style={{
               marginHorizontal: -horizontalPadding,
               height: dateBarHeight,

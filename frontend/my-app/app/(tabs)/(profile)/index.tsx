@@ -13,7 +13,11 @@ export default function ProfileScreen() {
   const { nickname } = useAuthStore();
 
   return (
-    <ScreenContainer>
+    <ScreenContainer
+      contentContainerStyle={{
+        paddingBottom: 0,
+      }}
+    >
         <View
           className="relative mb-3 mt-1 overflow-hidden rounded-[20px] px-5 py-5"
           style={[
