@@ -30,7 +30,7 @@ export function IntakeRoutine() {
       >
         <View className="mb-4 flex-row items-center justify-between">
           <View className="flex-1 pr-3">
-            <Text className="text-[20px] font-scdream-medium my-2" style={{ color: colors.text }}>
+            <Text className="text-[22px] font-scdream-medium my-2" style={{ color: colors.text }}>
               섭취 시간
             </Text>
           </View>
@@ -49,19 +49,19 @@ export function IntakeRoutine() {
                 },
               ]}
             >
-              <Text className="text-[13px] font-scdream-medium" style={{ color: colors.text }}>
+              <Text className="text-[15px] font-scdream-medium" style={{ color: colors.text }}>
                 수정
               </Text>
             </Pressable>
           </View>
         </View>
-        <Text className="mb-4 text-[12px] font-scdream" style={{ color: colors.textMuted }}>
+        <Text className="mb-4 text-[14px] font-scdream" style={{ color: colors.textMuted }}>
           {isLoading ? '불러오는 중…' : `설정된 시간 ${totalCount}개`}
         </Text>
 
         {bodyPartThumbSources.length > 0 ? (
           <View className="mb-4">
-            <Text className="mb-2 text-[11px] font-scdream-medium tracking-wide" style={{ color: colors.textMuted }}>
+            <Text className="mb-2 text-[13px] font-scdream-medium tracking-wide" style={{ color: colors.textMuted }}>
               등록 영양제 부위
             </Text>
             <View className="flex-row flex-wrap gap-2">
@@ -87,10 +87,10 @@ export function IntakeRoutine() {
           className="-mx-5 flex-row items-center justify-between px-10 py-2.5"
           style={{ borderTopWidth: 1, borderBottomWidth: 1, borderColor: `${colors.shadowDark}1F`, backgroundColor: `${colors.input}66` }}
         >
-          <Text className="text-[11px] font-scdream tracking-wide" style={{ color: colors.textMuted }}>
+          <Text className="text-[13px] font-scdream tracking-wide" style={{ color: colors.textMuted }}>
             섭취 구분
           </Text>
-          <Text className="text-[11px] font-scdream tracking-wide" style={{ color: colors.textMuted }}>
+          <Text className="text-[13px] font-scdream tracking-wide" style={{ color: colors.textMuted }}>
             섭취 시간
           </Text>
         </View>
@@ -103,7 +103,7 @@ export function IntakeRoutine() {
 
         {isError && (
           <View className="py-7 items-center">
-            <Text className="text-[13px] font-scdream" style={{ color: colors.textMuted }}>
+            <Text className="text-[15px] font-scdream" style={{ color: colors.textMuted }}>
               데이터 로드 실패
             </Text>
           </View>
@@ -111,7 +111,7 @@ export function IntakeRoutine() {
 
         {!isLoading && !isError && routineTimes && routineTimes.length === 0 && (
           <View className="py-7 items-center">
-            <Text className="text-[13px] font-scdream" style={{ color: colors.textMuted }}>
+            <Text className="text-[15px] font-scdream" style={{ color: colors.textMuted }}>
               설정된 루틴이 없습니다.
             </Text>
           </View>
@@ -126,7 +126,7 @@ export function IntakeRoutine() {
               borderBottomColor: `${colors.shadowDark}1E`,
             }}
           >
-            <Text className="text-[13px] font-scdream" style={{ color: colors.textMuted }}>
+            <Text className="text-[15px] font-scdream" style={{ color: colors.textMuted }}>
               {t.intakeTiming}
             </Text>
             <View className="flex-row items-center">
@@ -134,7 +134,7 @@ export function IntakeRoutine() {
                 className="mr-3 h-2 w-2 rounded-full"
                 style={{ backgroundColor: colors.primary }}
               />
-              <Text className="text-[15px] font-scdream-medium tracking-wide" style={{ color: colors.text }}>
+              <Text className="text-[17px] font-scdream-medium tracking-wide" style={{ color: colors.text }}>
                 {t.intakeTime}
               </Text>
             </View>

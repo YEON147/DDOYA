@@ -146,7 +146,7 @@ export function SignupProfileForm() {
               }}
             >
               <Text
-                className="text-[14px] font-scdream-medium"
+                className="text-[16px] font-scdream-medium"
                 style={{ color: isMaleSelected ? '#FFFFFF' : colors.text }}
               >
                 남성
@@ -167,7 +167,7 @@ export function SignupProfileForm() {
               }}
             >
               <Text
-                className="text-[14px] font-scdream-medium"
+                className="text-[16px] font-scdream-medium"
                 style={{
                   color: isFemaleSelected ? '#FFFFFF' : colors.text,
                 }}
@@ -208,7 +208,7 @@ export function SignupProfileForm() {
                     style={neuInset(12, colors.surface)}
                     onPress={() => setIsDatePickerOpen(false)}
                   >
-                    <Text className="text-[14px] font-scdream-medium" style={{ color: colors.textMuted }}>
+                    <Text className="text-[16px] font-scdream-medium" style={{ color: colors.textMuted }}>
                       닫기
                     </Text>
                   </TouchableOpacity>
@@ -230,7 +230,7 @@ export function SignupProfileForm() {
                   setErrorMessage('');
                 }}
               />
-              <Text className="absolute right-1 top-[16px] text-[14px] font-scdream" style={{ color: colors.textMuted }}>
+              <Text className="absolute right-1 top-[16px] text-[16px] font-scdream" style={{ color: colors.textMuted }}>
                 cm
               </Text>
             </View>
@@ -249,7 +249,7 @@ export function SignupProfileForm() {
                   setErrorMessage('');
                 }}
               />
-              <Text className="absolute right-1 top-[16px] text-[14px] font-scdream" style={{ color: colors.textMuted }}>
+              <Text className="absolute right-1 top-[16px] text-[16px] font-scdream" style={{ color: colors.textMuted }}>
                 kg
               </Text>
             </View>

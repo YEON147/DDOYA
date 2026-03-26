@@ -42,8 +42,8 @@ export function PillSlot({ name, count, image, taken, onPress }: PillSlotProps) 
             />
           )}
           <Image source={image} style={{ width: 46, height: 46, borderRadius: 10 }} />
-          <Text style={{ fontSize: 11, color: colors.text, fontFamily: 'SCoreDreamMedium' }}>{name}</Text>
-          <Text style={{ fontSize: 10, color: colors.text, fontFamily: 'SCoreDreamMedium' }}>{count}정</Text>
+          <Text style={{ fontSize: 13, color: colors.text, fontFamily: 'SCoreDreamMedium' }}>{name}</Text>
+          <Text style={{ fontSize: 12, color: colors.text, fontFamily: 'SCoreDreamMedium' }}>{count}정</Text>
         </View>
       )}
     </Pressable>

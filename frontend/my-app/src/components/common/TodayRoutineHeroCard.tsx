@@ -78,7 +78,7 @@ export function TodayRoutineHeroCard({ timeSlots, isPending, isError, className 
               style={{
                 backgroundColor: colors.cardIvory,
                 borderWidth: 1,
-                borderColor: `${colors.shadowDark}80`,
+                borderColor: `${colors.primary}66`,
               }}
             >
               {/* 꼬리 */}
@@ -92,7 +92,7 @@ export function TodayRoutineHeroCard({ timeSlots, isPending, isError, className 
                   backgroundColor: colors.cardIvory,
                   borderRightWidth: 1,
                   borderTopWidth: 1,
-                  borderColor: `${colors.shadowDark}80`,
+                  borderColor: `${colors.primary}66`,
                   transform: [{ rotate: '45deg' }],
                 }}
               />
@@ -100,7 +100,7 @@ export function TodayRoutineHeroCard({ timeSlots, isPending, isError, className 
               <View className="flex-row items-start justify-between gap-3">
                 <View className="flex-1">
                   <Text
-                    className="text-[15px] font-scdream-medium p-2"
+                    className="text-[17px] font-scdream-medium p-2"
                     style={{ color: colors.text, letterSpacing: -0.2 }}
                   >
                     {speechTitle}
@@ -108,7 +108,7 @@ export function TodayRoutineHeroCard({ timeSlots, isPending, isError, className 
                   <View className="mt-1.5 p-2">
                     {showTimerStyle ? (
                       <View>
-                        <Text className="text-[12px] font-scdream" style={{ color: colors.textMuted }}>
+                        <Text className="text-[14px] font-scdream" style={{ color: colors.textMuted }}>
                           다음 섭취까지{' '}
                           <Text className="font-scdream-bold" style={{ color: colors.text }}>
                             {timerLine}
@@ -116,13 +116,13 @@ export function TodayRoutineHeroCard({ timeSlots, isPending, isError, className 
                           {' '}남았어요
                         </Text>
                         {scheduledTimeLine ? (
-                          <Text className="mt-1 text-[11px] font-scdream" style={{ color: colors.textMuted }}>
+                          <Text className="mt-1 text-[13px] font-scdream" style={{ color: colors.textMuted }}>
                             예정 시각 · {scheduledTimeLine}
                           </Text>
                         ) : null}
                       </View>
                     ) : (
-                      <Text className="text-[12px] font-scdream leading-5" style={{ color: colors.textMuted }}>
+                      <Text className="text-[14px] font-scdream leading-5" style={{ color: colors.textMuted }}>
                         {speechBody}
                       </Text>
                     )}

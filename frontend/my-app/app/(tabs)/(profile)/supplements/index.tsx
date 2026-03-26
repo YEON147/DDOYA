@@ -45,7 +45,7 @@ export default function SupplementsScreen() {
       style={[styles.card, { paddingHorizontal: 18, paddingVertical: 18 }]}
     >
       <View className="flex-row items-start justify-between">
-        <Text className="text-[11px] font-scdream-medium leading-4" style={{ color: colors.textMuted }}>
+        <Text className="text-[13px] font-scdream-medium leading-4" style={{ color: colors.textMuted }}>
           {`No.${index + 1}`}
         </Text>
         <AppIcon icon={ChevronRight} size={18} color={colors.textMuted} />
@@ -75,14 +75,14 @@ export default function SupplementsScreen() {
 
       <View className="mt-3">
         <Text
-          className="text-[16px] font-scdream-medium leading-5"
+          className="text-[18px] font-scdream-medium leading-5"
           style={{ color: colors.text }}
           numberOfLines={1}
         >
           {item.alias}
         </Text>
         <Text
-          className="mt-1 text-[12px] font-scdream leading-4"
+          className="mt-1 text-[14px] font-scdream leading-4"
           style={{ color: colors.textMuted, minHeight: 16 }}
           numberOfLines={1}
           ellipsizeMode="tail"
@@ -90,7 +90,7 @@ export default function SupplementsScreen() {
           {(item.primaryIngredientNames ?? []).filter(Boolean).join(' · ') || '성분 정보 없음'}
         </Text>
         <Text
-          className="mt-0.5 text-[12px] font-scdream leading-4"
+          className="mt-0.5 text-[14px] font-scdream leading-4"
           style={{ color: colors.textMuted }}
           numberOfLines={1}
         >
@@ -147,7 +147,7 @@ export default function SupplementsScreen() {
         </View>
       ) : !accessToken ? (
         <View className="flex-1 items-center justify-center gap-3 px-6 pt-20">
-          <Text className="text-center text-[14px] font-scdream" style={{ color: colors.textMuted }}>
+          <Text className="text-center text-[16px] font-scdream" style={{ color: colors.textMuted }}>
             로그인 후 영양제 목록을 불러올 수 있습니다.
           </Text>
           <TouchableOpacity
@@ -155,7 +155,7 @@ export default function SupplementsScreen() {
             className="rounded-full px-5 py-2.5"
             style={neuRaised(999, colors.surface)}
           >
-            <Text className="text-[14px] font-scdream-medium" style={{ color: colors.primary }}>
+            <Text className="text-[16px] font-scdream-medium" style={{ color: colors.primary }}>
               로그인하기
             </Text>
           </TouchableOpacity>
@@ -166,7 +166,7 @@ export default function SupplementsScreen() {
         </View>
       ) : isError ? (
         <View className="flex-1 items-center justify-center gap-3 px-6 pt-20">
-          <Text className="text-center text-[14px] font-scdream" style={{ color: colors.textMuted }}>
+          <Text className="text-center text-[16px] font-scdream" style={{ color: colors.textMuted }}>
             목록을 불러오지 못했습니다.
           </Text>
           <TouchableOpacity
@@ -174,7 +174,7 @@ export default function SupplementsScreen() {
             className="rounded-full px-5 py-2.5"
             style={neuRaised(999, colors.surface)}
           >
-            <Text className="text-[14px] font-scdream-medium" style={{ color: colors.primary }}>
+            <Text className="text-[16px] font-scdream-medium" style={{ color: colors.primary }}>
               다시 시도
             </Text>
           </TouchableOpacity>
@@ -191,7 +191,7 @@ export default function SupplementsScreen() {
           }
           ListEmptyComponent={
             <View className="flex-1 items-center justify-center pt-20">
-              <Text className="text-[14px] font-scdream" style={{ color: colors.textMuted }}>
+              <Text className="text-[16px] font-scdream" style={{ color: colors.textMuted }}>
                 등록된 영양제가 없습니다.
               </Text>
             </View>

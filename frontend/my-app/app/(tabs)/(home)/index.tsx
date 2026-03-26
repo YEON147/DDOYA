@@ -45,7 +45,7 @@ export default function HomeScreen() {
         <View className="px-[18px]">
           <View className="relative">
             <View className="flex-row items-center pr-12">
-              <SvgXml xml={DDOYA_LOGO_XML} width={124} height={50} />
+              <SvgXml xml={DDOYA_LOGO_XML} width={132} height={58} />
             </View>
             <Pressable
               onPress={() => router.push('/notifications' as never)}
@@ -77,13 +77,13 @@ export default function HomeScreen() {
             }}
           >
             <View style={{ width: 4, backgroundColor: colors.primary }} />
-            <View className="flex-1 px-6 py-4">
+            <View className="flex-1 px-6 py-5">
               <Text
                 className="font-scdream-medium"
                 style={{ color: colors.text, fontSize: 16, letterSpacing: -0.2 }}
                 numberOfLines={1}
               >
-                {(nickname ?? '회원') + '님 환영합니다'}
+                {(nickname ?? '회원') + '님, 오셨군요 ! ! !'}
               </Text>
             </View>
           </View>

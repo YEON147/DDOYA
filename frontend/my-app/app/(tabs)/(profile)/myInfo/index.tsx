@@ -30,13 +30,13 @@ function InfoRow({ label, value, Icon, onPress }: InfoRowProps) {
     >
       <View className="flex-row items-center">
         <AppIcon icon={Icon} size={16} color={colors.textMuted} />
-        <Text className="pl-2 pr-4 text-[14px] font-scdream" style={{ color: colors.textMuted }}>
+        <Text className="pl-2 pr-4 text-[16px] font-scdream" style={{ color: colors.textMuted }}>
           {label}
         </Text>
       </View>
       <View className="flex-1 flex-row items-center justify-end">
         <Text
-          className="text-right text-[14px] font-scdream leading-5"
+          className="text-right text-[16px] font-scdream leading-5"
           style={{ color: colors.text }}
           numberOfLines={1}
         >
@@ -62,7 +62,7 @@ function ActionRow({ label, destructive, onPress }: ActionRowProps) {
       style={{ borderColor: line }}
     >
       <Text
-        className="text-[14px] font-scdream"
+        className="text-[16px] font-scdream"
         style={{ color: destructive ? '#DC2626' : colors.text }}
       >
         {label}
@@ -139,7 +139,7 @@ export default function MyInfoScreen() {
             <AppIcon icon={User} size={34} color={colors.textMuted} />
           </View>
           <Text
-            className="mt-4 text-center text-[30px] font-scdream-bold tracking-tight"
+            className="mt-4 text-center text-[32px] font-scdream-bold tracking-tight"
             style={{ color: colors.text }}
             numberOfLines={1}
           >
@@ -147,7 +147,7 @@ export default function MyInfoScreen() {
           </Text>
         </View>
 
-        <Text className="mb-1 text-[12px] font-scdream tracking-wide" style={{ color: colors.textMuted }}>
+        <Text className="mb-1 text-[14px] font-scdream tracking-wide" style={{ color: colors.textMuted }}>
           계정 정보
         </Text>
         <InfoRow
@@ -183,7 +183,7 @@ export default function MyInfoScreen() {
 
         <View className="h-8" />
 
-        <Text className="mb-1 text-[12px] font-scdream tracking-wide" style={{ color: colors.textMuted }}>
+        <Text className="mb-1 text-[14px] font-scdream tracking-wide" style={{ color: colors.textMuted }}>
           계정 관리
         </Text>
         <ActionRow label="비밀번호 변경" onPress={handlePasswordChange} />

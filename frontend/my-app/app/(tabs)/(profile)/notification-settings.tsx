@@ -118,7 +118,7 @@ export default function NotificationSettingsScreen() {
             style={neuRaised(16, colors.surface)}
           >
             <View>
-              <Text className="text-[16px] font-scdream-bold mb-1" style={{ color: colors.text }}>
+              <Text className="text-[18px] font-scdream-bold mb-1" style={{ color: colors.text }}>
                 챙김 알림 시각
               </Text>
             </View>
@@ -128,7 +128,7 @@ export default function NotificationSettingsScreen() {
               className="px-3 py-1.5 rounded-lg"
               style={{ backgroundColor: `${colors.primary}15` }}
             >
-              <Text className="text-[16px] font-scdream-bold" style={{ color: colors.primary }}>
+              <Text className="text-[18px] font-scdream-bold" style={{ color: colors.primary }}>
                 {carryTime || '설정 필요'}
               </Text>
             </TouchableOpacity>
@@ -168,10 +168,10 @@ function SettingItem({
       style={neuRaised(16, colors.surface)}
     >
       <View className="flex-1 mr-3">
-        <Text className="text-[16px] font-scdream-bold mb-1" style={{ color: colors.text }}>
+        <Text className="text-[18px] font-scdream-bold mb-1" style={{ color: colors.text }}>
           {label}
         </Text>
-        <Text className="text-[12px] font-scdream-regular" style={{ color: colors.textMuted }}>
+        <Text className="text-[14px] font-scdream-regular" style={{ color: colors.textMuted }}>
           {description}
         </Text>
       </View>
