@@ -83,6 +83,7 @@ public class ReportService {
     /**
      * 로그인 사용자 기준으로 리포트를 생성 또는 갱신합니다.
      */
+    @Transactional
     public ReportCreateResponse createOrUpdateReport(Long userId) {
         // 1. 사용자 조회
         User user = userRepository.findById(userId)
@@ -135,6 +136,9 @@ public class ReportService {
         List<ReportRecommendedProduct> recommendedProducts = recommendedProductRepository.findAllByReport_ReportId(reportId);
         List<ReportIntakeTimingRecommendation> timingRecommendations = timingRecommendationRepository.findAllByReport_ReportId(reportId);
 
+        // 2.5 사용자별 섭취 타이밍 설정 조회 (N+1 방지용 Map 활용)
+        Map<IntakeTiming, LocalTime> timingSettingMap = buildTimingSettingMap(userId);
+
         // 3. 추천 제품 그룹화 (Ingredient 기준)
         List<ReportDetailResponse.RecommendedProductsByIngredientDto> productsByIngredient = recommendedProducts.stream()
                 .collect(Collectors.groupingBy(rrp -> rrp.getIngredient().getIngredientId()))
@@ -166,11 +170,17 @@ public class ReportService {
                 .collect(Collectors.groupingBy(ReportIntakeTimingRecommendation::getIntakeTiming))
                 .entrySet().stream()
                 .map(entry -> {
+                    IntakeTiming timing = entry.getKey();
+                    LocalTime settingTime = timingSettingMap.get(timing);
+                    String intakeTimeStr = (settingTime != null) ? settingTime.format(TIME_FORMATTER) : null;
+
                     List<String> supplementAliases = entry.getValue().stream()
                             .map(ritr -> ritr.getSupplement().getAlias())
                             .collect(Collectors.toList());
+
                     return ReportDetailResponse.IntakeRecommendationSummaryDto.builder()
-                            .intakeTiming(entry.getKey())
+                            .intakeTiming(timing)
+                            .intakeTime(intakeTimeStr)
                             .supplements(supplementAliases)
                             .build();
                 })
@@ -216,13 +226,21 @@ public class ReportService {
             log.info("[ReportService] FastAPI raw body={}", responseEntity.getBody());
 
             String rawBody = responseEntity.getBody();
+            log.info("[ReportService] rawBody={}", rawBody);
 
-            if (rawBody == null || rawBody.isBlank()) {
-                log.error("[ReportService] FastAPI raw body가 비어 있습니다. url={}", url);
-                throw new CustomException(INTERNAL_SERVER_ERROR, "AI 리포트 생성 서버로부터 응답을 받지 못했습니다.");
+            // "null" 문자열 체크 추가 (Jackson readValue("null") 은 null 을 반환함)
+            if (rawBody == null || rawBody.isBlank() || "null".equalsIgnoreCase(rawBody)) {
+                log.error("[ReportService] FastAPI raw body가 비어 있거나 'null'입니다. url={}", url);
+                throw new CustomException(INTERNAL_SERVER_ERROR, "AI 리포트 생성 서버로부터 유효한 응답을 받지 못했습니다.");
             }
 
             FastApiReportResponse body = objectMapper.readValue(rawBody, FastApiReportResponse.class);
+
+            // 파싱 결과 null 체크 (NPE 방지)
+            if (body == null) {
+                log.error("[ReportService] FastAPI 응답 파싱 결과가 null입니다. rawBody={}", rawBody);
+                throw new CustomException(INTERNAL_SERVER_ERROR, "AI 리포트 응답 형식이 올바르지 않습니다.");
+            }
 
             log.info("[ReportService] FastAPI parsed success={}", body.isSuccess());
             log.info("[ReportService] FastAPI parsed message={}", body.getMessage());

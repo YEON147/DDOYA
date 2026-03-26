@@ -50,6 +50,7 @@ public class ReportDetailResponse {
     @Builder
     public static class IntakeRecommendationSummaryDto {
         private IntakeTiming intakeTiming;
+        private String intakeTime;
         private List<String> supplements;
     }
 }
