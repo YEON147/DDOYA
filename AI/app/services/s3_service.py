@@ -8,6 +8,38 @@ import numpy as np
 from app.core.config import settings
 
 
+def _use_s3() -> bool:
+    return settings.STORAGE_BACKEND == "s3"
+
+
+def _validate_s3_settings() -> None:
+    missing_fields = []
+
+    if not settings.AWS_S3_BUCKET:
+        missing_fields.append("AWS_S3_BUCKET")
+    if not settings.AWS_ACCESS_KEY_ID:
+        missing_fields.append("AWS_ACCESS_KEY_ID")
+    if not settings.AWS_SECRET_ACCESS_KEY:
+        missing_fields.append("AWS_SECRET_ACCESS_KEY")
+    if not settings.AWS_DEFAULT_REGION:
+        missing_fields.append("AWS_DEFAULT_REGION or AWS_REGION")
+
+    if missing_fields:
+        joined = ", ".join(missing_fields)
+        raise ValueError(f"S3 설정이 누락되었습니다: {joined}")
+
+
+def _create_s3_client():
+    _validate_s3_settings()
+
+    return boto3.client(
+        "s3",
+        aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+        aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+        region_name=settings.AWS_DEFAULT_REGION,
+    )
+
+
 def _build_reference_key(user_supplement_id: int | None = None) -> str:
     if user_supplement_id is not None:
         filename = f"{user_supplement_id}.npz"
@@ -33,19 +65,15 @@ def save_reference_bundle(
     np.savez_compressed(buffer, **bundle)
     buffer.seek(0)
 
-    if settings.STORAGE_BACKEND == "s3":
-        client = boto3.client(
-            "s3",
-            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-            region_name=settings.AWS_DEFAULT_REGION,
-        )
+    if _use_s3():
+        client = _create_s3_client()
         client.put_object(
             Bucket=settings.AWS_S3_BUCKET,
             Key=key,
             Body=buffer.getvalue(),
             ContentType="application/octet-stream",
         )
+        print(f"[S3 UPLOAD OK] bucket={settings.AWS_S3_BUCKET}, key={key}")
         return key
 
     # local fallback
@@ -56,6 +84,7 @@ def save_reference_bundle(
         f.write(buffer.getvalue())
 
     return key
+
 
 def load_reference_bundle(reference_embedding_path: str) -> dict[str, np.ndarray]:
     """
@@ -68,13 +97,11 @@ def load_reference_bundle(reference_embedding_path: str) -> dict[str, np.ndarray
         "shape_vector": np.ndarray
     }
     """
-    if settings.STORAGE_BACKEND == "s3":
-        client = boto3.client(
-            "s3",
-            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-            region_name=settings.AWS_DEFAULT_REGION,
-        )
+    if not reference_embedding_path:
+        raise ValueError("reference_embedding_path가 비어 있습니다.")
+
+    if _use_s3():
+        client = _create_s3_client()
         response = client.get_object(
             Bucket=settings.AWS_S3_BUCKET,
             Key=reference_embedding_path,
