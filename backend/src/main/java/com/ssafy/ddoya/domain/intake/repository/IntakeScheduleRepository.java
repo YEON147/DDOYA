@@ -98,4 +98,11 @@ public interface IntakeScheduleRepository extends JpaRepository<IntakeSchedule, 
         @Modifying(clearAutomatically = true)
         @Query("DELETE FROM IntakeSchedule s WHERE s.supplement.userSupplementId = :userSupplementId")
         void deleteByUserSupplementId(@Param("userSupplementId") Long userSupplementId);
+
+    @Query("SELECT s FROM IntakeSchedule s " +
+           "WHERE s.supplement.userSupplementId IN :userSupplementIds " +
+           "AND s.scheduleType = :scheduleType")
+    List<IntakeSchedule> findBySupplementIdInAndScheduleType(
+            @Param("userSupplementIds") List<Long> userSupplementIds,
+            @Param("scheduleType") ScheduleType scheduleType);
 }
