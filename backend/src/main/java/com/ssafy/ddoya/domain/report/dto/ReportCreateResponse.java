@@ -45,6 +45,9 @@ public class ReportCreateResponse {
     @Builder
     public static class TimingRecommendationWithTimeDto {
 
+        @JsonProperty("has_registered_schedule")
+        private Boolean hasRegisteredSchedule;
+
         @JsonProperty("user_supplement_id")
         private Long userSupplementId;
 
