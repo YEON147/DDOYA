@@ -4,25 +4,36 @@ import { colors } from '@/constants/theme/colors';
 import { AppIcon } from '@/src/components/common/AppIcon';
 import type { DailyIntakeScheduleSlotItem } from '@/src/types/intakeRoutine';
 import { scaleByWidth } from '@/src/utils/responsive';
+import { slotFailDeadline } from '@/src/utils/nextIntake';
 
 export type HomeIntakeSlotProps = {
   timeLabel: string;
+  intakeTime: string;
+  plannedAt?: string;
+  now: Date;
   items: DailyIntakeScheduleSlotItem[];
   onPressCamera?: (scheduleIds: number[]) => void;
 };
 
 /** 홈 — 시간대별 섭취 인증 카드 (Soft Wellness) */
-export function HomeIntakeSlot({ timeLabel, items, onPressCamera }: HomeIntakeSlotProps) {
+export function HomeIntakeSlot({ timeLabel, intakeTime, plannedAt, now, items, onPressCamera }: HomeIntakeSlotProps) {
   const { width } = useWindowDimensions();
   const scheduleIds = items.map((i) => i.scheduleId);
   const hasItems = items.length > 0;
-  const completedCount = items.filter((i) => i.status === 'TAKEN' || i.status === 'SKIPPED').length;
-  const remainingCount = Math.max(0, items.length - completedCount);
+  const completedCount = items.filter((i) => i.status === 'TAKEN' || i.status === 'SKIPPED' || i.status === 'MISSED').length;
+  const pendingCount = Math.max(0, items.length - completedCount);
+  const pseudoSlot = { intakeTime, plannedAt: plannedAt ?? '', items };
+  const deadline = slotFailDeadline(pseudoSlot);
+  const isTimedOut = hasItems && pendingCount > 0 && !!deadline && now.getTime() >= deadline.getTime();
+  const hasMissed = items.some((i) => i.status === 'MISSED');
+  const isFailedSlot = isTimedOut || hasMissed;
+  const remainingCount = isTimedOut ? 0 : pendingCount;
   const isSlotCompleted = hasItems && remainingCount === 0;
   const success = '#2FB58A';
   const successBg = `${success}12`;
   const successBorder = `${success}33`;
   const STAMP_IMAGE = require('../../../assets/images/DDOYA_stamp.png');
+  const FAIL_STAMP_IMAGE = require('../../../assets/images/fail.png');
   const bubblePaddingH = scaleByWidth(width, 22, { min: 16, max: 24 });
   const bubblePaddingV = scaleByWidth(width, 18, { min: 14, max: 22 });
   const BUBBLE_RADIUS = 'rounded-3xl';
@@ -60,7 +71,7 @@ export function HomeIntakeSlot({ timeLabel, items, onPressCamera }: HomeIntakeSl
                 }}
               >
                 <Image
-                  source={STAMP_IMAGE}
+                  source={isFailedSlot ? FAIL_STAMP_IMAGE : STAMP_IMAGE}
                   style={{ width: stampSize, height: stampSize, alignSelf: 'center' }}
                   resizeMode="contain"
                 />
@@ -97,12 +108,12 @@ export function HomeIntakeSlot({ timeLabel, items, onPressCamera }: HomeIntakeSl
                     <View />
                   ) : (
                     <Pressable
-                      disabled={!hasItems}
+                      disabled={!hasItems || isFailedSlot}
                       onPress={() => onPressCamera?.(scheduleIds)}
                       hitSlop={10}
                       className="h-10 w-10 items-center justify-center rounded-full"
                       style={({ pressed }) => ({
-                        opacity: !hasItems ? 0.42 : pressed ? 0.86 : 1,
+                        opacity: !hasItems || isFailedSlot ? 0.42 : pressed ? 0.86 : 1,
                         backgroundColor: `${colors.primary}0F`,
                         borderWidth: 1,
                         borderColor: `${colors.shadowDark}18`,
@@ -117,7 +128,9 @@ export function HomeIntakeSlot({ timeLabel, items, onPressCamera }: HomeIntakeSl
                 {!hasItems
                   ? '이 시간대엔 등록된 영양제가 없어요.'
                   : isSlotCompleted
-                    ? '이 시간대 섭취를 완료했어요'
+                    ? isFailedSlot
+                      ? '섭취 가능 시간이 지나 실패 처리됐어요'
+                      : '이 시간대 섭취를 완료했어요'
                     : '사진으로 섭취 인증을 해주세요'}
               </Text>
             </View>
@@ -143,9 +156,17 @@ export function HomeIntakeSlot({ timeLabel, items, onPressCamera }: HomeIntakeSl
                       {items.map((it, idx) => {
                         const isTaken = it.status === 'TAKEN';
                         const isSkipped = it.status === 'SKIPPED';
-                        const badgeBg = isTaken ? successBg : isSkipped ? `${colors.shadowDark}10` : `${colors.input}AA`;
-                        const badgeBorder = isTaken ? successBorder : `${colors.shadowDark}22`;
-                        const badgeText = isTaken ? success : colors.textMuted;
+                        const isMissed = it.status === 'MISSED';
+                        const missed = '#D95F5F';
+                        const badgeBg = isTaken
+                          ? successBg
+                          : isMissed
+                            ? `${missed}12`
+                            : isSkipped
+                              ? `${colors.shadowDark}10`
+                              : `${colors.input}AA`;
+                        const badgeBorder = isTaken ? successBorder : isMissed ? `${missed}40` : `${colors.shadowDark}22`;
+                        const badgeText = isTaken ? success : isMissed ? missed : colors.textMuted;
 
                         return (
                           <View
