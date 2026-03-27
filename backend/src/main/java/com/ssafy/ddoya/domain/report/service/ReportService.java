@@ -5,6 +5,9 @@ import com.ssafy.ddoya.domain.common.entity.IngredientMaster;
 import com.ssafy.ddoya.domain.common.entity.Product;
 import com.ssafy.ddoya.domain.common.repository.IngredientMasterRepository;
 import com.ssafy.ddoya.domain.common.repository.ProductRepository;
+import com.ssafy.ddoya.domain.intake.entity.IntakeSchedule;
+import com.ssafy.ddoya.domain.intake.entity.ScheduleType;
+import com.ssafy.ddoya.domain.intake.repository.IntakeScheduleRepository;
 import com.ssafy.ddoya.domain.report.dto.FastApiReportRequest;
 import com.ssafy.ddoya.domain.report.dto.FastApiReportResponse;
 import com.ssafy.ddoya.domain.report.dto.ReportCreateResponse;
@@ -79,6 +82,7 @@ public class ReportService {
     private final ReportCommentsRepository reportCommentsRepository;
     private final IngredientMasterRepository ingredientMasterRepository;
     private final ProductRepository productRepository;
+    private final IntakeScheduleRepository intakeScheduleRepository;
 
     /**
      * 로그인 사용자 기준으로 리포트를 생성 또는 갱신합니다.
@@ -351,7 +355,7 @@ public class ReportService {
 
         // timing_recommendations에 intake_time 주입하여 응답 DTO 조립
         List<ReportCreateResponse.TimingRecommendationWithTimeDto> timingWithTime =
-                buildTimingWithTime(data.getTimingRecommendations(), timingSettingMap);
+                buildTimingWithTime(user.getUserId(), data.getTimingRecommendations(), timingSettingMap);
 
         return ReportCreateResponse.builder()
                 .reportId(reportId)
@@ -366,11 +370,10 @@ public class ReportService {
     }
 
     /**
-     * FastAPI의 timing_recommendations 목록에 사용자 설정 intake_time을 주입합니다.
-     * FastAPI는 intake_timings를 List<String>으로 내려주며,
-     * 이를 클라이언트 응답용 List<IntakeTimingInfo> 객체로 변환합니다.
+     * FastAPI의 timing_recommendations 목록에 사용자 설정 intake_time 또는 실제 등록된 스케줄 시각을 주입합니다.
      */
     private List<ReportCreateResponse.TimingRecommendationWithTimeDto> buildTimingWithTime(
+            Long userId,
             List<FastApiReportResponse.TimingRecommendationDto> timingDtos,
             Map<IntakeTiming, LocalTime> timingSettingMap) {
 
@@ -380,27 +383,52 @@ public class ReportService {
 
         List<ReportCreateResponse.TimingRecommendationWithTimeDto> result = new ArrayList<>();
         for (FastApiReportResponse.TimingRecommendationDto dto : timingDtos) {
+            Long supplementId = dto.getUserSupplementId();
+            List<IntakeSchedule> registeredSchedules = intakeScheduleRepository
+                    .findBySupplementIdAndUserIdAndScheduleType(supplementId, userId, ScheduleType.INTAKE);
+
+            boolean hasRegisteredSchedule = !registeredSchedules.isEmpty();
             List<ReportCreateResponse.TimingRecommendationWithTimeDto.IntakeTimingInfo> timingInfos = new ArrayList<>();
 
             List<String> rawTimings = dto.getIntakeTimings();
-            if (rawTimings != null) {
-                for (String timingStr : rawTimings) {
-                    String intakeTimeStr = resolveIntakeTime(timingStr, timingSettingMap);
+
+            if (hasRegisteredSchedule) {
+                // Case A: 등록된 스케줄이 있는 경우 -> 실제 스케줄 시각 사용
+                // intake_timing은 리포트가 추천한 순서대로 매칭 (부족하면 마지막 추천 타이밍 재사용)
+                for (int i = 0; i < registeredSchedules.size(); i++) {
+                    IntakeSchedule schedule = registeredSchedules.get(i);
+                    String label = (rawTimings != null && !rawTimings.isEmpty())
+                            ? (i < rawTimings.size() ? rawTimings.get(i) : rawTimings.get(rawTimings.size() - 1))
+                            : null;
+
                     timingInfos.add(ReportCreateResponse.TimingRecommendationWithTimeDto.IntakeTimingInfo.builder()
-                            .intakeTiming(timingStr)
-                            .intakeTime(intakeTimeStr)
+                            .intakeTiming(label)
+                            .intakeTime(schedule.getIntakeTime().format(TIME_FORMATTER))
                             .build());
+                }
+            } else {
+                // Case B: 등록된 스케줄이 없는 경우 -> 리포트 추천 타이밍 + 사용자 기본 설정 시각 사용
+                if (rawTimings != null) {
+                    for (String timingStr : rawTimings) {
+                        String intakeTimeStr = resolveIntakeTime(timingStr, timingSettingMap);
+                        timingInfos.add(ReportCreateResponse.TimingRecommendationWithTimeDto.IntakeTimingInfo.builder()
+                                .intakeTiming(timingStr)
+                                .intakeTime(intakeTimeStr)
+                                .build());
+                    }
                 }
             }
 
             result.add(ReportCreateResponse.TimingRecommendationWithTimeDto.builder()
-                    .userSupplementId(dto.getUserSupplementId())
+                    .hasRegisteredSchedule(hasRegisteredSchedule)
+                    .userSupplementId(supplementId)
                     .alias(dto.getAlias())
                     .intakeTimings(timingInfos)
                     .build());
         }
         return result;
     }
+
 
     /**
      * intakeTiming 문자열을 enum으로 변환하여 사용자 설정 시각을 HH:mm로 반환합니다.
