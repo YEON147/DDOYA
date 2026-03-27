@@ -31,7 +31,7 @@ public class ReportIngredientAnalysis {
     @Column(name = "normalized_ingredient_name", nullable = false, length = 100)
     private String normalizedIngredientName;
 
-    @Column(name = "recommended_amount", nullable = false, precision = 10, scale = 2)
+    @Column(name = "recommended_amount", precision = 10, scale = 2)
     private BigDecimal recommendedAmount;
 
     @Column(name = "current_amount", precision = 10, scale = 2)
