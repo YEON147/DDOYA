@@ -76,3 +76,18 @@ export interface IntakeCertificationResultData {
 }
 
 export type IntakeCertificationResponse = SuccessResponse<IntakeCertificationResultData>;
+
+export type IntakeRecordStatusUpdate = 'MISSED' | 'SKIPPED';
+
+export interface IntakeRecordStatusUpdateRequest {
+  status: IntakeRecordStatusUpdate;
+}
+
+export interface IntakeRecordStatusUpdateData {
+  intakeRecordId: number;
+  scheduleId: number;
+  status: IntakeScheduleItemStatus;
+  actionAt: string | null;
+}
+
+export type IntakeRecordStatusUpdateResponse = SuccessResponse<IntakeRecordStatusUpdateData>;

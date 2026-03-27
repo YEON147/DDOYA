@@ -33,11 +33,7 @@ export default function SupplementsScreen() {
   const [failedImageIds, setFailedImageIds] = React.useState<Record<number, true>>({});
   
   const showReportBanner = React.useMemo(() => {
-    if (!report) return false;
-    // 백엔드 플래그가 있으면 우선 활용
-    if (report.needsRefresh) return true;
-
-    if (!data?.supplements) return false;
+    if (!report || !data?.supplements) return false;
 
     // 현재 등록된 영양제 ID 목록
     const currentIds = (data.supplements as any[])
@@ -46,8 +42,9 @@ export default function SupplementsScreen() {
       .join(',');
 
     // 최근 리포트에 포함된 영양제 ID 목록
-    const reportedIds = (report.timing_recommendations || [])
-      .map((r: any) => r.user_supplement_id)
+    const recommendations = report.timing_recommendations || report.timingRecommendations || [];
+    const reportedIds = recommendations
+      .map((r: any) => r.user_supplement_id || r.userSupplementId)
       .sort((a: number, b: number) => a - b)
       .join(',');
 

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supplementApi } from '@/src/api/supplement';
 import { reportApi } from '@/src/api/report';
 import { useSupplementsList } from '@/hooks/useSupplement';
 import { intakeRoutineApi } from '@/src/api/intakeRoutine';
@@ -40,8 +41,13 @@ export default function ReportsScreen() {
   const [selectedTiming, setSelectedTiming] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState('09:00');
   
-  // 수정된 시간들을 보관하는 로컬 맵 { INTAKE_TIMING_ENUM: 'HH:mm' }
-  const [tempTimes, setTempTimes] = useState<Record<string, string>>({});
+  // 수정된 시간들을 보관하는 로컬 맵 { "userSupplementId_INTAKE_TIMING_ENUM": 'HH:mm' }
+  const [tempSupplementTimes, setTempSupplementTimes] = useState<Record<string, string>>({});
+
+  // 헬퍼: 추천 시점 정보를 찾아 반환 (SNAKE_CASE/camelCase 대응)
+  const getTimingRecommendations = (rep: any) => {
+    return rep?.timing_recommendations || rep?.timingRecommendations || [];
+  };
 
   // 리포트 데이터 조회
   const { data: reportResponse, isLoading, error, refetch } = useQuery({
@@ -61,8 +67,9 @@ export default function ReportsScreen() {
       .sort((a: number, b: number) => a - b)
       .join(',');
 
-    const reportedIds = (report.timing_recommendations || [])
-      .map((r: any) => r.user_supplement_id)
+    const recommendations = getTimingRecommendations(report);
+    const reportedIds = recommendations
+      .map((r: any) => r.user_supplement_id || r.userSupplementId)
       .sort((a: number, b: number) => a - b)
       .join(',');
 
@@ -82,42 +89,33 @@ export default function ReportsScreen() {
   useEffect(() => {
     if (mode === 'edit' && report) {
       const initialTimes: Record<string, string> = {};
-      report.timing_recommendations.forEach(rec => {
-        rec.intake_timings.forEach(info => {
-          if (info.intake_time) {
-            initialTimes[info.intake_timing] = info.intake_time;
+      const recommendations = getTimingRecommendations(report);
+      
+      recommendations.forEach((rec: any) => {
+        const supId = rec.user_supplement_id || rec.userSupplementId;
+        const timings = rec.intake_timings || rec.intakeTimings || [];
+        timings.forEach((info: any) => {
+          const timingEnum = info.intake_timing || info.intakeTiming;
+          const intakeTime = info.intake_time || info.intakeTime;
+          if (supId && timingEnum && intakeTime) {
+            initialTimes[`${supId}_${timingEnum}`] = intakeTime;
           }
         });
       });
-      setTempTimes(initialTimes);
+      setTempSupplementTimes(initialTimes);
     }
   }, [mode, report]);
 
   // 리포트 갱신 Mutation
   const refreshMutation = useMutation({
     mutationFn: () => reportApi.updateReport(),
-    onSuccess: (res) => {
-      // 갱신된 데이터를 캐시에 즉시 반영
-      queryClient.setQueryData(['report'], res.data);
-      queryClient.invalidateQueries({ queryKey: ['report'] });
+    onSuccess: async (res) => {
+      // 갱신 성공 시 데이터 정합성을 위해 쿼리 무효화 및 다시 불러오기
+      await queryClient.invalidateQueries({ queryKey: ['report'] });
+      await queryClient.invalidateQueries({ queryKey: ['intakeSettings'] });
+      
       setMode('edit');
-      
-      const newReport = res?.data?.data;
-      if (newReport && newReport.timing_recommendations) {
-        const initialTimes: Record<string, string> = {};
-        newReport.timing_recommendations.forEach(rec => {
-          if (rec.intake_timings) {
-            rec.intake_timings.forEach(info => {
-              if (info.intake_time) {
-                initialTimes[info.intake_timing] = info.intake_time;
-              }
-            });
-          }
-        });
-        setTempTimes(initialTimes);
-      }
-      
-      Alert.alert('리포트 갱신 완료', '최신 정보를 바탕으로 분석이 완료되었습니다. 추천 시간을 확인해 주세요.');
+      Alert.alert('리포트 갱신 완료', '최신 정보를 바탕으로 분석이 완료되었습니다. 영양제별 추천 시간을 확인해 주세요.');
     },
     onError: () => {
       Alert.alert('오류', '리포트 갱신 중 문제가 발생했습니다.');
@@ -127,54 +125,148 @@ export default function ReportsScreen() {
   // 저장 처리
   const [isSaving, setIsSaving] = useState(false);
   const handleSave = async () => {
-    if (Object.keys(tempTimes).length === 0) {
+    if (Object.keys(tempSupplementTimes).length === 0) {
       router.replace('/(tabs)/(home)');
       return;
     }
 
     setIsSaving(true);
     try {
-      // tempTimes: { BREAKFAST: '09:00' }
-      // settings에서 해당 enum에 맞는 display명을 갖는 settingId 탐색
-      // (백엔드 DTO가 intakeTiming에 displayName을 넣어주므로 매핑 필요)
-      const savePromises = Object.entries(tempTimes).map(([timingEnum, time]) => {
-        const displayName = TIMING_DISPLAY_MAP[timingEnum];
-        const setting = settings.find((s: any) => s.intakeTiming === displayName);
+      // 1. 변경된 영양제 ID 목록 추출
+      const changedSupIds = Array.from(new Set(
+        Object.keys(tempSupplementTimes).map(key => parseInt(key.split('_')[0]))
+      ));
+
+      // 2. 각 영양제별로 상세 정보를 조회하여 스케줄을 업데이트함
+      for (const supId of changedSupIds) {
+        // 이미 가지고 있는 영양제 목록에서 기본 정보 찾기
+        const baseSup = (supplementsResponse?.supplements as any[])?.find(s => s.userSupplementId === supId);
+        if (!baseSup) continue;
+
+        // 상세 정보 조회를 통해 현재 스케줄(ID 포함)을 가져옴
+        const detailRes = await supplementApi.getSupplementById(supId);
+        const detail = detailRes.data.data;
         
-        if (setting) {
-          return intakeRoutineApi.updateSetting(setting.userIntakeTimingSettingId, { intakeTime: time });
-        }
-        return Promise.resolve();
-      });
+        // 리포트 추천에서 이 영양제에 대해 제안된 항목들
+        const recommendations = getTimingRecommendations(report).find((r: any) => (r.user_supplement_id || r.userSupplementId) === supId);
+        const timings = recommendations?.intake_timings || recommendations?.intakeTimings || [];
+
+        // 해당 영양제의 변경사항 적용
+        const updatedSchedules = detail.intakeSchedules.map((s: any, idx: number) => {
+          // 리포트에서 추천된 시점(예: AFTER_BREAKFAST)에 대해 유저가 수정한 시간이 있으면 반영.
+          // 순서대로(idx) 매칭하는 것이 가장 확실함 (DailyDose와 추천 개수는 동일함)
+          const matchedTiming = timings[idx];
+          const timingEnum = matchedTiming?.intake_timing || matchedTiming?.intakeTiming;
+          
+          const newTime = timingEnum ? tempSupplementTimes[`${supId}_${timingEnum}`] : null;
+          
+          return {
+            scheduleId: s.scheduleId,
+            intakeTime: newTime || s.intakeTime
+          };
+        });
+
+        // 영양제 정보 업데이트 API 호출
+        await supplementApi.updateSupplement(supId, {
+          alias: detail.alias,
+          dailyDose: detail.dailyDose,
+          dosePerIntake: detail.dosePerIntake,
+          stockQuantity: detail.stockQuantity,
+          stockNotificationEnabled: detail.stockNotificationEnabled,
+          intakeSchedules: updatedSchedules
+        });
+      }
       
-      await Promise.all(savePromises);
-      
-      // 저장 성공 후 리포트/세팅 쿼리 갱신
-      queryClient.invalidateQueries({ queryKey: ['report'] });
-      queryClient.invalidateQueries({ queryKey: ['intakeSettings'] });
+      // 저장 성공 후 모든 관련 쿼리 무효화 (동기화)
+      await queryClient.invalidateQueries({ queryKey: ['report'] });
+      await queryClient.invalidateQueries({ queryKey: ['intakeSettings'] });
+      await queryClient.invalidateQueries({ queryKey: ['supplements'] });
+      await queryClient.invalidateQueries({ queryKey: ['supplement'] }); // 개별 상세 쿼리도 무효화
+      await queryClient.invalidateQueries({ queryKey: ['intakeSchedule'] });
       
       Alert.alert('저장 완료', '맞춤 복용 시간이 반영되었습니다.', [
-        { text: '확인', onPress: () => router.replace('/(tabs)/(home)') }
+        { text: '확인', onPress: () => {
+          if (router.canDismiss()) {
+            router.dismissAll();
+          }
+          router.replace('/(tabs)/(home)');
+        }}
       ]);
     } catch (err) {
+      console.error(err);
       Alert.alert('저장 실패', '정보를 저장하지 못했습니다.');
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleEditTime = (userSupplementId: number, intakeTiming: string, initialTime: string) => {
+  const handleEditTime = (userSupplementId: number, timingEnum: string, initialTime: string) => {
     setSelectedSupplementId(userSupplementId);
-    setSelectedTiming(intakeTiming);
-    setCurrentTime(tempTimes[intakeTiming] || initialTime);
+    setSelectedTiming(timingEnum);
+    setCurrentTime(tempSupplementTimes[`${userSupplementId}_${timingEnum}`] || initialTime);
     setTimePickerVisible(true);
   };
 
   const handleTimeConfirm = (time: string) => {
-    if (selectedTiming) {
-      setTempTimes(prev => ({ ...prev, [selectedTiming]: time }));
+    if (selectedSupplementId && selectedTiming) {
+      setTempSupplementTimes(prev => ({ 
+        ...prev, 
+        [`${selectedSupplementId}_${selectedTiming}`]: time 
+      }));
     }
   };
+
+  // 영양제별 그룹화 로직 (새 구조: 전체 영양제 목록 기준)
+  const supplementRecommendations = React.useMemo(() => {
+    if (!supplementsResponse?.supplements) return [];
+    
+    // 리포트에서 추천 목록 추출 (데이터 구조 유연하게 대응)
+    const recommendations = getTimingRecommendations(report);
+    
+    return (supplementsResponse.supplements as any[]).map(sup => {
+      const supId = sup.userSupplementId;
+      // 해당 영양제에 대한 추천 정보 찾기
+      const rec = recommendations.find((r: any) => (r.user_supplement_id || r.userSupplementId) === supId);
+
+      if (rec) {
+        return {
+          userSupplementId: supId,
+          alias: rec.alias,
+          timings: (rec.intake_timings || rec.intakeTimings || []).map((info: any) => {
+            const timingEnum = info.intake_timing || info.intakeTiming;
+            const timingLabel = TIMING_DISPLAY_MAP[timingEnum] || timingEnum;
+            
+            // 기본 시간 우선순위: 1. 임시 변경값 -> 2. 리포트 추천값 -> 3. 전역 설정값 -> 4. 09:00
+            const globalSetting = settings.find(s => s.intakeTiming === timingLabel)?.intakeTime;
+            const intakeTime = tempSupplementTimes[`${supId}_${timingEnum}`] || info.intake_time || info.intakeTime || globalSetting || '09:00';
+            
+            return {
+              timingEnum,
+              timingLabel,
+              intakeTime
+            };
+          })
+        };
+      } else {
+        // 신규 영양제 (리포트에 아직 없는 경우)
+        // 기본적으로 '아침 식후'를 추천 시점 가이드로 노출 (유저 요구사항)
+        const defaultTiming = 'AFTER_BREAKFAST';
+        const timingLabel = TIMING_DISPLAY_MAP[defaultTiming];
+        const globalSetting = settings.find(s => s.intakeTiming === timingLabel)?.intakeTime;
+        
+        return {
+          userSupplementId: sup.userSupplementId,
+          alias: sup.alias,
+          timings: [{
+            timingEnum: defaultTiming,
+            timingLabel: `${timingLabel} (기본)`,
+            intakeTime: tempSupplementTimes[`${supId}_${defaultTiming}`] || globalSetting || '09:00'
+          }],
+          isNew: true
+        };
+      }
+    });
+  }, [report, supplementsResponse?.supplements, tempSupplementTimes, settings]);
 
   if (isLoading) {
     return (
@@ -201,18 +293,9 @@ export default function ReportsScreen() {
     );
   }
 
-  // 추천 제품 평탄화 (Flat list for UI)
-  const flatProducts = (report.recommendedProductsByIngredient || []).flatMap(group => 
-    group.recommendedProducts.map(p => ({
-      productCode: p.productCode,
-      productName: p.productName,
-      brand: p.brand || '',
-      pillImageUrl: p.pillImageUrl || ''
-    }))
-  ).slice(0, 5); // 최대 5개 유지
-
   // 날짜 포맷 (updatedAt: "2024-03-26T12:34:56" -> "2024.03.26")
-  const displayDate = report.updatedAt ? report.updatedAt.split('T')[0].replace(/-/g, '.') : '';
+  const updatedAt = report.updated_at || report.updatedAt;
+  const displayDate = updatedAt ? updatedAt.split('T')[0].replace(/-/g, '.') : '';
 
   return (
     <ScreenContainer header={<TopHeader title={mode === 'edit' ? "리포트 갱신" : "분석 리포트"} onBackPress={() => router.back()} />}>
@@ -254,21 +337,23 @@ export default function ReportsScreen() {
           <AnalysisReport comments={report.comments} />
 
           {/* 추천 제품 섹션 */}
-          <ProductRecommendation nickname={profile.nickname} products={flatProducts as any} />
+          <ProductRecommendation 
+            nickname={profile.nickname} 
+            products={(report.recommended_products_by_ingredient || report.recommendedProductsByIngredient || []).flatMap((group: any) => 
+              (group.recommended_products || group.recommendedProducts || []).map((p: any) => ({
+                productCode: p.product_code || p.productCode,
+                productName: p.product_name || p.productName,
+                brand: p.brand || '',
+                pillImageUrl: p.pill_image_url || p.pillImageUrl || ''
+              }))
+            ).slice(0, 5)} 
+          />
 
           {/* 갱신 모드 전용 섹션 */}
           {mode === 'edit' && (
             <View className="mt-4">
               <TimeRecommendation
-                recommendations={(report.timing_recommendations || []).flatMap(rec => 
-                  rec.intake_timings.map((info, idx) => ({
-                    userSupplementId: rec.user_supplement_id * 100 + idx, // 고유 키용 임시 조합
-                    name: rec.alias,
-                    intakeTiming: info.intake_timing,
-                    recommendedIntakeTime: tempTimes[info.intake_timing] || (info.intake_time || '09:00'),
-                    reason: `${TIMING_DISPLAY_MAP[info.intake_timing] || info.intake_timing} 추천`
-                  }))
-                )}
+                supplementRecommendations={supplementRecommendations}
                 onEditTime={handleEditTime}
               />
 

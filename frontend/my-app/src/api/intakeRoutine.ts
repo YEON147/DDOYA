@@ -7,6 +7,8 @@ import {
   DailyIntakeScheduleQuery,
   IntakeCertificationRequest,
   IntakeCertificationResponse,
+  IntakeRecordStatusUpdateRequest,
+  IntakeRecordStatusUpdateResponse,
 } from '../types/intakeRoutine';
 
 export const intakeRoutineApi = {
@@ -35,6 +37,10 @@ export const intakeRoutineApi = {
       throw e;
     }
   },
+
+  /** 섭취 기록 상태 변경 (`MISSED` | `SKIPPED`) */
+  updateIntakeRecordStatus: (intakeRecordId: number, payload: IntakeRecordStatusUpdateRequest) =>
+    apiClient.patch<IntakeRecordStatusUpdateResponse>(`/intake-records/${intakeRecordId}/status`, payload),
 };
 
 export function buildIntakeCertificationFormData(
