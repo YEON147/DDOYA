@@ -70,26 +70,43 @@ export default function SupplementDetailScreen() {
       setPillImageUrl(supplement.pillImageUrl);
       setBodyPartId(typeof supplement.bodyPartId === 'number' ? supplement.bodyPartId : null);
       setPillImageLoadFailed(false);
-      
-      // Determine daily dose: Priority to Report if specified
+
+      // 리포트에 저장된 복용 시간(PATCH /reports/{id}/intake-timings 결과)을 우선 반영
+      const reportRecommendations =
+        (report as any)?.timing_recommendations ||
+        (report as any)?.timingRecommendations ||
+        [];
+      const matchedRecommendation = reportRecommendations.find(
+        (r: any) => (r.user_supplement_id || r.userSupplementId) === id,
+      );
+      const reportTimings = (matchedRecommendation?.intake_timings || matchedRecommendation?.intakeTimings || [])
+        .map((info: any) => info.intake_time || info.intakeTime)
+        .filter((time: string | null | undefined): time is string => !!time);
+
+      // Determine daily dose: Priority to report timings if specified
       let initialDose = supplement.dailyDose;
-      if (report?.intakeTimeRecommendations) {
-        const recommendations = report.intakeTimeRecommendations.filter(r => r.userSupplementId === id);
-        if (recommendations.length > 0) {
-          initialDose = recommendations.length;
-        }
+      if (reportTimings.length > 0) {
+        initialDose = reportTimings.length;
       }
       setDailyDose(initialDose);
-      
+
       setDosePerIntake(supplement.dosePerIntake);
       setStockQuantity(supplement.stockQuantity);
       setStockNotificationEnabled(supplement.stockNotificationEnabled);
-      
+
       // Process schedules: ensure length matches initialDose
       let schedules = supplement.intakeSchedules.map(s => ({
         scheduleId: s.scheduleId,
         intakeTime: s.intakeTime,
       }));
+
+      // 상세 조회에서 리포트 저장 시간이 보이도록 기존 스케줄을 reportTimings로 덮어쓴다.
+      if (reportTimings.length > 0) {
+        schedules = reportTimings.map((time, index) => ({
+          scheduleId: schedules[index]?.scheduleId ?? null,
+          intakeTime: time,
+        }));
+      }
 
       // Pad if less than daily dose
       if (schedules.length < initialDose) {

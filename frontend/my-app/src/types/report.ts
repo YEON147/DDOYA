@@ -9,6 +9,8 @@ export interface ReportDetail {
   updatedAt?: string;
   is_editable: boolean;
   isEditable?: boolean;
+  ingredient_analysis?: IngredientAnalysis[];
+  ingredientAnalysis?: IngredientAnalysis[];
   comments: ReportComments | null;
   recommended_products_by_ingredient: RecommendedProductsByIngredient[];
   recommendedProductsByIngredient?: RecommendedProductsByIngredient[];
@@ -42,6 +44,15 @@ export interface RecommendedProduct {
   pillImageUrl?: string;
 }
 
+export interface IngredientAnalysis {
+  ingredient_id?: number;
+  ingredientId?: number;
+  normalized_ingredient_name?: string;
+  normalizedIngredientName?: string;
+  analysis_type?: 'EXCESS' | 'DEFICIENCY' | 'NORMAL';
+  analysisType?: 'EXCESS' | 'DEFICIENCY' | 'NORMAL';
+}
+
 /** 리포트 생성/갱신 응답 (POST /reports) */
 export interface ReportCreateDetail {
   reportId: number;
@@ -65,5 +76,20 @@ export interface IntakeTimingInfo {
   intake_time: string | null;
 }
 
+export interface ReportIntakeTimingsSaveRequest {
+  userSupplements: {
+    userSupplementId: number;
+    intakeTimes: string[];
+  }[];
+}
+
+export interface ReportIntakeTimingsSaveData {
+  reportId: number;
+  saved_count: number;
+  updated_supplement_count: number;
+  needsRefresh: boolean;
+}
+
 export type ReportResponse = SuccessResponse<ReportDetail>;
 export type ReportCreateResponse = SuccessResponse<ReportCreateDetail>;
+export type ReportIntakeTimingsSaveResponse = SuccessResponse<ReportIntakeTimingsSaveData>;

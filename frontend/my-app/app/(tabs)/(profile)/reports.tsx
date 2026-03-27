@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, ScrollView, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supplementApi } from '@/src/api/supplement';
 import { reportApi } from '@/src/api/report';
 import { useSupplementsList } from '@/hooks/useSupplement';
 import { intakeRoutineApi } from '@/src/api/intakeRoutine';
 import { useUserProfileStore } from '@/src/store/userProfileStore';
+import { useAuthStore } from '@/src/store/authStore';
 import { AnalysisReport } from '@/src/components/profile/report/AnalysisReport';
 import { ProductRecommendation } from '@/src/components/profile/report/ProductRecommendation';
 import { TimeRecommendation } from '@/src/components/profile/report/TimeRecommendation';
@@ -15,6 +15,7 @@ import { TopHeader } from '@/src/components/common/TopHeader';
 import { AppButton } from '@/src/components/common/AppButton';
 import { TimePicker } from '@/src/components/common/TimePicker';
 import { colors } from '@/constants/theme/colors';
+import { softWellnessCard } from '@/constants/theme/neumorphism';
 import { Ionicons } from '@expo/vector-icons';
 
 const TIMING_DISPLAY_MAP: Record<string, string> = {
@@ -30,6 +31,7 @@ const TIMING_DISPLAY_MAP: Record<string, string> = {
 export default function ReportsScreen() {
   const queryClient = useQueryClient();
   const { profile } = useUserProfileStore();
+  const authNickname = useAuthStore((s) => s.nickname);
   const params = useLocalSearchParams<{ mode?: 'view' | 'edit'; from?: 'banner' }>();
   
   // 화면 모드: 'view' (마이페이지 진입 시), 'edit' (갱신 버튼 클릭 시 또는 파라미터로 전달 시)
@@ -43,6 +45,7 @@ export default function ReportsScreen() {
   
   // 수정된 시간들을 보관하는 로컬 맵 { "userSupplementId_INTAKE_TIMING_ENUM": 'HH:mm' }
   const [tempSupplementTimes, setTempSupplementTimes] = useState<Record<string, string>>({});
+  const hasTriggeredAutoReportRefresh = useRef(false);
 
   // 헬퍼: 추천 시점 정보를 찾아 반환 (SNAKE_CASE/camelCase 대응)
   const getTimingRecommendations = (rep: any) => {
@@ -113,6 +116,7 @@ export default function ReportsScreen() {
       // 갱신 성공 시 데이터 정합성을 위해 쿼리 무효화 및 다시 불러오기
       await queryClient.invalidateQueries({ queryKey: ['report'] });
       await queryClient.invalidateQueries({ queryKey: ['intakeSettings'] });
+      await queryClient.refetchQueries({ queryKey: ['report'] });
       
       setMode('edit');
       Alert.alert('리포트 갱신 완료', '최신 정보를 바탕으로 분석이 완료되었습니다. 영양제별 추천 시간을 확인해 주세요.');
@@ -122,59 +126,115 @@ export default function ReportsScreen() {
     },
   });
 
+  // GET 리포트에 성분 분석이 비어 있으면 1회 자동 갱신 시도
+  useEffect(() => {
+    if (!report || refreshMutation.isPending || hasTriggeredAutoReportRefresh.current) return;
+    const ingredientAnalysis = report.ingredient_analysis || report.ingredientAnalysis || [];
+    if (Array.isArray(ingredientAnalysis) && ingredientAnalysis.length === 0) {
+      hasTriggeredAutoReportRefresh.current = true;
+      refreshMutation.mutate();
+    }
+  }, [report, refreshMutation]);
+
   // 저장 처리
   const [isSaving, setIsSaving] = useState(false);
   const handleSave = async () => {
-    if (Object.keys(tempSupplementTimes).length === 0) {
-      router.replace('/(tabs)/(home)');
-      return;
-    }
-
     setIsSaving(true);
     try {
-      // 1. 변경된 영양제 ID 목록 추출
-      const changedSupIds = Array.from(new Set(
-        Object.keys(tempSupplementTimes).map(key => parseInt(key.split('_')[0]))
-      ));
+      const reportId = report?.reportId ?? report?.report_id;
+      if (!reportId) {
+        Alert.alert('저장 실패', '리포트 ID를 확인할 수 없습니다.');
+        return;
+      }
 
-      // 2. 각 영양제별로 상세 정보를 조회하여 스케줄을 업데이트함
-      for (const supId of changedSupIds) {
-        // 이미 가지고 있는 영양제 목록에서 기본 정보 찾기
-        const baseSup = (supplementsResponse?.supplements as any[])?.find(s => s.userSupplementId === supId);
-        if (!baseSup) continue;
+      const recommendations = getTimingRecommendations(report);
+      let userSupplements = recommendations
+        .map((rec: any) => {
+          const userSupplementId = rec.user_supplement_id || rec.userSupplementId;
+          const intakeTimings = rec.intake_timings || rec.intakeTimings || [];
+          const intakeTimes = Array.from(
+            new Set(
+              intakeTimings
+                .map((info: any) => {
+                  const timingEnum = info.intake_timing || info.intakeTiming;
+                  const defaultTime = info.intake_time || info.intakeTime || '';
+                  return tempSupplementTimes[`${userSupplementId}_${timingEnum}`] || defaultTime;
+                })
+                .filter((time: string) => /^([01]\d|2[0-3]):([0-5]\d)$/.test(time)),
+            ),
+          );
 
-        // 상세 정보 조회를 통해 현재 스케줄(ID 포함)을 가져옴
-        const detailRes = await supplementApi.getSupplementById(supId);
-        const detail = detailRes.data.data;
-        
-        // 리포트 추천에서 이 영양제에 대해 제안된 항목들
-        const recommendations = getTimingRecommendations(report).find((r: any) => (r.user_supplement_id || r.userSupplementId) === supId);
-        const timings = recommendations?.intake_timings || recommendations?.intakeTimings || [];
+          return { userSupplementId, intakeTimes };
+        })
+        .filter(
+          (item: { userSupplementId: number; intakeTimes: string[] } | null): item is { userSupplementId: number; intakeTimes: string[] } =>
+            !!item && !!item.userSupplementId && item.intakeTimes.length > 0,
+        );
 
-        // 해당 영양제의 변경사항 적용
-        const updatedSchedules = detail.intakeSchedules.map((s: any, idx: number) => {
-          // 리포트에서 추천된 시점(예: AFTER_BREAKFAST)에 대해 유저가 수정한 시간이 있으면 반영.
-          // 순서대로(idx) 매칭하는 것이 가장 확실함 (DailyDose와 추천 개수는 동일함)
-          const matchedTiming = timings[idx];
-          const timingEnum = matchedTiming?.intake_timing || matchedTiming?.intakeTiming;
-          
-          const newTime = timingEnum ? tempSupplementTimes[`${supId}_${timingEnum}`] : null;
-          
-          return {
-            scheduleId: s.scheduleId,
-            intakeTime: newTime || s.intakeTime
-          };
-        });
+      // recommendations 기반 결과가 비어 있으면 화면에 표시 중인 값으로 fallback 구성
+      if (userSupplements.length === 0) {
+        userSupplements = supplementRecommendations
+          .map((item) => ({
+            userSupplementId: item.userSupplementId,
+            intakeTimes: Array.from(
+              new Set(
+                item.timings
+                  .map((t: { intakeTime: string }) => t.intakeTime)
+                  .filter((time: string) => /^([01]\d|2[0-3]):([0-5]\d)$/.test(time)),
+              ),
+            ),
+          }))
+          .filter((item) => item.intakeTimes.length > 0);
+      }
 
-        // 영양제 정보 업데이트 API 호출
-        await supplementApi.updateSupplement(supId, {
-          alias: detail.alias,
-          dailyDose: detail.dailyDose,
-          dosePerIntake: detail.dosePerIntake,
-          stockQuantity: detail.stockQuantity,
-          stockNotificationEnabled: detail.stockNotificationEnabled,
-          intakeSchedules: updatedSchedules
-        });
+      if (userSupplements.length === 0) {
+        Alert.alert('저장 실패', '확정 저장할 영양제/시간이 없습니다.');
+        return;
+      }
+
+      console.log('[Report Save Debug] reportId:', reportId);
+      console.log('[Report Save Debug] PATCH payload:', { userSupplements });
+
+      // 1) 복용 시각 확정 저장
+      await reportApi.saveIntakeTimings(reportId, { userSupplements });
+
+      // 2) 저장 성공 후 리포트 재생성/갱신
+      try {
+        const refreshed = await reportApi.updateReport();
+
+        // POST /reports 응답에 최신 timing_recommendations가 포함되므로,
+        // GET /reports 재조회 타이밍 이슈가 있어도 화면에 즉시 반영되도록 캐시를 선반영
+        const refreshedData = refreshed?.data?.data;
+        if (refreshedData?.timing_recommendations) {
+          queryClient.setQueryData(['report'], (prev: any) => {
+            const prevDetail = prev?.data?.data ?? {};
+            return {
+              ...prev,
+              data: {
+                ...(prev?.data ?? {}),
+                data: {
+                  ...prevDetail,
+                  timing_recommendations: refreshedData.timing_recommendations,
+                  timingRecommendations: refreshedData.timing_recommendations,
+                  needsRefresh: refreshedData.needsRefresh ?? prevDetail.needsRefresh,
+                  updated_at: refreshedData.updatedAt ?? prevDetail.updated_at,
+                  updatedAt: refreshedData.updatedAt ?? prevDetail.updatedAt,
+                },
+              },
+            };
+          });
+        }
+      } catch (refreshErr) {
+        const re = refreshErr as any;
+        const refreshStatus = re?.response?.status;
+        const refreshData = re?.response?.data;
+        console.log('[Report Refresh Error] status:', refreshStatus);
+        console.log('[Report Refresh Error] data:', refreshData);
+        console.log('[Report Refresh Error] request url:', re?.config?.url);
+        Alert.alert(
+          '일부 완료',
+          '복용 시각 저장은 완료되었지만 리포트 갱신에 실패했습니다.\n네트워크 상태 확인 후 다시 시도해 주세요.',
+        );
       }
       
       // 저장 성공 후 모든 관련 쿼리 무효화 (동기화)
@@ -182,7 +242,10 @@ export default function ReportsScreen() {
       await queryClient.invalidateQueries({ queryKey: ['intakeSettings'] });
       await queryClient.invalidateQueries({ queryKey: ['supplements'] });
       await queryClient.invalidateQueries({ queryKey: ['supplement'] }); // 개별 상세 쿼리도 무효화
-      await queryClient.invalidateQueries({ queryKey: ['intakeSchedule'] });
+      // 홈 화면은 `useDailyIntakeSchedule()`(['dailyIntakeSchedule', '__today__'])를 사용
+      await queryClient.invalidateQueries({ queryKey: ['dailyIntakeSchedule'] });
+      // 화면에 즉시 반영되도록 강제 재조회
+      await queryClient.refetchQueries({ queryKey: ['report'] });
       
       Alert.alert('저장 완료', '맞춤 복용 시간이 반영되었습니다.', [
         { text: '확인', onPress: () => {
@@ -193,8 +256,41 @@ export default function ReportsScreen() {
         }}
       ]);
     } catch (err) {
-      console.error(err);
-      Alert.alert('저장 실패', '정보를 저장하지 못했습니다.');
+      const e = err as any;
+      const status = e?.response?.status;
+      const data = e?.response?.data;
+      const message = data?.message || e?.message || '정보를 저장하지 못했습니다.';
+      console.log('[Report Save Error] status:', status);
+      console.log('[Report Save Error] data:', data);
+      console.log('[Report Save Error] request url:', e?.config?.url);
+      console.log('[Report Save Error] request data:', e?.config?.data);
+
+      // 디버그 모드: 500 발생 시 영양제 1개씩 분리 요청해 실패 지점 추적
+      if (status === 500) {
+        try {
+          const requestData = JSON.parse(e?.config?.data ?? '{}');
+          const reportId = report?.reportId ?? report?.report_id;
+          const supplements = requestData?.userSupplements ?? [];
+
+          if (reportId && Array.isArray(supplements) && supplements.length > 1) {
+            console.log('[Report Save Debug] start single-supplement probe');
+            for (const item of supplements) {
+              try {
+                await reportApi.saveIntakeTimings(reportId, { userSupplements: [item] });
+                console.log('[Report Save Debug] single success:', item);
+              } catch (probeErr: any) {
+                console.log('[Report Save Debug] single fail item:', item);
+                console.log('[Report Save Debug] single fail status:', probeErr?.response?.status);
+                console.log('[Report Save Debug] single fail data:', probeErr?.response?.data);
+              }
+            }
+          }
+        } catch (probeParseErr) {
+          console.log('[Report Save Debug] single probe skipped:', probeParseErr);
+        }
+      }
+
+      Alert.alert('저장 실패', `status=${status ?? 'unknown'}\n${String(message)}`);
     } finally {
       setIsSaving(false);
     }
@@ -285,9 +381,8 @@ export default function ReportsScreen() {
         <View className="flex-1 items-center justify-center px-6">
           <Ionicons name="alert-circle-outline" size={48} color={colors.textMuted} className="mb-4" />
           <Text className="text-base font-scdream text-center mb-6" style={{ color: colors.text }}>
-            리포트 데이터를 불러오지 못했습니다.{"\n"}서버 상태를 확인해 주세요.
+            리포트를 불러오는 중입니다.{"\n"}잠시만 기다려주세요.
           </Text>
-          <AppButton title="새로고침" onPress={() => refetch()} />
         </View>
       </ScreenContainer>
     );
@@ -304,41 +399,19 @@ export default function ReportsScreen() {
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 100 }}
       >
         <View className="py-2">
-          {/* 리포트 갱신 버튼 (최상단 노출 - 배너 진입이 아니며 갱신이 필요할 때만 노출) */}
-          {needsRefresh && params.from !== 'banner' && (
-            <TouchableOpacity 
-              onPress={() => refreshMutation.mutate()}
-              disabled={refreshMutation.isPending}
-              className="mb-8 p-5 rounded-3xl bg-orange-50 border border-orange-100 flex-row items-center justify-between shadow-sm"
-              activeOpacity={0.7}
-            >
-              <View className="flex-1 mr-3">
-                <View className="flex-row items-center mb-1">
-                  <Ionicons name="sparkles" size={16} color="#EA580C" className="mr-2" />
-                  <Text className="text-sm font-bold text-orange-600">리포트 갱신하기</Text>
-                </View>
-                <Text className="text-xs text-orange-400" numberOfLines={1}>변경된 영양제 정보를 바탕으로 AI 분석을 다시 실행합니다.</Text>
-              </View>
-              <View className="w-10 h-10 rounded-full bg-orange-500 items-center justify-center">
-                {refreshMutation.isPending ? (
-                  <ActivityIndicator size="small" color="white" />
-                ) : (
-                  <Ionicons name="refresh" size={20} color="white" />
-                )}
-              </View>
-            </TouchableOpacity>
-          )}
-
-          <Text className="mb-4 text-xs font-scdream" style={{ color: colors.textMuted }}>
-            {displayDate} 생성 리포트
+          <Text className="mb-4 text-sm font-scdream" style={{ color: colors.textMuted }}>
+            {displayDate ? `${displayDate} 생성 리포트입니다.` : '최신 리포트입니다.'}
           </Text>
 
           {/* 분석 리포트 섹션 */}
-          <AnalysisReport comments={report.comments} />
+          <AnalysisReport
+            comments={report.comments}
+            ingredientAnalysis={report.ingredient_analysis || report.ingredientAnalysis || []}
+          />
 
           {/* 추천 제품 섹션 */}
           <ProductRecommendation 
-            nickname={profile.nickname} 
+            nickname={authNickname || profile.nickname || '회원'} 
             products={(report.recommended_products_by_ingredient || report.recommendedProductsByIngredient || []).flatMap((group: any) => 
               (group.recommended_products || group.recommendedProducts || []).map((p: any) => ({
                 productCode: p.product_code || p.productCode,
@@ -352,6 +425,7 @@ export default function ReportsScreen() {
           {/* 갱신 모드 전용 섹션 */}
           {mode === 'edit' && (
             <View className="mt-4">
+              <View className="mb-6 h-[1px]" style={{ backgroundColor: `${colors.shadowDark}2A` }} />
               <TimeRecommendation
                 supplementRecommendations={supplementRecommendations}
                 onEditTime={handleEditTime}
@@ -368,7 +442,7 @@ export default function ReportsScreen() {
                   onPress={() => setMode('view')}
                   className="mt-4 items-center"
                 >
-                  <Text className="text-sm text-gray-400 underline font-scdream">취소하고 돌아가기</Text>
+                  <Text className="text-sm underline font-scdream" style={{ color: colors.textMuted }}>취소하고 돌아가기</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -378,7 +452,7 @@ export default function ReportsScreen() {
              <AppButton
                title="확인"
                onPress={() => router.back()}
-               className="mt-8 mb-4 bg-gray-200"
+               className="mt-8 mb-4"
              />
           )}
         </View>

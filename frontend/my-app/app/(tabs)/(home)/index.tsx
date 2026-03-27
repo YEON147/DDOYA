@@ -14,6 +14,7 @@ import { useAuthStore } from '@/src/store/authStore';
 import { scaleByWidth } from '@/src/utils/responsive';
 import { useEffect, useRef, useState } from 'react';
 import { intakeRoutineApi } from '@/src/api/intakeRoutine';
+import { useFocusEffect } from '@react-navigation/native';
 
 const DDOYA_LOGO_XML = `<svg width="1106" height="479" viewBox="0 0 1106 479" fill="none" xmlns="http://www.w3.org/2000/svg">
 <g clip-path="url(#clip0_428_3034)">
@@ -47,6 +48,11 @@ export default function HomeScreen() {
     const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
   }, []);
+
+  // 탭 전환/뒤로가기 등으로 홈 화면에 돌아오면 최신 루틴을 즉시 다시 불러온다.
+  useFocusEffect(() => {
+    refetch();
+  });
 
   useEffect(() => {
     if (!schedule || isPending || isError) return;
