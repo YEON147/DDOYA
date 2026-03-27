@@ -12,3 +12,19 @@ export interface UserMe {
 }
 
 export type UserMeResponse = SuccessResponse<UserMe>;
+
+export interface UpdateNicknameRequest {
+  nickname: string;
+}
+
+export interface UpdateBirthRequest {
+  birthDate: string;
+}
+
+export interface UpdateHeightRequest {
+  heightCm: number;
+}
+
+export interface UpdateWeightRequest {
+  weightKg: number;
+}

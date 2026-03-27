@@ -119,7 +119,7 @@ export default function MyInfoBirthDateScreen() {
             variant={isValid ? 'primary' : 'disabled'}
             onPress={handleSave}
             disabled={!isValid}
-            className="mt-auto h-[56px] w-full"
+            className="mt-auto mb-[10px] h-[56px] w-full"
           />
         </View>
       </View>
