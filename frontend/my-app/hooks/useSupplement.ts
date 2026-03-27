@@ -40,6 +40,8 @@ export const useUpdateSupplement = () => {
       queryClient.invalidateQueries({ queryKey: ['supplement', id] });
       queryClient.invalidateQueries({ queryKey: SUPPLEMENTS_LIST_KEY });
       queryClient.invalidateQueries({ queryKey: ['report'] });
+      // 홈 화면 일별 루틴 즉시 반영
+      queryClient.invalidateQueries({ queryKey: ['dailyIntakeSchedule'] });
     },
   });
 };

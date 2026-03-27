@@ -242,7 +242,8 @@ export default function ReportsScreen() {
       await queryClient.invalidateQueries({ queryKey: ['intakeSettings'] });
       await queryClient.invalidateQueries({ queryKey: ['supplements'] });
       await queryClient.invalidateQueries({ queryKey: ['supplement'] }); // 개별 상세 쿼리도 무효화
-      await queryClient.invalidateQueries({ queryKey: ['intakeSchedule'] });
+      // 홈 화면은 `useDailyIntakeSchedule()`(['dailyIntakeSchedule', '__today__'])를 사용
+      await queryClient.invalidateQueries({ queryKey: ['dailyIntakeSchedule'] });
       // 화면에 즉시 반영되도록 강제 재조회
       await queryClient.refetchQueries({ queryKey: ['report'] });
       
