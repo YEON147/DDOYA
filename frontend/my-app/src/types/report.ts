@@ -2,13 +2,18 @@ import { SuccessResponse } from './types';
 
 /** 리포트 상세 조회 응답 (GET /reports) */
 export interface ReportDetail {
-  reportId: number;
+  report_id: number;
+  reportId?: number;
   needsRefresh: boolean;
-  updatedAt: string;
-  isEditable: boolean;
+  updated_at: string;
+  updatedAt?: string;
+  is_editable: boolean;
+  isEditable?: boolean;
   comments: ReportComments | null;
-  recommendedProductsByIngredient: RecommendedProductsByIngredient[];
+  recommended_products_by_ingredient: RecommendedProductsByIngredient[];
+  recommendedProductsByIngredient?: RecommendedProductsByIngredient[];
   timing_recommendations: TimingRecommendation[];
+  timingRecommendations?: TimingRecommendation[];
 }
 
 export interface ReportComments {
@@ -19,15 +24,21 @@ export interface ReportComments {
 }
 
 export interface RecommendedProductsByIngredient {
-  ingredientId: number;
-  ingredientName: string;
-  recommendedProducts: RecommendedProduct[];
+  ingredient_id: number;
+  ingredientId?: number;
+  ingredient_name: string;
+  ingredientName?: string;
+  recommended_products: RecommendedProduct[];
+  recommendedProducts?: RecommendedProduct[];
 }
 
 export interface RecommendedProduct {
-  productCode: string;
-  productName: string;
+  product_code: string;
+  productCode?: string;
+  product_name: string;
+  productName?: string;
   brand?: string;
+  pill_image_url?: string;
   pillImageUrl?: string;
 }
 
