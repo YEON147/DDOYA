@@ -12,7 +12,7 @@ import java.util.List;
 @Repository
 public interface ReportIntakeTimingRecommendationRepository extends JpaRepository<ReportIntakeTimingRecommendation, Long> {
 
-    @Modifying
+    @Modifying(clearAutomatically = true)
     @Query("DELETE FROM ReportIntakeTimingRecommendation r WHERE r.report.reportId = :reportId")
     void deleteAllByReportId(@Param("reportId") Long reportId);
 
@@ -20,4 +20,8 @@ public interface ReportIntakeTimingRecommendationRepository extends JpaRepositor
            "LEFT JOIN FETCH ritr.supplement " +
            "WHERE ritr.report.reportId = :reportId")
     List<ReportIntakeTimingRecommendation> findAllByReport_ReportId(@Param("reportId") Long reportId);
+
+    @Modifying(clearAutomatically = true)
+    @Query("DELETE FROM ReportIntakeTimingRecommendation r WHERE r.supplement.userSupplementId = :userSupplementId")
+    void deleteByUserSupplementId(@Param("userSupplementId") Long userSupplementId);
 }

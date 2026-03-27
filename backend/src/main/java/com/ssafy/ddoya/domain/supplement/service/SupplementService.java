@@ -7,8 +7,11 @@ import com.ssafy.ddoya.domain.common.repository.IngredientMasterRepository;
 import com.ssafy.ddoya.domain.common.util.ImageCompressUtil;
 import com.ssafy.ddoya.domain.intake.entity.IntakeSchedule;
 import com.ssafy.ddoya.domain.intake.entity.ScheduleType;
+import com.ssafy.ddoya.domain.intake.repository.IntakeRecordRepository;
 import com.ssafy.ddoya.domain.intake.repository.IntakeScheduleRepository;
 import com.ssafy.ddoya.domain.intake.service.IntakeRecordSyncService;
+import com.ssafy.ddoya.domain.notification.repository.NotificationDeliveryLogRepository;
+import com.ssafy.ddoya.domain.report.repository.ReportIntakeTimingRecommendationRepository;
 import com.ssafy.ddoya.domain.supplement.dto.*;
 import com.ssafy.ddoya.domain.supplement.dto.SupplementDetailResponse.IntakeScheduleDto;
 import com.ssafy.ddoya.domain.supplement.dto.SupplementUpdateRequest.IntakeScheduleUpdateDto;
@@ -71,7 +74,10 @@ public class SupplementService {
     private final UserSupplementIngredientRepository userSupplementIngredientRepository;
     private final SupplementInventoryRepository supplementInventoryRepository;
     private final IntakeScheduleRepository intakeScheduleRepository;
+    private final IntakeRecordRepository intakeRecordRepository;
     private final IntakeRecordSyncService intakeRecordSyncService;
+    private final NotificationDeliveryLogRepository notificationDeliveryLogRepository;
+    private final ReportIntakeTimingRecommendationRepository timingRecommendationRepository;
     private final BodyPartRepository bodyPartRepository;
     private final IngredientMasterRepository ingredientMasterRepository;
     private final EntityManager entityManager;
@@ -683,6 +689,7 @@ public class SupplementService {
 
     /**
      * 영양제 및 관련 정보를 삭제합니다.
+     * FK 제약 조건 오류를 방지하기 위해 자식 데이터를 먼저 명시적으로 삭제합니다.
      */
     @Transactional
     public void deleteSupplement(Long userId, Long supplementId) {
@@ -693,15 +700,33 @@ public class SupplementService {
             throw CustomException.forbidden("해당 영양제에 대한 권한이 없습니다.");
         }
 
-        // FK 제약 순서에 맞게 삭제
-        List<IntakeSchedule> schedules = intakeScheduleRepository.findBySupplementId(supplementId);
-        for (IntakeSchedule s : schedules) {
-            intakeRecordSyncService.syncOnDelete(s.getScheduleId()); // 1. 섭취 기록
+        log.info("[Supplement 삭제 시작] id={}", supplementId);
+
+        // 1. 리포트 관련 추천 데이터 삭제
+        timingRecommendationRepository.deleteByUserSupplementId(supplementId);
+
+        // 2. 섭취 일정 관련 자식 데이터 처리 (기록 및 알림 로그)
+        List<Long> scheduleIds = intakeScheduleRepository.findIdsByUserSupplementId(supplementId);
+        if (!scheduleIds.isEmpty()) {
+            // 2-1. 알림 발송 로그 삭제
+            notificationDeliveryLogRepository.deleteByScheduleIdIn(scheduleIds);
+            // 2-2. 실제 복용 기록 삭제
+            intakeRecordRepository.deleteByScheduleIdIn(scheduleIds);
         }
-        intakeScheduleRepository.deleteBySupplementId(supplementId); // 2. 스케줄
-        userSupplementIngredientRepository.deleteBySupplementId(supplementId); // 3. 성분
-        supplementInventoryRepository.deleteBySupplementIds(List.of(supplementId)); // 4. 재고
-        supplementRepository.delete(supplement); // 5. 영양제
+
+        // 2-3. 섭취 일정(Schedule) 삭제
+        intakeScheduleRepository.deleteByUserSupplementId(supplementId);
+
+        // 3. 기타 영양제 하위 데이터 삭제
+        userSupplementIngredientRepository.deleteByUserSupplementId(supplementId);
+        supplementInventoryRepository.deleteByUserSupplementId(supplementId);
+
+        log.info("[자식 데이터 삭제 완료]");
+
+        // 4. 부모(Supplement) 최종 삭제
+        supplementRepository.delete(supplement);
+
+        log.info("[Supplement 삭제 완료]");
     }
 
     /**
