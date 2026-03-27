@@ -47,6 +47,10 @@ public interface SupplementInventoryRepository extends JpaRepository<SupplementI
     @Query("DELETE FROM SupplementInventory i WHERE i.supplement.userSupplementId IN :supplementIds")
     void deleteBySupplementIds(@Param("supplementIds") List<Long> supplementIds);
 
+    @Modifying(clearAutomatically = true)
+    @Query("DELETE FROM SupplementInventory si WHERE si.supplement.userSupplementId = :userSupplementId")
+    void deleteByUserSupplementId(@Param("userSupplementId") Long userSupplementId);
+
     /**
      * 특정 사용자 소유의 영양제에 대한 재고 정보를 조회합니다.
      *

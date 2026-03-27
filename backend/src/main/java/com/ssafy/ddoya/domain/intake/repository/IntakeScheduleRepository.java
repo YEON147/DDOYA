@@ -91,4 +91,11 @@ public interface IntakeScheduleRepository extends JpaRepository<IntakeSchedule, 
         List<IntakeSchedule> findAllByScheduleTypeAndIntakeTimeAndCarryEnabled(
                         @Param("scheduleType") ScheduleType scheduleType,
                         @Param("intakeTime") LocalTime intakeTime);
+
+        @Query("SELECT s.scheduleId FROM IntakeSchedule s WHERE s.supplement.userSupplementId = :userSupplementId")
+        List<Long> findIdsByUserSupplementId(@Param("userSupplementId") Long userSupplementId);
+
+        @Modifying(clearAutomatically = true)
+        @Query("DELETE FROM IntakeSchedule s WHERE s.supplement.userSupplementId = :userSupplementId")
+        void deleteByUserSupplementId(@Param("userSupplementId") Long userSupplementId);
 }

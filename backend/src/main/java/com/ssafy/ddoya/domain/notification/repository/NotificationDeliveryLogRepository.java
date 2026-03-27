@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -34,4 +35,8 @@ public interface NotificationDeliveryLogRepository extends JpaRepository<Notific
      */
     @Query("SELECT n FROM NotificationDeliveryLog n WHERE n.intakeRecord.intakeRecordId = :intakeRecordId")
     Optional<NotificationDeliveryLog> findTopByIntakeRecord_IntakeRecordIdOrderBySentAtDesc(@Param("intakeRecordId") Long intakeRecordId);
+
+    @Modifying(clearAutomatically = true)
+    @Query("DELETE FROM NotificationDeliveryLog n WHERE n.schedule.scheduleId IN :scheduleIds")
+    void deleteByScheduleIdIn(@Param("scheduleIds") List<Long> scheduleIds);
 }

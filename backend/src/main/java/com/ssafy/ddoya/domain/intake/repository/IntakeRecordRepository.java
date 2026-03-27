@@ -128,4 +128,8 @@ public interface IntakeRecordRepository extends JpaRepository<IntakeRecord, Long
     List<IntakeRecord> findIntakeReminders(
             @Param("now") LocalDateTime now,
             @Param("startOfDay") LocalDateTime startOfDay);
+
+    @Modifying(clearAutomatically = true)
+    @Query("DELETE FROM IntakeRecord r WHERE r.schedule.scheduleId IN :scheduleIds")
+    void deleteByScheduleIdIn(@Param("scheduleIds") List<Long> scheduleIds);
 }

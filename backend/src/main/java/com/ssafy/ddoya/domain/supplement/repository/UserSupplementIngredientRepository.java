@@ -38,4 +38,8 @@ public interface UserSupplementIngredientRepository
     @Modifying
     @Query("DELETE FROM UserSupplementIngredient u WHERE u.supplement.userSupplementId = :supplementId")
     void deleteBySupplementId(@Param("supplementId") Long supplementId);
+
+    @Modifying(clearAutomatically = true)
+    @Query("DELETE FROM UserSupplementIngredient usi WHERE usi.supplement.userSupplementId = :userSupplementId")
+    void deleteByUserSupplementId(@Param("userSupplementId") Long userSupplementId);
 }
