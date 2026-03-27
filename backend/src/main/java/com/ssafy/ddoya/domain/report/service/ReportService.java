@@ -150,6 +150,7 @@ public class ReportService {
         Optional<ReportComments> commentsOpt = reportCommentsRepository.findByReport_ReportId(reportId);
         List<ReportRecommendedProduct> recommendedProducts = recommendedProductRepository.findAllByReport_ReportId(reportId);
         List<ReportIntakeTimingRecommendation> timingRecommendations = timingRecommendationRepository.findAllByReport_ReportId(reportId);
+        List<ReportIngredientAnalysis> analysisEntities = ingredientAnalysisRepository.findAllByReport_ReportIdOrderByIngredient_IngredientIdAsc(reportId);
 
         // 2.5 사용자별 섭취 타이밍 설정 조회 (N+1 방지용 Map 활용)
         Map<IntakeTiming, LocalTime> timingSettingMap = buildTimingSettingMap(userId);
@@ -217,6 +218,22 @@ public class ReportService {
                         .build())
                 .orElse(null);
 
+        // 5.5 성분 분석 매핑
+        List<ReportDetailResponse.IngredientAnalysisResponse> analysisDtos = analysisEntities.stream()
+                .map(ia -> ReportDetailResponse.IngredientAnalysisResponse.builder()
+                        .ingredientId(ia.getIngredient().getIngredientId())
+                        .normalizedIngredientName(ia.getNormalizedIngredientName())
+                        .recommendedAmount(ia.getRecommendedAmount())
+                        .currentAmount(ia.getCurrentAmount())
+                        .excessRatio(ia.getExcessRatio())
+                        .excessAmount(ia.getExcessAmount())
+                        .deficiencyRatio(ia.getDeficiencyRatio())
+                        .deficiencyAmount(ia.getDeficiencyAmount())
+                        .unit(ia.getUnit())
+                        .analysisType(ia.getAnalysisType())
+                        .build())
+                .collect(Collectors.toList());
+
         // 6. 최종 응답 조립
         return ReportDetailResponse.builder()
                 .reportId(reportId)
@@ -225,6 +242,7 @@ public class ReportService {
                 .isEditable(false) // 조회 API에서는 항상 false
                 .comments(commentsDto)
                 .recommendedProductsByIngredient(productsByIngredient)
+                .ingredientAnalysis(analysisDtos)
                 .timingRecommendations(timingRecommendationDtos)
                 .build();
     }

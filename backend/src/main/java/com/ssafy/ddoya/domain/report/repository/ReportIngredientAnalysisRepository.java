@@ -16,5 +16,5 @@ public interface ReportIngredientAnalysisRepository extends JpaRepository<Report
     @Query("DELETE FROM ReportIngredientAnalysis r WHERE r.report.reportId = :reportId")
     void deleteAllByReportId(@Param("reportId") Long reportId);
 
-    List<ReportIngredientAnalysis> findAllByReport_ReportId(@Param("reportId") Long reportId);
+    List<ReportIngredientAnalysis> findAllByReport_ReportIdOrderByIngredient_IngredientIdAsc(Long reportId);
 }
