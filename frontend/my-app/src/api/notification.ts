@@ -7,27 +7,17 @@ import { Platform } from 'react-native';
  * - 다른 API(auth.ts, supplement.ts 등)와 동일하게 apiClient를 사용하여 작성했습니다.
  */
 export const notificationApi = {
-  /**
-   * FCM/APNs 디바이스 토큰 등록
-   * @param fcmToken 디바이스에서 발급받은 실제 토큰
-   */
+  /** 디바이스 푸시 토큰 등록 */
   registerToken: (fcmToken: string) => {
-    // ERD에 따라 ANDROID 또는 IOS 타입을 실어서 보냅니다.
-    const deviceType = Platform.OS === 'ios' ? 'IOS' : 'ANDROID';
-    return apiClient.post<SuccessResponse<unknown>>('/notifications/tokens', {
-      fcmToken,
-      deviceType,
+    return apiClient.post('/notifications/tokens', {
+      fcmToken: fcmToken,
+      deviceType: Platform.OS.toUpperCase()
     });
   },
 
-  /**
-   * FCM 디바이스 토큰 비활성화 (로그아웃 시 호출)
-   * @param fcmToken 비활성화할 토큰
-   */
+  /** 디바이스 푸시 토큰 해제 */
   deactivateToken: (fcmToken: string) => {
-    return apiClient.delete<SuccessResponse<unknown>>('/notifications/tokens', {
-      data: { fcmToken },
-    });
+    return apiClient.delete('/notifications/tokens', { data: { fcmToken: fcmToken } });
   },
 
   /**

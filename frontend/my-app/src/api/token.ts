@@ -4,6 +4,7 @@ import { Platform } from 'react-native';
 const TOKEN_KEY = 'access_token';
 const REFRESH_TOKEN_KEY = 'refresh_token';
 const NICKNAME_KEY = 'user_nickname';
+const DDOYA_START_DATE_KEY = 'ddoya_start_date';
 
 export const tokenService = {
   save: async (token: string, nickname?: string | null) => {
@@ -48,15 +49,30 @@ export const tokenService = {
     }
     return SecureStore.getItemAsync(NICKNAME_KEY);
   },
+  getDdoyaStartDate: async () => {
+    if (Platform.OS === 'web') {
+      return window.localStorage.getItem(DDOYA_START_DATE_KEY);
+    }
+    return SecureStore.getItemAsync(DDOYA_START_DATE_KEY);
+  },
+  setDdoyaStartDate: async (isoDate: string) => {
+    if (Platform.OS === 'web') {
+      window.localStorage.setItem(DDOYA_START_DATE_KEY, isoDate);
+      return;
+    }
+    await SecureStore.setItemAsync(DDOYA_START_DATE_KEY, isoDate);
+  },
   delete: async () => {
     if (Platform.OS === 'web') {
       window.localStorage.removeItem(TOKEN_KEY);
       window.localStorage.removeItem(REFRESH_TOKEN_KEY);
       window.localStorage.removeItem(NICKNAME_KEY);
+      window.localStorage.removeItem(DDOYA_START_DATE_KEY);
       return;
     }
     await SecureStore.deleteItemAsync(TOKEN_KEY);
     await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
     await SecureStore.deleteItemAsync(NICKNAME_KEY);
+    await SecureStore.deleteItemAsync(DDOYA_START_DATE_KEY);
   },
 };

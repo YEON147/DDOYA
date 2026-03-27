@@ -10,6 +10,8 @@ import { authApi } from '@/src/api/auth';
 import { AppIcon } from '@/src/components/common/AppIcon';
 import * as Notifications from 'expo-notifications';
 import { notificationService } from '@/src/services/notificationService';
+import { useMyProfile } from '@/hooks/useUser';
+import { useEffect } from 'react';
 
 const line = `${colors.shadowDark}44`;
 
@@ -29,14 +31,14 @@ function InfoRow({ label, value, Icon, onPress }: InfoRowProps) {
       style={{ borderColor: line }}
     >
       <View className="flex-row items-center">
-        <AppIcon icon={Icon} size={16} color={colors.textMuted} />
-        <Text className="pl-2 pr-4 text-[14px] font-scdream" style={{ color: colors.textMuted }}>
+        <AppIcon icon={Icon} size={15} color={colors.textMuted} />
+        <Text className="pl-2 pr-4 text-md font-scdream" style={{ color: colors.textMuted }}>
           {label}
         </Text>
       </View>
       <View className="flex-1 flex-row items-center justify-end">
         <Text
-          className="text-right text-[14px] font-scdream leading-5"
+          className="text-right text-md font-scdream leading-5"
           style={{ color: colors.text }}
           numberOfLines={1}
         >
@@ -62,7 +64,7 @@ function ActionRow({ label, destructive, onPress }: ActionRowProps) {
       style={{ borderColor: line }}
     >
       <Text
-        className="text-[14px] font-scdream"
+        className="text-md font-scdream"
         style={{ color: destructive ? '#DC2626' : colors.text }}
       >
         {label}
@@ -74,6 +76,19 @@ function ActionRow({ label, destructive, onPress }: ActionRowProps) {
 export default function MyInfoScreen() {
   const clearToken = useAuthStore((s) => s.clearToken);
   const profile = useUserProfileStore((s) => s.profile);
+  const setProfile = useUserProfileStore((s) => s.setProfile);
+  const { data: me } = useMyProfile();
+
+  useEffect(() => {
+    if (!me) return;
+    setProfile({
+      nickname: me.nickname ?? '',
+      gender: me.gender === 'MALE' ? '남성' : me.gender === 'FEMALE' ? '여성' : '',
+      birthDate: me.birthDate ?? '',
+      heightCm: typeof me.heightCm === 'number' ? String(me.heightCm) : '',
+      weightKg: typeof me.weightKg === 'number' ? String(me.weightKg) : '',
+    });
+  }, [me, setProfile]);
 
   const handlePasswordChange = () => {
     router.push('/(tabs)/(profile)/myInfo/password-change');
@@ -92,8 +107,8 @@ export default function MyInfoScreen() {
             if (token) {
               await notificationService.deactivateTokenOnServer(token);
             }
-          } catch (e) {
-            console.error('토큰 비활성화 중 오류 발생', e);
+          } catch {
+            // 토큰 비활성화 실패 시에도 로그아웃 흐름은 계속 진행
           }
 
           try {
@@ -131,59 +146,59 @@ export default function MyInfoScreen() {
         keyboardShouldPersistTaps="handled"
         removeClippedSubviews={false}
       >
-        <View className="items-center pb-8 pt-2">
+        <View className="items-center pb-9 pt-3">
           <View
-            className="h-[76px] w-[76px] items-center justify-center rounded-full"
+            className="h-[72px] w-[72px] items-center justify-center rounded-full"
             style={{ backgroundColor: colors.surfaceWarm }}
           >
-            <AppIcon icon={User} size={34} color={colors.textMuted} />
+            <AppIcon icon={User} size={30} color={colors.textMuted} />
           </View>
           <Text
-            className="mt-4 text-center text-[30px] font-scdream-bold tracking-tight"
+            className="mt-4 text-center text-2xl font-scdream-bold tracking-tight"
             style={{ color: colors.text }}
             numberOfLines={1}
           >
-            {profile.nickname}
+            {profile.nickname || '회원'}
           </Text>
         </View>
 
-        <Text className="mb-1 text-[12px] font-scdream tracking-wide" style={{ color: colors.textMuted }}>
+        <Text className="mb-2 text-sm font-scdream tracking-wide" style={{ color: colors.textMuted }}>
           계정 정보
         </Text>
         <InfoRow
           label="닉네임"
-          value={profile.nickname}
+          value={profile.nickname || '-'}
           Icon={User}
           onPress={() => router.push('/(tabs)/(profile)/myInfo/nickname')}
         />
         <InfoRow
           label="성별"
-          value={profile.gender}
+          value={profile.gender || '-'}
           Icon={Users}
           onPress={() => router.push('/(tabs)/(profile)/myInfo/gender')}
         />
         <InfoRow
           label="생년월일"
-          value={profile.birthDate}
+          value={profile.birthDate || '-'}
           Icon={CalendarDays}
           onPress={() => router.push('/(tabs)/(profile)/myInfo/birth-date')}
         />
         <InfoRow
           label="키"
-          value={`${profile.heightCm} cm`}
+          value={profile.heightCm ? `${profile.heightCm} cm` : '-'}
           Icon={Ruler}
           onPress={() => router.push('/(tabs)/(profile)/myInfo/height')}
         />
         <InfoRow
           label="몸무게"
-          value={`${profile.weightKg} kg`}
+          value={profile.weightKg ? `${profile.weightKg} kg` : '-'}
           Icon={Dumbbell}
           onPress={() => router.push('/(tabs)/(profile)/myInfo/weight')}
         />
 
-        <View className="h-8" />
+        <View className="h-10" />
 
-        <Text className="mb-1 text-[12px] font-scdream tracking-wide" style={{ color: colors.textMuted }}>
+        <Text className="mb-2 text-sm font-scdream tracking-wide" style={{ color: colors.textMuted }}>
           계정 관리
         </Text>
         <ActionRow label="비밀번호 변경" onPress={handlePasswordChange} />
@@ -199,7 +214,7 @@ export default function MyInfoScreen() {
 const styles = StyleSheet.create({
   content: {
     paddingHorizontal: 26,
-    paddingTop: 8,
-    paddingBottom: 32,
+    paddingTop: 10,
+    paddingBottom: 36,
   },
 });

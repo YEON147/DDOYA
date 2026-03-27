@@ -36,6 +36,7 @@ export function useCreateSupplementMutation() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['supplements'] });
+      queryClient.invalidateQueries({ queryKey: ['report'] });
     },
   });
 }

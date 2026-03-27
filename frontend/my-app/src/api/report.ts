@@ -1,15 +1,15 @@
 import apiClient from './client';
-import { ReportResponse } from '../types/report';
+import { ReportResponse, ReportCreateResponse } from '../types/report';
 import { SuccessResponse } from '../types/types';
 
 export const reportApi = {
-  // 리포트 상세 조회
+  // 리포트 상세 조회 (GET /api/reports)
   getReport: () => 
-    apiClient.get<ReportResponse>('/reports/latest'),
+    apiClient.get<ReportResponse>('/reports'),
 
-  // 리포트 갱신 (영양제 변동 시)
+  // 리포트 갱신 (POST /api/reports)
   updateReport: () => 
-    apiClient.post<ReportResponse>('/reports/refresh'),
+    apiClient.post<ReportCreateResponse>('/reports'),
 
   // 추천 섭취 시간 변경 반영
   updateRecommendedTime: (userSupplementId: number, time: string) =>

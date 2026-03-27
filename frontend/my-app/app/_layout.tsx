@@ -74,13 +74,16 @@ export default function RootLayout() {
   useEffect(() => {
     // 1. 알림 수신 리스너 (포그라운드 환경)
     const notificationListener = Notifications.addNotificationReceivedListener(notification => {
-      // 포그라운드 수신 이벤트 처리 (추가 동작 필요 시 구현)
+      console.log('💡 [DEBUG] 포그라운드 알림 낚아챔! 수신됨:', notification);
     });
+
 
     // 2. 알림 클릭 리스너 (알림바 클릭 시 동작)
     const responseListener = Notifications.addNotificationResponseReceivedListener(response => {
+      console.log('💡 [DEBUG] 클릭 데이터:', response.notification.request.content.data);
+
       const data = response.notification.request.content.data;
-      
+
       // 알림 Data Payload에 맞춤 라우팅 처리
       if (data?.url) {
         // 백엔드에서 명시적 경로(ex '/reports')를 준 경우

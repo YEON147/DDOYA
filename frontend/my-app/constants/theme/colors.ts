@@ -16,6 +16,8 @@ export const colors = {
   textMuted: '#6F6A62',
   /** 라인 아이콘 통일 톤 (#555~#777 계열) */
   iconMuted: '#66615C',
+  /** 브랜드 브라운 */
+  brown: '#3F2207',
   primary: '#F29222',
   point: '#F18A2D',
 } as const;
