@@ -167,7 +167,7 @@ def run_verify(
     if detected_total_amount > expected_total_amount:
         return VerifyResponse(
             success=False,
-            message="검출된 알약 수가 예상보다 많습니다. 오검출 가능성이 있어 재촬영해주세요.",
+            message="검출된 알약 수가 예상보다 많습니다. 재촬영해주세요.",
             results=None,
         )
 
