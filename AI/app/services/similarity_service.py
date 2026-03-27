@@ -3,120 +3,148 @@ import numpy as np
 from app.core.config import settings
 
 
-def _safe_cosine_similarity(vec1: np.ndarray, vec2: np.ndarray) -> float:
-    v1 = vec1.astype(np.float32).reshape(-1)
-    v2 = vec2.astype(np.float32).reshape(-1)
+def safe_cosine_similarity(a: np.ndarray, b: np.ndarray) -> float:
+    a = a.astype(np.float32)
+    b = b.astype(np.float32)
 
-    norm1 = np.linalg.norm(v1)
-    norm2 = np.linalg.norm(v2)
+    a_norm = np.linalg.norm(a)
+    b_norm = np.linalg.norm(b)
 
-    if norm1 == 0.0 or norm2 == 0.0:
+    if a_norm < 1e-12 or b_norm < 1e-12:
         return 0.0
 
-    return float(np.dot(v1, v2) / (norm1 * norm2))
+    return float(np.dot(a, b) / (a_norm * b_norm))
 
 
-def _compare_color_features(query_features: dict, ref_bundle: dict) -> float:
-    query_mean_hsv = query_features.get("mean_hsv")
-    query_hue_hist = query_features.get("hue_hist")
+def _hist_intersection(a: np.ndarray, b: np.ndarray) -> float:
+    a = a.astype(np.float32)
+    b = b.astype(np.float32)
 
-    ref_mean_hsv = ref_bundle.get("mean_hsv")
-    ref_hue_hist = ref_bundle.get("hue_hist")
+    if a.sum() > 0:
+        a = a / (a.sum() + 1e-12)
+    if b.sum() > 0:
+        b = b / (b.sum() + 1e-12)
 
-    mean_score = 0.0
-    hist_score = 0.0
-
-    if query_mean_hsv is not None and ref_mean_hsv is not None:
-        dist = np.linalg.norm(
-            query_mean_hsv.astype(np.float32).reshape(-1)
-            - ref_mean_hsv.astype(np.float32).reshape(-1)
-        )
-        mean_score = 1.0 / (1.0 + float(dist))
-
-    if query_hue_hist is not None and ref_hue_hist is not None:
-        hist_score = _safe_cosine_similarity(query_hue_hist, ref_hue_hist)
-
-    return (
-        settings.COLOR_MEAN_WEIGHT * mean_score
-        + settings.COLOR_HIST_WEIGHT * hist_score
-    )
+    return float(np.minimum(a, b).sum())
 
 
-def _compare_shape_features(query_features: dict, ref_bundle: dict) -> float:
-    query_shape = query_features.get("shape_vector")
-    ref_shape = ref_bundle.get("shape_vector")
-
-    if query_shape is None or ref_shape is None:
-        return 0.0
-
-    return _safe_cosine_similarity(query_shape, ref_shape)
+def _distance_to_similarity(distance_value: float, scale: float = 1.0) -> float:
+    return float(1.0 / (1.0 + (distance_value / max(scale, 1e-12))))
 
 
-def _calculate_final_score(
-    embedding_score: float,
-    color_score: float,
-    shape_score: float,
+def _normalize_weights(*weights: float) -> list[float]:
+    total = float(sum(weights))
+    if total < 1e-12:
+        return [1.0 / len(weights)] * len(weights)
+    return [float(w / total) for w in weights]
+
+
+def compute_color_score(
+    query_features: dict[str, np.ndarray],
+    reference_bundle: dict[str, np.ndarray],
 ) -> float:
-    return (
-        settings.DINO_SCORE_WEIGHT * embedding_score
-        + settings.COLOR_SCORE_WEIGHT * color_score
-        + settings.SHAPE_SCORE_WEIGHT * shape_score
+    mean_hsv_q = query_features["mean_hsv"]
+    mean_hsv_r = reference_bundle["mean_hsv"]
+
+    hue_hist_q = query_features["hue_hist"]
+    hue_hist_r = reference_bundle["hue_hist"]
+
+    hsv_distance = float(np.linalg.norm(mean_hsv_q - mean_hsv_r))
+    hsv_score = _distance_to_similarity(hsv_distance, scale=60.0)
+
+    hist_score = _hist_intersection(hue_hist_q, hue_hist_r)
+
+    wm, wh = _normalize_weights(
+        settings.COLOR_MEAN_WEIGHT,
+        settings.COLOR_HIST_WEIGHT,
     )
+
+    return float(wm * hsv_score + wh * hist_score)
+
+
+def compute_shape_score(
+    query_features: dict[str, np.ndarray],
+    reference_bundle: dict[str, np.ndarray],
+) -> float:
+    shape_q = query_features["shape_vector"]
+    shape_r = reference_bundle["shape_vector"]
+
+    shape_distance = float(np.linalg.norm(shape_q - shape_r))
+    return _distance_to_similarity(shape_distance, scale=1.0)
 
 
 def match_crop_against_expected_items(
     query_embedding: np.ndarray,
-    query_features: dict,
+    query_features: dict[str, np.ndarray],
     reference_candidates: list[dict],
     top_k: int = 3,
 ) -> dict:
     """
-    threshold 없이 최고 점수 후보를 final_user_supplement_id로 선택한다.
+    점수 결합 방식:
+    final_score = w1 * dino_score + w2 * color_score + w3 * shape_score
     """
+    if not reference_candidates:
+        raise ValueError("reference_candidates가 비어 있습니다.")
+
+    wd, wc, ws = _normalize_weights(
+        settings.DINO_SCORE_WEIGHT,
+        settings.COLOR_SCORE_WEIGHT,
+        settings.SHAPE_SCORE_WEIGHT,
+    )
+
     scored_candidates = []
 
     for candidate in reference_candidates:
         user_supplement_id = candidate["user_supplement_id"]
         bundle = candidate["bundle"]
 
-        ref_embedding = bundle.get("embedding")
-        if ref_embedding is None:
-            continue
+        dino_score = safe_cosine_similarity(query_embedding, bundle["embedding"])
+        color_score = compute_color_score(query_features, bundle)
+        shape_score = compute_shape_score(query_features, bundle)
 
-        embedding_score = _safe_cosine_similarity(query_embedding, ref_embedding)
-        color_score = _compare_color_features(query_features, bundle)
-        shape_score = _compare_shape_features(query_features, bundle)
-
-        final_score = _calculate_final_score(
-            embedding_score=embedding_score,
-            color_score=color_score,
-            shape_score=shape_score,
+        final_score = (
+            wd * dino_score
+            + wc * color_score
+            + ws * shape_score
         )
 
         scored_candidates.append(
             {
                 "user_supplement_id": user_supplement_id,
-                "embedding_score": round(float(embedding_score), 6),
-                "color_score": round(float(color_score), 6),
-                "shape_score": round(float(shape_score), 6),
-                "final_score": round(float(final_score), 6),
+                "dino_score": float(dino_score),
+                "color_score": float(color_score),
+                "shape_score": float(shape_score),
+                "final_score": float(final_score),
             }
         )
 
-    if not scored_candidates:
-        return {
-            "final_user_supplement_id": None,
-            "final_confidence": 0.0,
-            "top_candidates": [],
-        }
-
     scored_candidates.sort(key=lambda x: x["final_score"], reverse=True)
 
-    top_candidates = scored_candidates[:top_k]
-    best = top_candidates[0]
+    top_candidates = scored_candidates[: min(top_k, len(scored_candidates))]
+    top1 = top_candidates[0]
+    top2_score = top_candidates[1]["final_score"] if len(top_candidates) > 1 else 0.0
+    margin = top1["final_score"] - top2_score
+
+    review_required = (
+        top1["final_score"] < settings.REVIEW_SCORE_THRESHOLD
+        or margin < settings.REVIEW_MARGIN_THRESHOLD
+    )
 
     return {
-        "final_user_supplement_id": best["user_supplement_id"],
-        "final_confidence": best["final_score"],
-        "top_candidates": top_candidates,
+        "final_user_supplement_id": top1["user_supplement_id"],
+        "final_confidence": float(top1["final_score"]),
+        "dino_score": float(top1["dino_score"]),
+        "color_score": float(top1["color_score"]),
+        "shape_score": float(top1["shape_score"]),
+        "review_required": review_required,
+        "top_k": [
+            {
+                "user_supplement_id": item["user_supplement_id"],
+                "score": float(item["final_score"]),
+                "dino_score": float(item["dino_score"]),
+                "color_score": float(item["color_score"]),
+                "shape_score": float(item["shape_score"]),
+            }
+            for item in top_candidates
+        ],
     }

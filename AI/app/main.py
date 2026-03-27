@@ -39,7 +39,5 @@ def health_db(db: Session = Depends(get_db)):
 
 app.include_router(ocr.router, prefix="/api/ai/ocr", tags=["OCR"])
 app.include_router(report.router, prefix="/api/ai/report", tags=["Report"])
-
-# 전부 pills로 통일
 app.include_router(register.router, prefix="/api/ai/pills", tags=["Pill Register"])
 app.include_router(verify.router, prefix="/api/ai/pills", tags=["Pill Verify"])

@@ -22,13 +22,14 @@ class Settings:
     SMALL_BBOX_AREA_RATIO = float(os.getenv("SMALL_BBOX_AREA_RATIO", 0.0012))
 
     # 저장소
-    STORAGE_BACKEND = os.getenv("STORAGE_BACKEND", "local").strip().lower()  # local or s3
+    STORAGE_BACKEND = os.getenv("STORAGE_BACKEND", "local").strip().lower()
     LOCAL_STORAGE_ROOT = os.getenv("LOCAL_STORAGE_ROOT", "storage")
 
     AWS_S3_BUCKET = os.getenv("AWS_S3_BUCKET", "").strip()
     AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID", "").strip()
     AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", "").strip()
 
+    # AWS_DEFAULT_REGION 우선, 없으면 AWS_REGION fallback
     AWS_DEFAULT_REGION = os.getenv(
         "AWS_DEFAULT_REGION",
         os.getenv("AWS_REGION", "ap-northeast-2")
@@ -59,10 +60,8 @@ class Settings:
     COLOR_MEAN_WEIGHT = float(os.getenv("COLOR_MEAN_WEIGHT", 0.4))
     COLOR_HIST_WEIGHT = float(os.getenv("COLOR_HIST_WEIGHT", 0.6))
 
-    # 현재 verify에서는 threshold 판정을 사용하지 않고
-    # 최고 점수 후보를 그대로 선택하는 구조로 운용
-    REVIEW_SCORE_THRESHOLD = float(os.getenv("REVIEW_SCORE_THRESHOLD", 0.0))
-    REVIEW_MARGIN_THRESHOLD = float(os.getenv("REVIEW_MARGIN_THRESHOLD", 0.0))
+    REVIEW_SCORE_THRESHOLD = float(os.getenv("REVIEW_SCORE_THRESHOLD", 0.75))
+    REVIEW_MARGIN_THRESHOLD = float(os.getenv("REVIEW_MARGIN_THRESHOLD", 0.05))
 
     DEVICE = os.getenv("DEVICE", "cpu")
     YOLO_MODEL_PATH = os.getenv("YOLO_MODEL_PATH", "weights/yolo_pill_best.pt")
