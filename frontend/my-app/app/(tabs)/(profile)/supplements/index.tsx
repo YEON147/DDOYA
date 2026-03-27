@@ -13,6 +13,7 @@ import { useRouter } from 'expo-router';
 import { ChevronRight, Plus } from 'lucide-react-native';
 import type { SupplementSummaryDto } from '@/src/types/types';
 import { useSupplementsList } from '@/hooks/useSupplement';
+import { useReport } from '@/hooks/useReport';
 import { useAuthStore } from '@/src/store/authStore';
 import { colors } from '@/constants/theme/colors';
 import { neuRaised } from '@/constants/theme/neumorphism';
@@ -20,14 +21,39 @@ import { ScreenContainer } from '@/src/components/common/ScreenContainer';
 import { TopHeader } from '@/src/components/common/TopHeader';
 import { AppIcon } from '@/src/components/common/AppIcon';
 import { getBodyPartImageSource } from '@/constants/bodyPartImages';
+import { ReportStatusBanner } from '@/src/components/supplement/ReportStatusBanner';
 
 export default function SupplementsScreen() {
   const router = useRouter();
   const hasHydrated = useAuthStore((s) => s.hasHydratedFromStorage);
   const accessToken = useAuthStore((s) => s.accessToken);
   const { data, isLoading, isError, refetch, isRefetching } = useSupplementsList();
+  const { data: report } = useReport();
   const supplements = data?.supplements ?? [];
   const [failedImageIds, setFailedImageIds] = React.useState<Record<number, true>>({});
+  
+  const showReportBanner = React.useMemo(() => {
+    if (!report) return false;
+    // 백엔드 플래그가 있으면 우선 활용
+    if (report.needsRefresh) return true;
+
+    if (!data?.supplements) return false;
+
+    // 현재 등록된 영양제 ID 목록
+    const currentIds = (data.supplements as any[])
+      .map((s: any) => s.userSupplementId)
+      .sort((a: number, b: number) => a - b)
+      .join(',');
+
+    // 최근 리포트에 포함된 영양제 ID 목록
+    const reportedIds = (report.timing_recommendations || [])
+      .map((r: any) => r.user_supplement_id)
+      .sort((a: number, b: number) => a - b)
+      .join(',');
+
+    // ID 목록이 다르면 변동이 있는 것으로 판단
+    return currentIds !== reportedIds;
+  }, [report, data?.supplements]);
 
   const accentPairs = [
     ['#FF8A80', '#FFD6DC'],
@@ -202,6 +228,15 @@ export default function SupplementsScreen() {
             styles.listContent,
             supplements.length === 0 ? { flexGrow: 1 } : undefined,
           ]}
+        />
+      )}
+
+      {showReportBanner && (
+        <ReportStatusBanner 
+          onPress={() => router.push({
+            pathname: '/reports',
+            params: { mode: 'edit', from: 'banner' }
+          })} 
         />
       )}
     </ScreenContainer>

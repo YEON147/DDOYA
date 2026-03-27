@@ -6,13 +6,14 @@ import { colors } from '@/constants/theme/colors';
 export interface RecommendationItem {
   userSupplementId: number;
   name: string;
+  intakeTiming: string; // Enum name or display name
   recommendedIntakeTime: string;
   reason?: string;
 }
 
 interface TimeRecommendationProps {
   recommendations: RecommendationItem[];
-  onEditTime: (userSupplementId: number, initialTime: string) => void;
+  onEditTime: (userSupplementId: number, intakeTiming: string, initialTime: string) => void;
 }
 
 export const TimeRecommendation: React.FC<TimeRecommendationProps> = ({ recommendations, onEditTime }) => {
@@ -70,7 +71,7 @@ export const TimeRecommendation: React.FC<TimeRecommendationProps> = ({ recommen
              </View>
              
              <TouchableOpacity 
-               onPress={() => onEditTime(rec.userSupplementId, rec.recommendedIntakeTime)}
+               onPress={() => onEditTime(rec.userSupplementId, rec.intakeTiming, rec.recommendedIntakeTime)}
                className="flex-row items-center bg-slate-50 px-4 py-2.5 rounded-2xl border border-slate-100"
                activeOpacity={0.7}
              >
