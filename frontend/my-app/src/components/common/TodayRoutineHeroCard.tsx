@@ -5,7 +5,7 @@ import type { DailyIntakeTimeSlot } from '@/src/types/intakeRoutine';
 import { useAuthStore } from '@/src/store/authStore';
 import { scaleByWidth } from '@/src/utils/responsive';
 import {
-  findNextAttentionSlot,
+  findNextUpcomingSlot,
   formatCountdownTimer,
   formatKoreanTime,
   slotTargetDate,
@@ -25,7 +25,6 @@ export function TodayRoutineHeroCard({ timeSlots, isPending, isError, className 
   const { width } = useWindowDimensions();
   const bubbleBg = `${colors.cardIvory}CC`;
   const slotCount = timeSlots.length;
-  const nextSlot = useMemo(() => findNextAttentionSlot(timeSlots), [timeSlots]);
   const nickname = useAuthStore((s) => s.nickname);
   const bubbleHeight = scaleByWidth(width, 148, { min: 140, max: 170 });
 
@@ -35,13 +34,14 @@ export function TodayRoutineHeroCard({ timeSlots, isPending, isError, className 
     return () => clearInterval(id);
   }, []);
 
+  const nextSlot = useMemo(() => findNextUpcomingSlot(timeSlots, now), [timeSlots, now]);
   const nextTarget = useMemo(() => (nextSlot ? slotTargetDate(nextSlot) : null), [nextSlot]);
 
   const timerLine = useMemo(() => {
     if (isPending) return '…';
     if (isError) return '—';
     if (slotCount === 0) return '일정 없음';
-    if (!nextSlot) return '모두 완료';
+    if (!nextSlot) return '오늘 일정 종료';
     if (!nextTarget) return '--:--:--';
     return formatCountdownTimer(nextTarget, now);
   }, [isPending, isError, slotCount, nextSlot, nextTarget, now]);
@@ -60,7 +60,7 @@ export function TodayRoutineHeroCard({ timeSlots, isPending, isError, className 
     if (isPending) return '오늘 루틴 불러오는 중…';
     if (isError) return '오늘 루틴을 불러오지 못했어요';
     if (slotCount === 0) return '오늘은 등록된 섭취 일정이 없어요';
-    if (!nextSlot) return '오늘 루틴, 전부 완료했어요';
+    if (!nextSlot) return '오늘 섭취 루틴이 끝났어요';
     return '오늘도 루틴 체크해볼까요?';
   }, [isPending, isError, slotCount, nextSlot]);
 
@@ -68,7 +68,7 @@ export function TodayRoutineHeroCard({ timeSlots, isPending, isError, className 
     if (isPending) return '잠시만 기다려줘요.';
     if (isError) return '잠깐만요… 잠시 후 다시 시도해 주세요.';
     if (slotCount === 0) return '루틴을 추가하면 여기서 바로 확인할 수 있어요.';
-    if (!nextSlot) return '완벽해요! 오늘은 여기까지.';
+    if (!nextSlot) return '우리 내일 또봐요 !!';
     if (!nextTarget) return '다음 섭취 시간을 확인해 주세요.';
     // 정상 상태 메시지는 UI에서 타이머 중심으로 조합
     return '';

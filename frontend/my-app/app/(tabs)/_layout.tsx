@@ -53,7 +53,7 @@ export default function TabLayout() {
         tabBarInactiveTintColor: `${colors.textMuted}AA`,
         tabBarStyle: showTabBar
           ? {
-              backgroundColor: colors.surface,
+              backgroundColor: colors.background,
               borderTopWidth: 0,
               ...tabBarShadow,
             }

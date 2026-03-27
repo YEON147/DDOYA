@@ -56,8 +56,36 @@ export function countCompletedSlots(slots: DailyIntakeTimeSlot[]): number {
 
 export function findNextAttentionSlot(slots: DailyIntakeTimeSlot[]): DailyIntakeTimeSlot | null {
   const needsAttention = (s: DailyIntakeTimeSlot) =>
-    s.items.some((i) => i.status !== 'TAKEN' && i.status !== 'SKIPPED');
+    s.items.some((i) => i.status !== 'TAKEN' && i.status !== 'SKIPPED' && i.status !== 'MISSED');
   return slots.find(needsAttention) ?? null;
+}
+
+export function hasPendingItems(slot: DailyIntakeTimeSlot): boolean {
+  return slot.items.some((i) => i.status !== 'TAKEN' && i.status !== 'SKIPPED' && i.status !== 'MISSED');
+}
+
+export function slotFailDeadline(slot: DailyIntakeTimeSlot): Date | null {
+  const target = slotTargetDate(slot);
+  if (!target) return null;
+  return new Date(target.getTime() + 20 * 60 * 1000);
+}
+
+export function isSlotTimedOut(slot: DailyIntakeTimeSlot, now: Date = new Date()): boolean {
+  const deadline = slotFailDeadline(slot);
+  if (!deadline) return false;
+  return hasPendingItems(slot) && now.getTime() >= deadline.getTime();
+}
+
+/** 현재 시각보다 미래에 있는 루틴 중 가장 이른 슬롯 */
+export function findNextUpcomingSlot(slots: DailyIntakeTimeSlot[], now: Date = new Date()): DailyIntakeTimeSlot | null {
+  const nowMs = now.getTime();
+  const candidates = slots
+    .map((slot) => ({ slot, target: slotTargetDate(slot) }))
+    .filter((entry): entry is { slot: DailyIntakeTimeSlot; target: Date } => !!entry.target)
+    .filter((entry) => entry.target.getTime() > nowMs)
+    .sort((a, b) => a.target.getTime() - b.target.getTime());
+
+  return candidates[0]?.slot ?? null;
 }
 
 /** 서버 `plannedAt` 우선, 없으면 오늘 날짜 + intakeTime(HH:mm) */
