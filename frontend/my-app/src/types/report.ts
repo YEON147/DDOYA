@@ -76,5 +76,20 @@ export interface IntakeTimingInfo {
   intake_time: string | null;
 }
 
+export interface ReportIntakeTimingsSaveRequest {
+  userSupplements: {
+    userSupplementId: number;
+    intakeTimes: string[];
+  }[];
+}
+
+export interface ReportIntakeTimingsSaveData {
+  reportId: number;
+  saved_count: number;
+  updated_supplement_count: number;
+  needsRefresh: boolean;
+}
+
 export type ReportResponse = SuccessResponse<ReportDetail>;
 export type ReportCreateResponse = SuccessResponse<ReportCreateDetail>;
+export type ReportIntakeTimingsSaveResponse = SuccessResponse<ReportIntakeTimingsSaveData>;
