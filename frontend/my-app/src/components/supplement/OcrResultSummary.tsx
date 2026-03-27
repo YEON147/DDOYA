@@ -56,10 +56,10 @@ export function OcrResultSummary({ ocrResult, title = '성분표 (OCR 결과)' }
         </View>
 
         <View
-          className="mt-3 flex-row items-center justify-between rounded-2xl px-3 py-3"
+          className="mt-3 flex-row items-center rounded-2xl px-3 py-3"
           style={{ backgroundColor: `${colors.textMuted}12` }}
         >
-          <View>
+          <View className="flex-1 items-center">
             <Text className="text-xs font-scdream" style={{ color: colors.textMuted }}>
               1일 권장
             </Text>
@@ -68,21 +68,12 @@ export function OcrResultSummary({ ocrResult, title = '성분표 (OCR 결과)' }
             </Text>
           </View>
           <View className="h-8 w-px" style={{ backgroundColor: `${colors.textMuted}44` }} />
-          <View>
+          <View className="flex-1 items-center">
             <Text className="text-xs font-scdream" style={{ color: colors.textMuted }}>
               1회 섭취량
             </Text>
             <Text className="mt-1 text-base font-scdream-medium" style={{ color: colors.text }}>
               {ocrResult.dosePerIntake}정
-            </Text>
-          </View>
-          <View className="h-8 w-px" style={{ backgroundColor: `${colors.textMuted}44` }} />
-          <View>
-            <Text className="text-xs font-scdream" style={{ color: colors.textMuted }}>
-              인식 성분
-            </Text>
-            <Text className="mt-1 text-base font-scdream-medium" style={{ color: colors.text }}>
-              {ingredients.length}개
             </Text>
           </View>
         </View>
