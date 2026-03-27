@@ -1,19 +1,16 @@
 package com.ssafy.ddoya.domain.report.controller;
 
 import com.ssafy.ddoya.domain.auth.dto.CustomUserDetails;
-import com.ssafy.ddoya.domain.report.dto.ReportCreateResponse;
-import com.ssafy.ddoya.domain.report.dto.ReportDetailResponse;
+import com.ssafy.ddoya.domain.report.dto.*;
 import com.ssafy.ddoya.domain.report.service.ReportService;
 import com.ssafy.ddoya.global.exception.CustomException;
 import com.ssafy.ddoya.global.response.SuccessResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * 리포트 생성 및 조회를 처리하는 컨트롤러입니다.
@@ -57,5 +54,24 @@ public class ReportController {
         ReportDetailResponse response = reportService.getReportDetail(userDetails.getUser().getUserId());
 
         return ResponseEntity.ok(SuccessResponse.of("리포트 조회가 완료되었습니다.", response));
+    }
+
+    /**
+     * 리포트에서 추천된 복용 시각 또는 사용자가 수정한 시각을 실제 스케줄로 확정 저장합니다.
+     */
+    @PatchMapping("/{reportId}/intake-timings")
+    public ResponseEntity<SuccessResponse<ReportIntakeTimingUpdateResponse>> updateReportIntakeTimings(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable("reportId") Long reportId,
+            @RequestBody @Valid ReportIntakeTimingUpdateRequest request) {
+
+        if (userDetails == null || userDetails.getUser() == null) {
+            throw CustomException.unauthorized("로그인이 필요한 서비스입니다.");
+        }
+
+        ReportIntakeTimingUpdateResponse response = reportService.updateReportIntakeTimings(
+                userDetails.getUser().getUserId(), reportId, request);
+
+        return ResponseEntity.ok(SuccessResponse.of("리포트 복용 시각이 확정 저장되었습니다.", response));
     }
 }

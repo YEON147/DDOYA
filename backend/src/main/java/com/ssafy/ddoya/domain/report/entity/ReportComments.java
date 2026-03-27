@@ -71,4 +71,16 @@ public class ReportComments {
         this.createdAt = createdAt != null ? createdAt : LocalDateTime.now();
         this.updatedAt = updatedAt;
     }
+
+    public void updateComments(String excessComment,
+                               String deficiencyComment,
+                               String productComment,
+                               String scheduleComment,
+                               LocalDateTime updatedAt) {
+        this.excessComment = excessComment;
+        this.deficiencyComment = deficiencyComment;
+        this.productComment = productComment;
+        this.scheduleComment = scheduleComment;
+        this.updatedAt = updatedAt;
+    }
 }

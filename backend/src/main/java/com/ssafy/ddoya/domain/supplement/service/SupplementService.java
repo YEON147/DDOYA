@@ -16,6 +16,8 @@ import com.ssafy.ddoya.domain.supplement.dto.*;
 import com.ssafy.ddoya.domain.supplement.dto.SupplementDetailResponse.IntakeScheduleDto;
 import com.ssafy.ddoya.domain.supplement.dto.SupplementUpdateRequest.IntakeScheduleUpdateDto;
 import com.ssafy.ddoya.domain.supplement.dto.SupplementListResponse.SupplementSummaryDto;
+import com.ssafy.ddoya.domain.report.entity.Report;
+import com.ssafy.ddoya.domain.report.repository.ReportRepository;
 import com.ssafy.ddoya.domain.supplement.entity.Supplement;
 import com.ssafy.ddoya.domain.supplement.entity.SupplementInventory;
 import com.ssafy.ddoya.domain.supplement.entity.UserSupplementIngredient;
@@ -80,6 +82,7 @@ public class SupplementService {
     private final ReportIntakeTimingRecommendationRepository timingRecommendationRepository;
     private final BodyPartRepository bodyPartRepository;
     private final IngredientMasterRepository ingredientMasterRepository;
+    private final ReportRepository reportRepository;
     private final EntityManager entityManager;
     private final RestTemplate restTemplate;
 
@@ -148,6 +151,9 @@ public class SupplementService {
         // 4. 추출된 성분 리스트 저장
         List<SupplementRegisterResponse.IngredientDto> ingredientDtos = saveIngredients(savedSupplement,
                 request.getIngredients());
+
+        // 5. 리포트 갱신 필요 표시
+        reportRepository.findByUserId(userId).ifPresent(Report::markNeedsRefresh);
 
         // 응답 DTO 생성
         return buildResponse(savedSupplement, inventory,
@@ -725,6 +731,9 @@ public class SupplementService {
 
         // 4. 부모(Supplement) 최종 삭제
         supplementRepository.delete(supplement);
+
+        // 5. 리포트 갱신 필요 표시
+        reportRepository.findByUserId(userId).ifPresent(Report::markNeedsRefresh);
 
         log.info("[Supplement 삭제 완료]");
     }
