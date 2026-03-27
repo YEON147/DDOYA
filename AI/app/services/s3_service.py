@@ -73,10 +73,8 @@ def save_reference_bundle(
             Body=buffer.getvalue(),
             ContentType="application/octet-stream",
         )
-        print(f"[S3 UPLOAD OK] bucket={settings.AWS_S3_BUCKET}, key={key}")
         return key
 
-    # local fallback
     local_path = Path(settings.LOCAL_STORAGE_ROOT) / key
     local_path.parent.mkdir(parents=True, exist_ok=True)
 

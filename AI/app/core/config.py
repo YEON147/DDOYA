@@ -22,7 +22,7 @@ class Settings:
     SMALL_BBOX_AREA_RATIO = float(os.getenv("SMALL_BBOX_AREA_RATIO", 0.0012))
 
     # 저장소
-    STORAGE_BACKEND = os.getenv("STORAGE_BACKEND", "local").strip().lower()  # local or s3
+    STORAGE_BACKEND = os.getenv("STORAGE_BACKEND", "local").strip().lower()
     LOCAL_STORAGE_ROOT = os.getenv("LOCAL_STORAGE_ROOT", "storage")
 
     AWS_S3_BUCKET = os.getenv("AWS_S3_BUCKET", "").strip()

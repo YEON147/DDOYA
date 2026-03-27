@@ -139,7 +139,7 @@ def run_verify(
     if not filtered_detections:
         return VerifyResponse(
             success=False,
-            message="알약이 검출되지 않았습니다.",
+            message="알약이 검출되지 않았습니다. 재촬영해주세요.",
             results=None,
         )
 
@@ -218,7 +218,7 @@ def run_verify(
     if not crop_results:
         return VerifyResponse(
             success=False,
-            message="알약 이미지 처리에 실패했습니다.",
+            message="알약 이미지 처리에 실패했습니다. 재촬영해주세요.",
             results=None,
         )
 
