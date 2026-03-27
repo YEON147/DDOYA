@@ -100,6 +100,17 @@ def _filter_verify_detections(detections: list[dict]) -> list[dict]:
     return selected
 
 
+def _build_direct_results(expected_items) -> list[VerifyResultItem]:
+    return [
+        VerifyResultItem(
+            user_supplement_id=item.user_supplement_id,
+            dose_per_intake=int(item.dose_per_intake),
+            detected_amount=int(item.dose_per_intake),
+        )
+        for item in expected_items
+    ]
+
+
 def run_verify(
     file_bytes: bytes,
     expected_items,
@@ -112,6 +123,13 @@ def run_verify(
         return VerifyResponse(
             success=False,
             message=quality_result.message,
+            results=None,
+        )
+
+    if not expected_items:
+        return VerifyResponse(
+            success=False,
+            message="expected_items가 비어 있습니다.",
             results=None,
         )
 
@@ -128,26 +146,33 @@ def run_verify(
     detected_total_amount = len(filtered_detections)
     expected_total_amount = sum(int(item.dose_per_intake) for item in expected_items)
 
-    # 핵심 변경:
-    # YOLO 최종 검출 개수가 예상 총 개수 이상이면
-    # 분류 없이 dose_per_intake 그대로 반환
-    if detected_total_amount >= expected_total_amount:
-        direct_results = [
-            VerifyResultItem(
-                user_supplement_id=item.user_supplement_id,
-                dose_per_intake=int(item.dose_per_intake),
-                detected_amount=int(item.dose_per_intake),
-            )
-            for item in expected_items
-        ]
+    if expected_total_amount <= 0:
+        return VerifyResponse(
+            success=False,
+            message="예상 복용 개수가 올바르지 않습니다.",
+            results=None,
+        )
 
+    # 1) YOLO 검출 개수 == 예상 총 개수
+    #    -> 임베딩 비교 없이 그대로 성공 처리
+    if detected_total_amount == expected_total_amount:
         return VerifyResponse(
             success=True,
             message="",
-            results=direct_results,
+            results=_build_direct_results(expected_items),
         )
 
-    # YOLO 검출 개수가 부족한 경우에만 분류 수행
+    # 2) YOLO 검출 개수 > 예상 총 개수
+    #    -> 오검출 가능성이 있으므로 재촬영 안내
+    if detected_total_amount > expected_total_amount:
+        return VerifyResponse(
+            success=False,
+            message="검출된 알약 수가 예상보다 많습니다. 오검출 가능성이 있어 재촬영해주세요.",
+            results=None,
+        )
+
+    # 3) YOLO 검출 개수 < 예상 총 개수
+    #    -> 임베딩 비교 수행
     reference_candidates = []
     for item in expected_items:
         bundle = load_reference_bundle(item.pill_reference_embedding_path)
