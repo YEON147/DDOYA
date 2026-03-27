@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, ScrollView, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -7,6 +7,7 @@ import { reportApi } from '@/src/api/report';
 import { useSupplementsList } from '@/hooks/useSupplement';
 import { intakeRoutineApi } from '@/src/api/intakeRoutine';
 import { useUserProfileStore } from '@/src/store/userProfileStore';
+import { useAuthStore } from '@/src/store/authStore';
 import { AnalysisReport } from '@/src/components/profile/report/AnalysisReport';
 import { ProductRecommendation } from '@/src/components/profile/report/ProductRecommendation';
 import { TimeRecommendation } from '@/src/components/profile/report/TimeRecommendation';
@@ -15,6 +16,7 @@ import { TopHeader } from '@/src/components/common/TopHeader';
 import { AppButton } from '@/src/components/common/AppButton';
 import { TimePicker } from '@/src/components/common/TimePicker';
 import { colors } from '@/constants/theme/colors';
+import { softWellnessCard } from '@/constants/theme/neumorphism';
 import { Ionicons } from '@expo/vector-icons';
 
 const TIMING_DISPLAY_MAP: Record<string, string> = {
@@ -30,6 +32,7 @@ const TIMING_DISPLAY_MAP: Record<string, string> = {
 export default function ReportsScreen() {
   const queryClient = useQueryClient();
   const { profile } = useUserProfileStore();
+  const authNickname = useAuthStore((s) => s.nickname);
   const params = useLocalSearchParams<{ mode?: 'view' | 'edit'; from?: 'banner' }>();
   
   // 화면 모드: 'view' (마이페이지 진입 시), 'edit' (갱신 버튼 클릭 시 또는 파라미터로 전달 시)
@@ -43,6 +46,7 @@ export default function ReportsScreen() {
   
   // 수정된 시간들을 보관하는 로컬 맵 { "userSupplementId_INTAKE_TIMING_ENUM": 'HH:mm' }
   const [tempSupplementTimes, setTempSupplementTimes] = useState<Record<string, string>>({});
+  const hasTriggeredAutoReportRefresh = useRef(false);
 
   // 헬퍼: 추천 시점 정보를 찾아 반환 (SNAKE_CASE/camelCase 대응)
   const getTimingRecommendations = (rep: any) => {
@@ -122,10 +126,28 @@ export default function ReportsScreen() {
     },
   });
 
+  // GET 리포트에 성분 분석이 비어 있으면 1회 자동 갱신 시도
+  useEffect(() => {
+    if (!report || refreshMutation.isPending || hasTriggeredAutoReportRefresh.current) return;
+    const ingredientAnalysis = report.ingredient_analysis || report.ingredientAnalysis || [];
+    if (Array.isArray(ingredientAnalysis) && ingredientAnalysis.length === 0) {
+      hasTriggeredAutoReportRefresh.current = true;
+      refreshMutation.mutate();
+    }
+  }, [report, refreshMutation]);
+
   // 저장 처리
   const [isSaving, setIsSaving] = useState(false);
   const handleSave = async () => {
     if (Object.keys(tempSupplementTimes).length === 0) {
+      try {
+        await reportApi.updateReport();
+        await queryClient.invalidateQueries({ queryKey: ['report'] });
+      } catch (err) {
+        console.error(err);
+        Alert.alert('리포트 갱신 실패', '리포트 갱신 중 문제가 발생했습니다.');
+        return;
+      }
       router.replace('/(tabs)/(home)');
       return;
     }
@@ -176,6 +198,9 @@ export default function ReportsScreen() {
           intakeSchedules: updatedSchedules
         });
       }
+
+      // 시간 저장 완료 후 최신 상태로 리포트 재생성/갱신
+      await reportApi.updateReport();
       
       // 저장 성공 후 모든 관련 쿼리 무효화 (동기화)
       await queryClient.invalidateQueries({ queryKey: ['report'] });
@@ -296,6 +321,9 @@ export default function ReportsScreen() {
   // 날짜 포맷 (updatedAt: "2024-03-26T12:34:56" -> "2024.03.26")
   const updatedAt = report.updated_at || report.updatedAt;
   const displayDate = updatedAt ? updatedAt.split('T')[0].replace(/-/g, '.') : '';
+  const fallbackDeficiencyIngredients = (report.recommended_products_by_ingredient || report.recommendedProductsByIngredient || [])
+    .map((g: any) => g.ingredient_name || g.ingredientName)
+    .filter((name: string | undefined): name is string => !!name);
 
   return (
     <ScreenContainer header={<TopHeader title={mode === 'edit' ? "리포트 갱신" : "분석 리포트"} onBackPress={() => router.back()} />}>
@@ -304,22 +332,27 @@ export default function ReportsScreen() {
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 100 }}
       >
         <View className="py-2">
+          <Text className="mb-4 text-sm font-scdream" style={{ color: colors.textMuted }}>
+            {displayDate ? `${displayDate} 생성 리포트입니다.` : '최신 리포트입니다.'}
+          </Text>
+
           {/* 리포트 갱신 버튼 (최상단 노출 - 배너 진입이 아니며 갱신이 필요할 때만 노출) */}
           {needsRefresh && params.from !== 'banner' && (
             <TouchableOpacity 
               onPress={() => refreshMutation.mutate()}
               disabled={refreshMutation.isPending}
-              className="mb-8 p-5 rounded-3xl bg-orange-50 border border-orange-100 flex-row items-center justify-between shadow-sm"
+              className="mb-8 flex-row items-center justify-between p-5"
+              style={[softWellnessCard(24), { backgroundColor: `${colors.primary}14`, borderColor: `${colors.primary}2A` }]}
               activeOpacity={0.7}
             >
               <View className="flex-1 mr-3">
                 <View className="flex-row items-center mb-1">
-                  <Ionicons name="sparkles" size={16} color="#EA580C" className="mr-2" />
-                  <Text className="text-sm font-bold text-orange-600">리포트 갱신하기</Text>
+                  <Ionicons name="sparkles" size={16} color={colors.primary} className="mr-2" />
+                  <Text className="text-sm font-scdream-bold" style={{ color: colors.brown }}>리포트 갱신하기</Text>
                 </View>
-                <Text className="text-xs text-orange-400" numberOfLines={1}>변경된 영양제 정보를 바탕으로 AI 분석을 다시 실행합니다.</Text>
+                <Text className="text-xs font-scdream" style={{ color: colors.textMuted }} numberOfLines={1}>변경된 영양제 정보를 바탕으로 AI 분석을 다시 실행합니다.</Text>
               </View>
-              <View className="w-10 h-10 rounded-full bg-orange-500 items-center justify-center">
+              <View className="h-10 w-10 items-center justify-center rounded-full" style={{ backgroundColor: colors.primary }}>
                 {refreshMutation.isPending ? (
                   <ActivityIndicator size="small" color="white" />
                 ) : (
@@ -329,16 +362,16 @@ export default function ReportsScreen() {
             </TouchableOpacity>
           )}
 
-          <Text className="mb-4 text-xs font-scdream" style={{ color: colors.textMuted }}>
-            {displayDate} 생성 리포트
-          </Text>
-
           {/* 분석 리포트 섹션 */}
-          <AnalysisReport comments={report.comments} />
+          <AnalysisReport
+            comments={report.comments}
+            ingredientAnalysis={report.ingredient_analysis || report.ingredientAnalysis || []}
+            fallbackDeficiencyIngredients={fallbackDeficiencyIngredients}
+          />
 
           {/* 추천 제품 섹션 */}
           <ProductRecommendation 
-            nickname={profile.nickname} 
+            nickname={authNickname || profile.nickname || '회원'} 
             products={(report.recommended_products_by_ingredient || report.recommendedProductsByIngredient || []).flatMap((group: any) => 
               (group.recommended_products || group.recommendedProducts || []).map((p: any) => ({
                 productCode: p.product_code || p.productCode,
@@ -352,6 +385,7 @@ export default function ReportsScreen() {
           {/* 갱신 모드 전용 섹션 */}
           {mode === 'edit' && (
             <View className="mt-4">
+              <View className="mb-6 h-[1px]" style={{ backgroundColor: `${colors.shadowDark}2A` }} />
               <TimeRecommendation
                 supplementRecommendations={supplementRecommendations}
                 onEditTime={handleEditTime}
@@ -368,7 +402,7 @@ export default function ReportsScreen() {
                   onPress={() => setMode('view')}
                   className="mt-4 items-center"
                 >
-                  <Text className="text-sm text-gray-400 underline font-scdream">취소하고 돌아가기</Text>
+                  <Text className="text-sm underline font-scdream" style={{ color: colors.textMuted }}>취소하고 돌아가기</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -378,7 +412,7 @@ export default function ReportsScreen() {
              <AppButton
                title="확인"
                onPress={() => router.back()}
-               className="mt-8 mb-4 bg-gray-200"
+               className="mt-8 mb-4"
              />
           )}
         </View>

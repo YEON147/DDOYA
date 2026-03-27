@@ -9,6 +9,8 @@ export interface ReportDetail {
   updatedAt?: string;
   is_editable: boolean;
   isEditable?: boolean;
+  ingredient_analysis?: IngredientAnalysis[];
+  ingredientAnalysis?: IngredientAnalysis[];
   comments: ReportComments | null;
   recommended_products_by_ingredient: RecommendedProductsByIngredient[];
   recommendedProductsByIngredient?: RecommendedProductsByIngredient[];
@@ -40,6 +42,15 @@ export interface RecommendedProduct {
   brand?: string;
   pill_image_url?: string;
   pillImageUrl?: string;
+}
+
+export interface IngredientAnalysis {
+  ingredient_id?: number;
+  ingredientId?: number;
+  normalized_ingredient_name?: string;
+  normalizedIngredientName?: string;
+  analysis_type?: 'EXCESS' | 'DEFICIENCY' | 'NORMAL';
+  analysisType?: 'EXCESS' | 'DEFICIENCY' | 'NORMAL';
 }
 
 /** 리포트 생성/갱신 응답 (POST /reports) */
