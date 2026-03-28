@@ -11,6 +11,8 @@ import com.ssafy.ddoya.domain.user.repository.UserRepository;
 import com.ssafy.ddoya.domain.user.service.UserIntakeTimingSettingService;
 import com.ssafy.ddoya.global.exception.CustomException;
 import com.ssafy.ddoya.global.jwt.JwtUtil;
+import com.ssafy.ddoya.domain.report.entity.Report;
+import com.ssafy.ddoya.domain.report.repository.ReportRepository;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -28,6 +30,7 @@ public class AuthService {
     private final JwtUtil jwtUtil;
     private final UserIntakeTimingSettingService userIntakeTimingSettingService;
     private final NotificationSettingService notificationSettingService;
+    private final ReportRepository reportRepository;
 
     @Transactional
     public void logout(Long  userId) {
@@ -123,6 +126,12 @@ public class AuthService {
 
         // 기본 약 챙김 알림 스케줄 생성 (20:00)
         notificationSettingService.createDefaultCarrySchedule(savedUser);
+
+        // 초기 Report 레코드 생성 (사용자당 1개 보장)
+        reportRepository.save(Report.builder()
+                .user(savedUser)
+                .needsRefresh(false)
+                .build());
 
         return SignUpResponseDto.from(savedUser);
     }

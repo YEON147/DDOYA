@@ -52,10 +52,9 @@ public class Report {
     }
 
     /**
-     * 리포트 갱신 완료 시 needsRefresh 플래그를 초기화합니다.
-     * @UpdateTimestamp에 의해 updated_at도 자동 갱신됩니다.
+     * 리포트 갱신 완료 시 needsRefresh 플래그를 초기화(false)합니다.
      */
-    public void markRefreshed() {
+    public void clearNeedsRefresh() {
         this.needsRefresh = false;
     }
 

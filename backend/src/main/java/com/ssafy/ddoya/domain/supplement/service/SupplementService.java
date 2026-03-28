@@ -152,8 +152,8 @@ public class SupplementService {
         List<SupplementRegisterResponse.IngredientDto> ingredientDtos = saveIngredients(savedSupplement,
                 request.getIngredients());
 
-        // 5. 리포트 갱신 필요 표시
-        reportRepository.findByUserId(userId).ifPresent(Report::markNeedsRefresh);
+        // 5. 리포트 갱신 필요 표시 (Report가 없는 경우 생성하여 보장)
+        triggerReportRefresh(userId, user);
 
         // 응답 DTO 생성
         return buildResponse(savedSupplement, inventory,
@@ -732,8 +732,8 @@ public class SupplementService {
         // 4. 부모(Supplement) 최종 삭제
         supplementRepository.delete(supplement);
 
-        // 5. 리포트 갱신 필요 표시
-        reportRepository.findByUserId(userId).ifPresent(Report::markNeedsRefresh);
+        // 5. 리포트 갱신 필요 표시 (Report가 없는 경우 생성하여 보장)
+        triggerReportRefresh(userId, supplement.getUser());
 
         log.info("[Supplement 삭제 완료]");
     }
@@ -867,7 +867,7 @@ public class SupplementService {
                         .build())
                 .collect(Collectors.toList());
 
-        return SupplementUpdateResponse.builder()
+        SupplementUpdateResponse response = SupplementUpdateResponse.builder()
                 .userSupplementId(supplement.getUserSupplementId())
                 .alias(supplement.getAlias())
                 .dailyDose(supplement.getDailyDose())
@@ -876,6 +876,8 @@ public class SupplementService {
                 .stockNotificationEnabled(inventory.isStockAlertEnabled())
                 .intakeSchedules(scheduleDtos)
                 .build();
+
+        return response;
     }
 
     /**
@@ -911,5 +913,16 @@ public class SupplementService {
                 .dosePerIntake(dose)
                 .isActive(true)
                 .build();
+    }
+
+    /**
+     * 영양제 정보가 변경되었을 때 리포트 갱신 필요 상태를 트리거합니다.
+     * Report 레코드가 없는 경우 새로 생성하여 안정성을 확보합니다.
+     */
+    private void triggerReportRefresh(Long userId, User user) {
+        reportRepository.findByUserId(userId)
+                .orElseGet(() -> reportRepository.save(
+                        Report.builder().user(user).needsRefresh(false).build()
+                )).markNeedsRefresh();
     }
 }

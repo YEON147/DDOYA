@@ -93,7 +93,7 @@ public class ReportService {
      * 로그인 사용자 기준으로 리포트를 생성 또는 갱신합니다.
      * 트랜잭션 없이 시작하여 네트워크 호출(FastAPI) 도중 커넥션 점유를 방지합니다.
      */
-    @Transactional(readOnly = false)
+    @Transactional
     public ReportCreateResponse createOrUpdateReport(Long userId) {
         // 1. 사용자 조회
         User user = userRepository.findById(userId)
@@ -124,13 +124,22 @@ public class ReportService {
         // 5. 사용자 섭취 타이밍 설정 한 번에 조회 → Map 변환 (N+1 방지)
         Map<IntakeTiming, LocalTime> timingSettingMap = buildTimingSettingMap(userId);
 
-        // 6. 트랜잭션 프록시를 통해 저장 로직 호출
+        // 6. Report 엔티티 확보 (조회 또는 생성만 수행)
+        Report report = reportRepository.findByUserId(user.getUserId())
+                .orElseGet(() -> reportRepository.save(
+                        Report.builder()
+                                .user(user)
+                                .needsRefresh(false)
+                                .build()
+                ));
+
+        // 7. 트랜잭션 프록시를 통해 저장 로직 호출
         ReportService self = selfProvider.getIfAvailable();
         if (self == null) {
             log.error("[ReportService] Self-provider is not available. Saving in current thread without proxy.");
-            return this.saveReportDataTransaction(user, supplements, supplementDtos, fastApiResponse, timingSettingMap);
+            return this.saveReportDataTransaction(report, user, supplements, supplementDtos, fastApiResponse, timingSettingMap);
         }
-        return self.saveReportDataTransaction(user, supplements, supplementDtos, fastApiResponse, timingSettingMap);
+        return self.saveReportDataTransaction(report, user, supplements, supplementDtos, fastApiResponse, timingSettingMap);
     }
 
     /**
@@ -276,13 +285,12 @@ public class ReportService {
         List<IntakeSchedule> existingSchedules = intakeScheduleRepository.findByUserSupplementIdInAndUserIdAndScheduleTypeAndIsActiveTrue(requestedSupplementIds, userId, ScheduleType.INTAKE);
 
         // 4. 기존 스케줄 비활성화 및 기록 정리
-        // [중요: 비활성화 처리 후 새 스케줄 생성 전까지의 상태를 확실히 하기 위함]
         for (IntakeSchedule schedule : existingSchedules) {
             // 오늘 MISSED + 미래 기록만 삭제 (과거/확정 이력은 보존)
             intakeRecordSyncService.syncOnUpdate(schedule.getScheduleId());
             schedule.deactivate();
         }
-        // 명시적 반영 (선택 사항이나 확실성을 위해 호출)
+        // 명시적 반영
         intakeScheduleRepository.saveAllAndFlush(existingSchedules);
 
         // 5. 새 INTAKE 스케줄 생성
@@ -312,7 +320,7 @@ public class ReportService {
         }
 
         // 6. 리포트 상태 갱신 (더 이상 갱신 필요 없음)
-        report.markRefreshed();
+        report.clearNeedsRefresh();
 
         return ReportIntakeTimingUpdateResponse.builder()
                 .reportId(reportId)
@@ -341,9 +349,7 @@ public class ReportService {
             log.info("[ReportService] FastAPI raw body={}", responseEntity.getBody());
 
             String rawBody = responseEntity.getBody();
-            log.info("[ReportService] rawBody={}", rawBody);
 
-            // "null" 문자열 체크 추가 (Jackson readValue("null") 은 null 을 반환함)
             if (rawBody == null || rawBody.isBlank() || "null".equalsIgnoreCase(rawBody)) {
                 log.error("[ReportService] FastAPI raw body가 비어 있거나 'null'입니다. url={}", url);
                 throw new CustomException(INTERNAL_SERVER_ERROR, "AI 리포트 생성 서버로부터 유효한 응답을 받지 못했습니다.");
@@ -351,15 +357,10 @@ public class ReportService {
 
             FastApiReportResponse body = objectMapper.readValue(rawBody, FastApiReportResponse.class);
 
-            // 파싱 결과 null 체크 (NPE 방지)
             if (body == null) {
                 log.error("[ReportService] FastAPI 응답 파싱 결과가 null입니다. rawBody={}", rawBody);
                 throw new CustomException(INTERNAL_SERVER_ERROR, "AI 리포트 응답 형식이 올바르지 않습니다.");
             }
-
-            log.info("[ReportService] FastAPI parsed success={}", body.isSuccess());
-            log.info("[ReportService] FastAPI parsed message={}", body.getMessage());
-            log.info("[ReportService] FastAPI parsed data null 여부={}", body.getData() == null);
 
             if (!body.isSuccess()) {
                 log.error("[ReportService] FastAPI 응답 success=false. message={}", body.getMessage());
@@ -400,46 +401,45 @@ public class ReportService {
      * 실제 DB 작업이므로 트랜잭션을 보장합니다.
      */
     @Transactional
-    public ReportCreateResponse saveReportDataTransaction(User user, List<Supplement> allSupplements,
+    public ReportCreateResponse saveReportDataTransaction(Report detachedReport, User user, List<Supplement> allSupplements,
                                                List<FastApiReportRequest.SupplementDto> requestedDtos,
                                                FastApiReportResponse fastApiResponse,
                                                Map<IntakeTiming, LocalTime> timingSettingMap) {
-        FastApiReportResponse.ReportData data = fastApiResponse.getData();
-
-        // Report Upsert (saveAndFlush를 사용하여 즉시 Report ID 확보)
-        Report report = reportRepository.findByUserId(user.getUserId())
-                .orElseGet(() -> reportRepository.saveAndFlush(
-                        Report.builder().user(user).needsRefresh(false).build()
-                ));
-
-        Long reportId = report.getReportId();
+        
+        Long reportId = detachedReport.getReportId();
         log.info("[ReportService] DB 저장 시작: reportId={}", reportId);
 
-        // 기존 child 데이터 삭제 (Modifying 쿼리들 - Repo 설정에 따라 flush됨)
+        // 기존 child 데이터 삭제 (clearAutomatically=false 로 수정되었으므로 report 가 detached 되지 않음)
         ingredientAnalysisRepository.deleteAllByReportId(reportId);
         recommendedProductRepository.deleteAllByReportId(reportId);
         timingRecommendationRepository.deleteAllByReportId(reportId);
 
+        // 확실한 managed 상태 확보를 위해 벌크 삭제 후 필요시 재조회 (이미 repository 조치 완료)
+        Report managedReport = reportRepository.findById(reportId)
+                .orElseThrow(() -> new CustomException(INTERNAL_SERVER_ERROR, "Report를 찾을 수 없습니다."));
+        
+        FastApiReportResponse.ReportData data = fastApiResponse.getData();
+
         // 성분 분석 저장
         if (data.getIngredientAnalysis() != null) {
-            saveIngredientAnalysisList(report, data.getIngredientAnalysis());
+            saveIngredientAnalysisList(managedReport, data.getIngredientAnalysis());
         }
 
         // 추천 제품 저장
         if (data.getRecommendedProducts() != null) {
-            saveRecommendedProducts(report, data.getRecommendedProducts());
+            saveRecommendedProducts(managedReport, data.getRecommendedProducts());
         }
 
         // 섭취 타이밍 추천 저장
         Map<Long, Supplement> supplementMap = allSupplements.stream()
                 .collect(Collectors.toMap(Supplement::getUserSupplementId, s -> s));
         if (data.getTimingRecommendations() != null) {
-            saveTimingRecommendations(report, data.getTimingRecommendations(), supplementMap);
+            saveTimingRecommendations(managedReport, data.getTimingRecommendations(), supplementMap);
         }
 
         // 코멘트 저장/갱신 (Upsert)
         if (data.getComments() != null) {
-            saveOrUpdateComments(report, data.getComments());
+            saveOrUpdateComments(managedReport, data.getComments());
         }
 
         // 리포트에 반영된 영양제 is_reflected = true 처리
@@ -452,8 +452,8 @@ public class ReportService {
 
         log.info("[ReportService] 리포트 데이터 저장 완료: userId={}, reportId={}", user.getUserId(), reportId);
 
-        // DB 저장 성공 후 needs_refresh = true 로 세팅 (프론트에 갱신 필요 알림)
-        report.markNeedsRefresh();
+        // 최신 리포트 데이터가 반영되었으므로 needs_refresh = false 로 설정
+        managedReport.clearNeedsRefresh();
 
         // timing_recommendations에 intake_time 주입하여 응답 DTO 조립
         List<ReportCreateResponse.TimingRecommendationWithTimeDto> timingWithTime =
@@ -461,7 +461,7 @@ public class ReportService {
 
         return ReportCreateResponse.builder()
                 .reportId(reportId)
-                .needsRefresh(report.getNeedsRefresh())
+                .needsRefresh(managedReport.getNeedsRefresh())
                 .updatedAt(LocalDateTime.now())
                 .isEditable(true)
                 .ingredientAnalysis(data.getIngredientAnalysis())
@@ -495,8 +495,6 @@ public class ReportService {
             List<String> rawTimings = dto.getIntakeTimings();
 
             if (hasRegisteredSchedule) {
-                // Case A: 등록된 스케줄이 있는 경우 -> 실제 스케줄 시각 사용
-                // intake_timing은 리포트가 추천한 순서대로 매칭 (부족하면 마지막 추천 타이밍 재사용)
                 for (int i = 0; i < registeredSchedules.size(); i++) {
                     IntakeSchedule schedule = registeredSchedules.get(i);
                     String label = (rawTimings != null && !rawTimings.isEmpty())
@@ -509,7 +507,6 @@ public class ReportService {
                             .build());
                 }
             } else {
-                // Case B: 등록된 스케줄이 없는 경우 -> 리포트 추천 타이밍 + 사용자 기본 설정 시각 사용
                 if (rawTimings != null) {
                     for (String timingStr : rawTimings) {
                         String intakeTimeStr = resolveIntakeTime(timingStr, timingSettingMap);
@@ -534,7 +531,6 @@ public class ReportService {
 
     /**
      * intakeTiming 문자열을 enum으로 변환하여 사용자 설정 시각을 HH:mm로 반환합니다.
-     * 맵핑 실패 또는 설정값 부재 시 null을 반환합니다.
      */
     private String resolveIntakeTime(String intakeTimingStr, Map<IntakeTiming, LocalTime> timingSettingMap) {
         if (intakeTimingStr == null || intakeTimingStr.isBlank()) {
@@ -558,8 +554,6 @@ public class ReportService {
         for (Supplement supplement : supplements) {
             List<UserSupplementIngredient> ingredientList = supplement.getIngredients();
             if (ingredientList == null || ingredientList.isEmpty()) {
-                log.debug("[ReportService] 성분 정보가 없어 FastAPI 요청에서 제외: supplementId={}",
-                        supplement.getUserSupplementId());
                 continue;
             }
 
@@ -588,7 +582,6 @@ public class ReportService {
             IngredientMaster ingredient = ingredientMasterRepository.findById(dto.getIngredientId())
                     .orElse(null);
             if (ingredient == null) {
-                log.warn("[ReportService] ingredient_id={} 가 없어 성분 분석 저장을 건너뜁니다.", dto.getIngredientId());
                 continue;
             }
 
@@ -596,7 +589,6 @@ public class ReportService {
             try {
                 analysisType = AnalysisType.valueOf(dto.getAnalysisType());
             } catch (IllegalArgumentException e) {
-                log.warn("[ReportService] 알 수 없는 analysis_type={}, NORMAL로 대체합니다.", dto.getAnalysisType());
                 analysisType = AnalysisType.NORMAL;
             }
 
@@ -623,14 +615,12 @@ public class ReportService {
         for (FastApiReportResponse.RecommendedProductDto dto : productDtos) {
             Optional<Product> productOpt = productRepository.findById(dto.getProductCode());
             if (productOpt.isEmpty()) {
-                log.warn("[ReportService] product_code={} 가 products 테이블에 없어 건너뜁니다.", dto.getProductCode());
                 continue;
             }
 
             IngredientMaster ingredient = ingredientMasterRepository.findById(dto.getIngredientId())
                     .orElse(null);
             if (ingredient == null) {
-                log.warn("[ReportService] ingredient_id={} 가 없어 추천 제품 저장을 건너뜁니다.", dto.getIngredientId());
                 continue;
             }
 
@@ -650,24 +640,19 @@ public class ReportService {
         for (FastApiReportResponse.TimingRecommendationDto dto : timingDtos) {
             Supplement supplement = supplementMap.get(dto.getUserSupplementId());
             if (supplement == null) {
-                log.warn("[ReportService] user_supplement_id={} 를 찾을 수 없어 타이밍 추천 저장을 건너뜁니다.", dto.getUserSupplementId());
                 continue;
             }
 
             List<String> rawTimings = dto.getIntakeTimings();
             if (rawTimings == null || rawTimings.isEmpty()) {
-                log.warn("[ReportService] user_supplement_id={} 의 intake_timings가 비어있어 저장을 건너뜁니다.", dto.getUserSupplementId());
                 continue;
             }
 
-            // 1 영양제당 복수 타이밍 각각 엔티티 생성
             for (String timingStr : rawTimings) {
                 IntakeTiming intakeTiming;
                 try {
                     intakeTiming = IntakeTiming.valueOf(timingStr);
                 } catch (IllegalArgumentException e) {
-                    log.warn("[ReportService] 알 수 없는 intake_timing='{}' (supplement_id={}), DB 저장을 건너뜁니다.",
-                            timingStr, dto.getUserSupplementId());
                     continue;
                 }
 
@@ -683,6 +668,7 @@ public class ReportService {
 
     private void saveOrUpdateComments(Report report, FastApiReportResponse.CommentsDto commentsDto) {
         LocalDateTime now = LocalDateTime.now();
+        log.info("saveOrUpdateComments reportId={}", report.getReportId());
 
         reportCommentsRepository.findByReport_ReportId(report.getReportId())
                 .ifPresentOrElse(
@@ -695,22 +681,21 @@ public class ReportService {
                                     now
                             );
                         },
-                        () -> reportCommentsRepository.save(
-                                buildComments(report, commentsDto, now, null)
-                        )
-                );
-    }
+                        () -> {
+                            ReportComments newComments = ReportComments.builder()
+                                    .report(report)
+                                    .excessComment(commentsDto.getExcessComment())
+                                    .deficiencyComment(commentsDto.getDeficiencyComment())
+                                    .productComment(commentsDto.getProductComment())
+                                    .scheduleComment(commentsDto.getScheduleComment())
+                                    .createdAt(now)
+                                    .build();
+                            
+                            log.info("save target entity class={}", newComments.getClass().getName());
+                            log.info("report class={}", report.getClass().getName());
 
-    private ReportComments buildComments(Report report, FastApiReportResponse.CommentsDto dto,
-                                          LocalDateTime createdAt, LocalDateTime updatedAt) {
-        return ReportComments.builder()
-                .report(report)
-                .excessComment(dto.getExcessComment())
-                .deficiencyComment(dto.getDeficiencyComment())
-                .productComment(dto.getProductComment())
-                .scheduleComment(dto.getScheduleComment())
-                .createdAt(createdAt)
-                .updatedAt(updatedAt)
-                .build();
+                            reportCommentsRepository.save(newComments);
+                        }
+                );
     }
 }
