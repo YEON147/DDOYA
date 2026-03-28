@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { View, TextInput, Text, Alert } from 'react-native';
+import { useRef, useState } from 'react';
+import { View, TextInput, Text, Animated, Easing } from 'react-native';
 import { router } from 'expo-router';
 import { AppButton } from '../common/AppButton';
 import { getLoginErrorMessage, useLoginMutation } from '@/hooks/useLoginMutation';
@@ -11,6 +11,8 @@ export function LoginForm() {
   const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const loginMutation = useLoginMutation();
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+  const slideAnim = useRef(new Animated.Value(0)).current;
 
   const isFormValid = loginId.trim() !== '' && password.trim() !== '';
 
@@ -20,8 +22,22 @@ export function LoginForm() {
       { loginId, password },
       {
         onSuccess: () => {
-          Alert.alert('로그인 완료');
-          router.replace('/(tabs)/(home)');
+          Animated.parallel([
+            Animated.timing(fadeAnim, {
+              toValue: 0,
+              duration: 280,
+              easing: Easing.out(Easing.cubic),
+              useNativeDriver: true,
+            }),
+            Animated.timing(slideAnim, {
+              toValue: -12,
+              duration: 280,
+              easing: Easing.out(Easing.cubic),
+              useNativeDriver: true,
+            }),
+          ]).start(() => {
+            router.replace('/(tabs)/(home)');
+          });
         },
         onError: (error) => {
           console.error('Login failed:', error);
@@ -32,13 +48,16 @@ export function LoginForm() {
   };
 
   return (
-    <View className="flex-1 w-full px-6 pb-6 items-center">
+    <Animated.View
+      className="flex-1 w-full px-6 pb-6 items-center"
+      style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}
+    >
       <View className="w-full max-w-[340px]">
         <View className="gap-3">
           <View className="px-4" style={neuInset(16)}>
             <TextInput
-              className="w-full h-[52px] text-sm font-scdream"
-              style={{ color: colors.text }}
+              className="w-full h-[52px] text-base font-scdream"
+              style={{ color: colors.text, letterSpacing: 0.65 }}
               placeholder="아이디를 입력해주세요"
               placeholderTextColor={colors.textMuted}
               value={loginId}
@@ -51,8 +70,8 @@ export function LoginForm() {
           </View>
           <View className="px-4" style={neuInset(16)}>
             <TextInput
-              className="w-full h-[52px] text-sm font-scdream"
-              style={{ color: colors.text }}
+              className="w-full h-[52px] text-base font-scdream"
+              style={{ color: colors.text, letterSpacing: 0.65 }}
               placeholder="비밀번호를 입력해주세요"
               placeholderTextColor={colors.textMuted}
               value={password}
@@ -94,6 +113,6 @@ export function LoginForm() {
           className="w-full h-[56px]"
         />
       </View>
-    </View>
+    </Animated.View>
   );
 }
