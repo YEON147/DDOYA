@@ -45,7 +45,7 @@ public class NotificationProcessorService {
         LocalTime scanTime = LocalTime.of(now.getHour(), now.getMinute());
 
         List<IntakeSchedule> targetSchedules = intakeScheduleRepository
-                .findAllByScheduleTypeAndIntakeTimeAndCarryEnabled(ScheduleType.CARRY, scanTime);
+                .findAllByScheduleTypeAndIntakeTimeAndCarryEnabledAndIsActiveTrue(ScheduleType.CARRY, scanTime);
 
         if (targetSchedules.isEmpty()) {
             return;
