@@ -22,21 +22,26 @@ class Settings:
     SMALL_BBOX_AREA_RATIO = float(os.getenv("SMALL_BBOX_AREA_RATIO", 0.0012))
 
     # 저장소
-    STORAGE_BACKEND = os.getenv("STORAGE_BACKEND", "local")  # local or s3
+    STORAGE_BACKEND = os.getenv("STORAGE_BACKEND", "local").strip().lower()
     LOCAL_STORAGE_ROOT = os.getenv("LOCAL_STORAGE_ROOT", "storage")
 
-    AWS_S3_BUCKET = os.getenv("AWS_S3_BUCKET", "")
-    AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID", "")
-    AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", "")
-    AWS_DEFAULT_REGION = os.getenv("AWS_DEFAULT_REGION", "ap-northeast-2")
+    AWS_S3_BUCKET = os.getenv("AWS_S3_BUCKET", "").strip()
+    AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID", "").strip()
+    AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", "").strip()
 
-    S3_REFERENCE_PREFIX = os.getenv("S3_REFERENCE_PREFIX", "supplements/embeddings")
+    # AWS_DEFAULT_REGION 우선, 없으면 AWS_REGION fallback
+    AWS_DEFAULT_REGION = os.getenv(
+        "AWS_DEFAULT_REGION",
+        os.getenv("AWS_REGION", "ap-northeast-2")
+    ).strip()
+
+    S3_REFERENCE_PREFIX = os.getenv("S3_REFERENCE_PREFIX", "supplements/embeddings").strip()
 
     # crop pad
     REGISTER_CROP_PAD_RATIO = float(os.getenv("REGISTER_CROP_PAD_RATIO", 0.12))
     VERIFY_CROP_PAD_RATIO = float(os.getenv("VERIFY_CROP_PAD_RATIO", 0.10))
 
-    # verify bbox filtering (조금 완화)
+    # verify bbox filtering
     VERIFY_MIN_W = int(os.getenv("VERIFY_MIN_W", 12))
     VERIFY_MIN_H = int(os.getenv("VERIFY_MIN_H", 12))
     VERIFY_MIN_AREA = int(os.getenv("VERIFY_MIN_AREA", 144))

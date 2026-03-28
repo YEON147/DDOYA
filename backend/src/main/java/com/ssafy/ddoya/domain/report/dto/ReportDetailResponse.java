@@ -4,8 +4,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
 import lombok.Getter;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import com.ssafy.ddoya.domain.report.entity.AnalysisType;
 
 /**
  * 리포트 상세 조회 응답 DTO
@@ -21,8 +23,35 @@ public class ReportDetailResponse {
     private ReportCommentsDto comments;
     private List<RecommendedProductsByIngredientDto> recommendedProductsByIngredient;
 
+    @JsonProperty("ingredient_analysis")
+    private List<IngredientAnalysisResponse> ingredientAnalysis;
+
     @JsonProperty("timing_recommendations")
     private List<TimingRecommendationDto> timingRecommendations;
+
+    @Getter
+    @Builder
+    public static class IngredientAnalysisResponse {
+        @JsonProperty("ingredient_id")
+        private Long ingredientId;
+        @JsonProperty("normalized_ingredient_name")
+        private String normalizedIngredientName;
+        @JsonProperty("recommended_amount")
+        private BigDecimal recommendedAmount;
+        @JsonProperty("current_amount")
+        private BigDecimal currentAmount;
+        @JsonProperty("excess_ratio")
+        private BigDecimal excessRatio;
+        @JsonProperty("excess_amount")
+        private BigDecimal excessAmount;
+        @JsonProperty("deficiency_ratio")
+        private BigDecimal deficiencyRatio;
+        @JsonProperty("deficiency_amount")
+        private BigDecimal deficiencyAmount;
+        private String unit;
+        @JsonProperty("analysis_type")
+        private AnalysisType analysisType;
+    }
 
     @Getter
     @Builder

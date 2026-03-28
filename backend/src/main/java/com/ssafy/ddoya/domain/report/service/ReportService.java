@@ -8,10 +8,7 @@ import com.ssafy.ddoya.domain.common.repository.ProductRepository;
 import com.ssafy.ddoya.domain.intake.entity.IntakeSchedule;
 import com.ssafy.ddoya.domain.intake.entity.ScheduleType;
 import com.ssafy.ddoya.domain.intake.repository.IntakeScheduleRepository;
-import com.ssafy.ddoya.domain.report.dto.FastApiReportRequest;
-import com.ssafy.ddoya.domain.report.dto.FastApiReportResponse;
-import com.ssafy.ddoya.domain.report.dto.ReportCreateResponse;
-import com.ssafy.ddoya.domain.report.dto.ReportDetailResponse;
+import com.ssafy.ddoya.domain.report.dto.*;
 import com.ssafy.ddoya.domain.report.entity.AnalysisType;
 import com.ssafy.ddoya.domain.report.entity.IntakeTiming;
 import com.ssafy.ddoya.domain.report.entity.Report;
@@ -26,7 +23,9 @@ import com.ssafy.ddoya.domain.report.repository.ReportRecommendedProductReposito
 import com.ssafy.ddoya.domain.report.repository.ReportRepository;
 import com.ssafy.ddoya.domain.supplement.entity.Supplement;
 import com.ssafy.ddoya.domain.supplement.entity.UserSupplementIngredient;
+import com.ssafy.ddoya.domain.supplement.repository.SupplementRepository;
 import com.ssafy.ddoya.domain.supplement.repository.SupplementWithIngredientsRepository;
+import com.ssafy.ddoya.domain.intake.service.IntakeRecordSyncService;
 import com.ssafy.ddoya.domain.user.entity.User;
 import com.ssafy.ddoya.domain.user.entity.UserIntakeTimingSetting;
 import com.ssafy.ddoya.domain.user.repository.UserIntakeTimingSettingRepository;
@@ -35,6 +34,7 @@ import com.ssafy.ddoya.global.exception.CustomException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -83,11 +83,17 @@ public class ReportService {
     private final IngredientMasterRepository ingredientMasterRepository;
     private final ProductRepository productRepository;
     private final IntakeScheduleRepository intakeScheduleRepository;
+    private final IntakeRecordSyncService intakeRecordSyncService;
+    private final SupplementRepository supplementRepository;
+
+    // Self-injection for @Transactional proxy
+    private final ObjectProvider<ReportService> selfProvider;
 
     /**
      * 로그인 사용자 기준으로 리포트를 생성 또는 갱신합니다.
+     * 트랜잭션 없이 시작하여 네트워크 호출(FastAPI) 도중 커넥션 점유를 방지합니다.
      */
-    @Transactional
+    @Transactional(readOnly = false)
     public ReportCreateResponse createOrUpdateReport(Long userId) {
         // 1. 사용자 조회
         User user = userRepository.findById(userId)
@@ -112,14 +118,19 @@ public class ReportService {
                 .supplements(supplementDtos)
                 .build();
 
-        // 4. FastAPI 호출 (트랜잭션 외부 - 실패 시 DB 저장 불가)
+        // 4. FastAPI 호출 (트랜잭션 외부)
         FastApiReportResponse fastApiResponse = callFastApiGenerateReport(request);
 
         // 5. 사용자 섭취 타이밍 설정 한 번에 조회 → Map 변환 (N+1 방지)
         Map<IntakeTiming, LocalTime> timingSettingMap = buildTimingSettingMap(userId);
 
-        // 6. FastAPI 응답을 DB에 저장 + 응답 DTO 조립 (트랜잭션)
-        return saveReportData(user, supplements, supplementDtos, fastApiResponse, timingSettingMap);
+        // 6. 트랜잭션 프록시를 통해 저장 로직 호출
+        ReportService self = selfProvider.getIfAvailable();
+        if (self == null) {
+            log.error("[ReportService] Self-provider is not available. Saving in current thread without proxy.");
+            return this.saveReportDataTransaction(user, supplements, supplementDtos, fastApiResponse, timingSettingMap);
+        }
+        return self.saveReportDataTransaction(user, supplements, supplementDtos, fastApiResponse, timingSettingMap);
     }
 
     /**
@@ -139,6 +150,7 @@ public class ReportService {
         Optional<ReportComments> commentsOpt = reportCommentsRepository.findByReport_ReportId(reportId);
         List<ReportRecommendedProduct> recommendedProducts = recommendedProductRepository.findAllByReport_ReportId(reportId);
         List<ReportIntakeTimingRecommendation> timingRecommendations = timingRecommendationRepository.findAllByReport_ReportId(reportId);
+        List<ReportIngredientAnalysis> analysisEntities = ingredientAnalysisRepository.findAllByReport_ReportIdOrderByIngredient_IngredientIdAsc(reportId);
 
         // 2.5 사용자별 섭취 타이밍 설정 조회 (N+1 방지용 Map 활용)
         Map<IntakeTiming, LocalTime> timingSettingMap = buildTimingSettingMap(userId);
@@ -206,6 +218,22 @@ public class ReportService {
                         .build())
                 .orElse(null);
 
+        // 5.5 성분 분석 매핑
+        List<ReportDetailResponse.IngredientAnalysisResponse> analysisDtos = analysisEntities.stream()
+                .map(ia -> ReportDetailResponse.IngredientAnalysisResponse.builder()
+                        .ingredientId(ia.getIngredient().getIngredientId())
+                        .normalizedIngredientName(ia.getNormalizedIngredientName())
+                        .recommendedAmount(ia.getRecommendedAmount())
+                        .currentAmount(ia.getCurrentAmount())
+                        .excessRatio(ia.getExcessRatio())
+                        .excessAmount(ia.getExcessAmount())
+                        .deficiencyRatio(ia.getDeficiencyRatio())
+                        .deficiencyAmount(ia.getDeficiencyAmount())
+                        .unit(ia.getUnit())
+                        .analysisType(ia.getAnalysisType())
+                        .build())
+                .collect(Collectors.toList());
+
         // 6. 최종 응답 조립
         return ReportDetailResponse.builder()
                 .reportId(reportId)
@@ -214,7 +242,87 @@ public class ReportService {
                 .isEditable(false) // 조회 API에서는 항상 false
                 .comments(commentsDto)
                 .recommendedProductsByIngredient(productsByIngredient)
+                .ingredientAnalysis(analysisDtos)
                 .timingRecommendations(timingRecommendationDtos)
+                .build();
+    }
+
+    /**
+     * 리포트에서 추천된 복용 시각을 사용자가 확정하여 실제 스케줄로 저장합니다.
+     * 기존 INTAKE 스케줄은 삭제하되, 기록 동기화(syncOnDelete)를 수행합니다.
+     */
+    @Transactional
+    public ReportIntakeTimingUpdateResponse updateReportIntakeTimings(Long userId, Long reportId, ReportIntakeTimingUpdateRequest request) {
+        // 1. 리포트 소유권 검증
+        Report report = reportRepository.findById(reportId)
+                .orElseThrow(() -> CustomException.notFound("리포트를 찾을 수 없습니다."));
+        if (!report.getUser().getUserId().equals(userId)) {
+            throw CustomException.forbidden("해당 리포트에 대한 권한이 없습니다.");
+        }
+
+        User user = report.getUser();
+
+        // 2. 요청 영양제 ID 목록 추출 및 소유권/중복 검증
+        List<Long> requestedSupplementIds = request.getUserSupplements().stream()
+                .map(ReportIntakeTimingUpdateRequest.UserSupplementTimingRequest::getUserSupplementId)
+                .collect(Collectors.toList());
+
+        // 동일 영양제 중복 요청 체크
+        if (requestedSupplementIds.size() != requestedSupplementIds.stream().distinct().count()) {
+            throw CustomException.badRequest("중복된 영양제 ID가 요청에 포함되어 있습니다.");
+        }
+
+        // 3. 기존 INTAKE 스케줄 일괄 조회
+        List<IntakeSchedule> existingSchedules = intakeScheduleRepository.findBySupplementIdInAndScheduleType(requestedSupplementIds, ScheduleType.INTAKE);
+
+        // 4. 기존 스케줄에 대한 intake_record 정리 및 스케줄 삭제
+        for (IntakeSchedule schedule : existingSchedules) {
+            // 해당 영양제가 실제 사용자 소유인지 최종 검증 (보안 강화)
+            if (!schedule.getUser().getUserId().equals(userId)) {
+                throw CustomException.forbidden("요청하신 영양제 중 일부에 대한 권한이 없습니다.");
+            }
+            // 미복용 기록 정리 정책 적용
+            intakeRecordSyncService.syncOnDelete(schedule.getScheduleId());
+        }
+
+        // 스케줄 일괄 삭제
+        if (!existingSchedules.isEmpty()) {
+            List<Long> scheduleIdsToDelete = existingSchedules.stream().map(IntakeSchedule::getScheduleId).collect(Collectors.toList());
+            intakeScheduleRepository.deleteAllByIdInBatch(scheduleIdsToDelete);
+        }
+
+        // 5. 새 INTAKE 스케줄 생성
+        int totalSavedCount = 0;
+        for (ReportIntakeTimingUpdateRequest.UserSupplementTimingRequest supplementRequest : request.getUserSupplements()) {
+            Supplement supplement = supplementRepository.findByIdAndUserId(supplementRequest.getUserSupplementId(), userId)
+                    .orElseThrow(() -> CustomException.notFound("영양제 정보를 찾을 수 없거나 권한이 없습니다: " + supplementRequest.getUserSupplementId()));
+
+            for (String timeStr : supplementRequest.getIntakeTimes()) {
+                LocalTime intakeTime = LocalTime.parse(timeStr);
+                
+                IntakeSchedule newSchedule = IntakeSchedule.builder()
+                        .user(user)
+                        .supplement(supplement)
+                        .intakeTime(intakeTime)
+                        .scheduleType(ScheduleType.INTAKE)
+                        .dosePerIntake(supplement.getDosePerIntake()) // 기본 1회 섭취량 사용
+                        .build();
+                
+                intakeScheduleRepository.save(newSchedule);
+                // 새 스케줄에 대해 오늘분 기록 생성 시도
+                intakeRecordSyncService.syncOnUpsert(newSchedule);
+                totalSavedCount++;
+            }
+        }
+
+        // 6. 리포트 상태 갱신 (더 이상 갱신 필요 없음)
+        report.markRefreshed();
+
+        return ReportIntakeTimingUpdateResponse.builder()
+                .reportId(reportId)
+                .savedCount(totalSavedCount)
+                .updatedSupplementCount(request.getUserSupplements().size())
+                .needsRefresh(report.getNeedsRefresh())
                 .build();
     }
 
@@ -293,27 +401,25 @@ public class ReportService {
 
     /**
      * FastAPI 응답 결과를 DB에 저장하고, 응답 DTO를 조립하여 반환합니다.
+     * 실제 DB 작업이므로 트랜잭션을 보장합니다.
      */
     @Transactional
-    public ReportCreateResponse saveReportData(User user, List<Supplement> allSupplements,
+    public ReportCreateResponse saveReportDataTransaction(User user, List<Supplement> allSupplements,
                                                List<FastApiReportRequest.SupplementDto> requestedDtos,
                                                FastApiReportResponse fastApiResponse,
                                                Map<IntakeTiming, LocalTime> timingSettingMap) {
         FastApiReportResponse.ReportData data = fastApiResponse.getData();
 
-        // Report Upsert
+        // Report Upsert (saveAndFlush를 사용하여 즉시 Report ID 확보)
         Report report = reportRepository.findByUserId(user.getUserId())
-                .map(existing -> {
-                    // 갱신: 기존 report 유지, 자식 데이터만 교체
-                    return existing;
-                })
-                .orElseGet(() -> reportRepository.save(
+                .orElseGet(() -> reportRepository.saveAndFlush(
                         Report.builder().user(user).needsRefresh(false).build()
                 ));
 
         Long reportId = report.getReportId();
+        log.info("[ReportService] DB 저장 시작: reportId={}", reportId);
 
-        // 기존 child 데이터 삭제 (갱신 시 교체 방식)
+        // 기존 child 데이터 삭제 (Modifying 쿼리들 - Repo 설정에 따라 flush됨)
         ingredientAnalysisRepository.deleteAllByReportId(reportId);
         recommendedProductRepository.deleteAllByReportId(reportId);
         timingRecommendationRepository.deleteAllByReportId(reportId);
@@ -348,7 +454,7 @@ public class ReportService {
             }
         }
 
-        log.info("[ReportService] 리포트 생성/갱신 완료: userId={}, reportId={}", user.getUserId(), reportId);
+        log.info("[ReportService] 리포트 데이터 저장 완료: userId={}, reportId={}", user.getUserId(), reportId);
 
         // DB 저장 성공 후 needs_refresh = true 로 세팅 (프론트에 갱신 필요 알림)
         report.markNeedsRefresh();
@@ -360,7 +466,7 @@ public class ReportService {
         return ReportCreateResponse.builder()
                 .reportId(reportId)
                 .needsRefresh(report.getNeedsRefresh())
-                .updatedAt(report.getUpdatedAt() != null ? report.getUpdatedAt() : LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
                 .isEditable(true)
                 .ingredientAnalysis(data.getIngredientAnalysis())
                 .recommendedProducts(data.getRecommendedProducts())
@@ -581,14 +687,21 @@ public class ReportService {
 
     private void saveOrUpdateComments(Report report, FastApiReportResponse.CommentsDto commentsDto) {
         LocalDateTime now = LocalDateTime.now();
+
         reportCommentsRepository.findByReport_ReportId(report.getReportId())
                 .ifPresentOrElse(
                         existing -> {
-                            reportCommentsRepository.delete(existing);
-                            reportCommentsRepository.flush();
-                            reportCommentsRepository.save(buildComments(report, commentsDto, existing.getCreatedAt(), now));
+                            existing.updateComments(
+                                    commentsDto.getExcessComment(),
+                                    commentsDto.getDeficiencyComment(),
+                                    commentsDto.getProductComment(),
+                                    commentsDto.getScheduleComment(),
+                                    now
+                            );
                         },
-                        () -> reportCommentsRepository.save(buildComments(report, commentsDto, now, null))
+                        () -> reportCommentsRepository.save(
+                                buildComments(report, commentsDto, now, null)
+                        )
                 );
     }
 
