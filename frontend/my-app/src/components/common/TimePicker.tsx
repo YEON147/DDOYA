@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Modal, View, Text, TouchableOpacity } from 'react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { colors } from '@/constants/theme/colors';
-import { neuInset, neuRaised } from '@/constants/theme/neumorphism';
+import { neuInset, neuRaised, softWellnessCard } from '@/constants/theme/neumorphism';
 
 interface TimePickerProps {
   isVisible: boolean;
@@ -49,24 +49,32 @@ export const TimePicker: React.FC<TimePickerProps> = ({
 
   return (
     <Modal visible={isVisible} transparent animationType="fade" onRequestClose={onClose}>
-      <View className="flex-1 justify-end bg-black/50">
+      <View className="flex-1 justify-end" style={{ backgroundColor: `${colors.brown}55` }}>
         <TouchableOpacity className="flex-1" activeOpacity={1} onPress={onClose} />
         <View
-          className="rounded-t-[32px] px-8 pb-12 pt-6"
-          style={{
-            backgroundColor: colors.surface,
-            borderTopWidth: 1,
-            borderColor: `${colors.shadowDark}44`,
-          }}
+          className="rounded-t-[32px] px-8 pb-12 pt-7"
+          style={[
+            softWellnessCard(32),
+            {
+              borderBottomLeftRadius: 0,
+              borderBottomRightRadius: 0,
+              backgroundColor: colors.cardIvory,
+            },
+          ]}
         >
-          <View className="mb-6 flex-row items-center justify-between">
-            <Text className="text-xl font-bold" style={{ color: colors.text }}>{title}</Text>
+          <View className="mb-1 h-1 w-10 self-center rounded-full" style={{ backgroundColor: `${colors.primary}44` }} />
+          <View className="mb-5 mt-4 flex-row items-center justify-between">
+            <Text className="text-xl font-scdream-bold" style={{ color: colors.brown }}>
+              {title}
+            </Text>
             <TouchableOpacity onPress={onClose} hitSlop={8}>
-              <Text className="text-base font-semibold" style={{ color: colors.primary }}>취소</Text>
+              <Text className="text-base font-scdream-medium" style={{ color: colors.textMuted }}>
+                취소
+              </Text>
             </TouchableOpacity>
           </View>
 
-          <View className="mb-10 py-2" style={neuInset(20)}>
+          <View className="mb-10 py-2" style={neuInset(20, colors.input)}>
             <View className="items-center justify-center">
               <DateTimePicker
                 value={date}
@@ -82,11 +90,11 @@ export const TimePicker: React.FC<TimePickerProps> = ({
 
           <TouchableOpacity
             onPress={handleConfirm}
-            activeOpacity={0.9}
-            className="items-center justify-center rounded-3xl py-4"
-            style={neuRaised(24, colors.primary)}
+            activeOpacity={0.92}
+            className="h-14 items-center justify-center rounded-full"
+            style={neuRaised(28, colors.point)}
           >
-            <Text className="text-lg font-bold text-white">확인</Text>
+            <Text className="text-lg font-scdream text-white">확인</Text>
           </TouchableOpacity>
         </View>
       </View>

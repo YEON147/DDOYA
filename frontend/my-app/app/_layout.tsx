@@ -15,6 +15,7 @@ import { useColorScheme } from '@/hooks/theme/use-color-scheme';
 import { useAuthStore } from '@/src/store/authStore';
 import * as Notifications from 'expo-notifications';
 import { notificationService } from '@/src/services/notificationService';
+import { AppAlertProvider } from '@/src/components/common/AppAlertProvider';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -118,6 +119,7 @@ export default function RootLayout() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <AppAlertProvider>
       <ThemeProvider value={theme}>
         <Stack>
           <Stack.Screen name="index" options={{ headerShown: false }} />
@@ -129,6 +131,7 @@ export default function RootLayout() {
         </Stack>
         <StatusBar style="auto" />
       </ThemeProvider>
+      </AppAlertProvider>
     </QueryClientProvider>
   );
 }

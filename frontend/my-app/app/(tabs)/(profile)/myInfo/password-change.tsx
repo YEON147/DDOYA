@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { View, Text, TextInput, Alert } from 'react-native';
+import { View, Text, TextInput } from 'react-native';
 import { ScreenContainer } from '@/src/components/common/ScreenContainer';
 import { TopHeader } from '@/src/components/common/TopHeader';
 import { colors } from '@/constants/theme/colors';
 import { neuInset } from '@/constants/theme/neumorphism';
 import { AppButton } from '@/src/components/common/AppButton';
+import { appAlert } from '@/src/utils/appAlert';
 
 export default function PasswordChangeScreen() {
   const [currentPassword, setCurrentPassword] = useState('');
@@ -13,14 +14,14 @@ export default function PasswordChangeScreen() {
 
   const handleSave = () => {
     if (!currentPassword || !newPassword || !confirmPassword) {
-      Alert.alert('비밀번호', '비밀번호를 입력해주세요.');
+      appAlert('비밀번호', '비밀번호를 입력해주세요.');
       return;
     }
     if (newPassword !== confirmPassword) {
-      Alert.alert('비밀번호', '비밀번호가 일치하지 않습니다.');
+      appAlert('비밀번호', '비밀번호가 일치하지 않습니다.');
       return;
     }
-    Alert.alert('변경', '비밀번호 변경 API 호출 완료.');
+    appAlert('변경', '비밀번호 변경 API 호출 완료.');
   };
 
   return (

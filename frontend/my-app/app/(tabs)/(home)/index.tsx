@@ -1,4 +1,4 @@
-import { View, Text, Pressable, ActivityIndicator, useWindowDimensions } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator, useWindowDimensions, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Bell } from 'lucide-react-native';
 import { ScreenContainer } from '@/src/components/common/ScreenContainer';
@@ -12,9 +12,9 @@ import { formatKoreanTime, formatKoreanTodayParts, hasPendingItems, slotFailDead
 import { SvgXml } from 'react-native-svg';
 import { useAuthStore } from '@/src/store/authStore';
 import { scaleByWidth } from '@/src/utils/responsive';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { intakeRoutineApi } from '@/src/api/intakeRoutine';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 
 const DDOYA_LOGO_XML = `<svg width="1106" height="479" viewBox="0 0 1106 479" fill="none" xmlns="http://www.w3.org/2000/svg">
 <g clip-path="url(#clip0_428_3034)">
@@ -43,16 +43,21 @@ export default function HomeScreen() {
   const dateBarHeight = scaleByWidth(width, 40, { min: 34, max: 48 });
   const [now, setNow] = useState(() => new Date());
   const processingRef = useRef<Set<number>>(new Set());
+  const scrollRef = useRef<ScrollView>(null);
+  useScrollToTop(scrollRef);
 
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
   }, []);
 
-  // 탭 전환/뒤로가기 등으로 홈 화면에 돌아오면 최신 루틴을 즉시 다시 불러온다.
-  useFocusEffect(() => {
-    refetch();
-  });
+  // 탭 포커스 시 스크롤 맨 위 + 루틴 재조회
+  useFocusEffect(
+    useCallback(() => {
+      scrollRef.current?.scrollTo({ y: 0, animated: false });
+      refetch();
+    }, [refetch]),
+  );
 
   useEffect(() => {
     if (!schedule || isPending || isError) return;
@@ -87,6 +92,7 @@ export default function HomeScreen() {
 
   return (
     <ScreenContainer
+      scrollRef={scrollRef}
       contentContainerStyle={{
         paddingHorizontal: 0,
         paddingTop: topPadding,

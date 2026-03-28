@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
 import { User, Users, CalendarDays, Ruler, Dumbbell, type LucideIcon } from 'lucide-react-native';
 import { ScreenContainer } from '@/src/components/common/ScreenContainer';
@@ -12,6 +12,7 @@ import * as Notifications from 'expo-notifications';
 import { notificationService } from '@/src/services/notificationService';
 import { useMyProfile } from '@/hooks/useUser';
 import { useEffect } from 'react';
+import { appAlert } from '@/src/utils/appAlert';
 
 const line = `${colors.shadowDark}44`;
 
@@ -95,7 +96,7 @@ export default function MyInfoScreen() {
   };
 
   const handleLogout = () => {
-    Alert.alert('로그아웃', '로그아웃 하시겠습니까?', [
+    appAlert('로그아웃', '로그아웃 하시겠습니까?', [
       { text: '취소', style: 'cancel' },
       {
         text: '로그아웃',
@@ -124,7 +125,7 @@ export default function MyInfoScreen() {
   };
 
   const handleWithdraw = () => {
-    Alert.alert('준비 중', '회원탈퇴 기능은 추후 연결 예정입니다.');
+    appAlert('준비 중', '회원탈퇴 기능은 추후 연결 예정입니다.');
   };
 
   return (

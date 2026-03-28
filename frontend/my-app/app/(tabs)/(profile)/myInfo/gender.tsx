@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { View, Text, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
 import { ScreenContainer } from '@/src/components/common/ScreenContainer';
 import { TopHeader } from '@/src/components/common/TopHeader';
 import { colors } from '@/constants/theme/colors';
 import { useUserProfileStore } from '@/src/store/userProfileStore';
 import { AppButton } from '@/src/components/common/AppButton';
+import { appAlert } from '@/src/utils/appAlert';
 
 export default function MyInfoGenderScreen() {
   const gender = useUserProfileStore((s) => s.profile.gender);
@@ -18,7 +19,7 @@ export default function MyInfoGenderScreen() {
 
   const handleSave = () => {
     if (!isValid) {
-      Alert.alert('성별', '성별을 선택해주세요.');
+      appAlert('성별', '성별을 선택해주세요.');
       return;
     }
     setProfile({ gender: value === 'MALE' ? '남성' : '여성' });

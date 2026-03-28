@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   LayoutChangeEvent,
   Platform,
   ScrollView,
@@ -27,6 +26,7 @@ import { getBackendErrorMessage } from '@/hooks/apiErrorMessage';
 import { prepareLabelImageForOcr } from '@/src/utils/labelImageForUpload';
 import { colors } from '@/constants/theme/colors';
 import { neuRaised } from '@/constants/theme/neumorphism';
+import { appAlert } from '@/src/utils/appAlert';
 
 const PILL_GUIDE_IMAGE = require('../../../../assets/images/intake_verify_example.jpg');
 
@@ -70,13 +70,13 @@ export default function SupplementPillGuideScreen() {
 
   const handleCapture = async () => {
     if (Platform.OS === 'web') {
-      Alert.alert('안내', '웹에서는 카메라 촬영을 지원하지 않습니다.');
+      appAlert('안내', '웹에서는 카메라 촬영을 지원하지 않습니다.');
       return;
     }
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('안내', '카메라 권한이 필요합니다.');
+        appAlert('안내', '카메라 권한이 필요합니다.');
         return;
       }
       const result = await ImagePicker.launchCameraAsync({
@@ -88,7 +88,7 @@ export default function SupplementPillGuideScreen() {
       const asset = result.assets[0];
       const uri = asset?.uri;
       if (!uri) {
-        Alert.alert('오류', '촬영 결과를 불러오지 못했습니다.');
+        appAlert('오류', '촬영 결과를 불러오지 못했습니다.');
         return;
       }
       setPillImageUri(uri, asset.mimeType ?? null);
@@ -123,7 +123,7 @@ export default function SupplementPillGuideScreen() {
         setValidatePhase('done');
       }
     } catch {
-      Alert.alert('오류', '촬영에 실패했습니다. 다시 시도해 주세요.');
+      appAlert('오류', '촬영에 실패했습니다. 다시 시도해 주세요.');
     }
   };
 
@@ -163,12 +163,12 @@ export default function SupplementPillGuideScreen() {
         onSuccess: () => {
           reset();
           setPhase('guide');
-          Alert.alert('완료', '영양제가 등록되었습니다.', [
+          appAlert('완료', '영양제가 등록되었습니다.', [
             { text: '확인', onPress: () => router.replace('/(tabs)/(profile)/supplements' as never) },
           ]);
         },
         onError: (error) => {
-          Alert.alert('등록 실패', getCreateSupplementErrorMessage(error));
+          appAlert('등록 실패', getCreateSupplementErrorMessage(error));
         },
       }
     );

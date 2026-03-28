@@ -4,11 +4,12 @@ import { colors } from '@/constants/theme/colors';
 import { ScreenContainer } from '@/src/components/common/ScreenContainer';
 import { AppIcon } from '@/src/components/common/AppIcon';
 import { useAuthStore } from '@/src/store/authStore';
-import { View, Text, Pressable, useWindowDimensions } from 'react-native';
+import { View, Text, Pressable, useWindowDimensions, ScrollView } from 'react-native';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { neuRaised } from '@/constants/theme/neumorphism';
 import { scaleByWidth } from '@/src/utils/responsive';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import { tokenService } from '@/src/api/token';
 import { Calendar } from 'react-native-calendars';
 import { useDailyIntakeSchedule } from '@/hooks/useIntakeRoutine';
@@ -23,6 +24,14 @@ export default function ProfileScreen() {
   const [ddoyaStartIso, setDdoyaStartIso] = useState<string | null>(null);
   const { data: todaySchedule, isPending: isSchedulePending } = useDailyIntakeSchedule();
   const { data: supplementsData } = useSupplementsList();
+  const scrollRef = useRef<ScrollView>(null);
+  useScrollToTop(scrollRef);
+
+  useFocusEffect(
+    useCallback(() => {
+      scrollRef.current?.scrollTo({ y: 0, animated: false });
+    }, []),
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -79,6 +88,7 @@ export default function ProfileScreen() {
 
   return (
     <ScreenContainer
+      scrollRef={scrollRef}
       contentContainerStyle={{
         paddingHorizontal: 0,
         paddingTop: scaleByWidth(width, 20, { min: 16, max: 26 }),

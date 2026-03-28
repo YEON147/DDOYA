@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Text,
   TouchableOpacity,
   View,
@@ -18,6 +17,7 @@ import { prepareLabelImageForOcr } from '@/src/utils/labelImageForUpload';
 import { OcrResultSummary } from '@/src/components/supplement/OcrResultSummary';
 import { colors } from '@/constants/theme/colors';
 import { neuRaised } from '@/constants/theme/neumorphism';
+import { appAlert } from '@/src/utils/appAlert';
 
 /** 업로드 직전 `prepareLabelImageForOcr` 로 JPEG 고정 */
 function buildIngredientsOcrFormData(jpegUri: string): FormData {
@@ -80,7 +80,7 @@ export default function SupplementLabelPreviewScreen() {
         const payload = res.data.data;
         if (!payload.success) {
           setOcrPhase('error');
-          Alert.alert('분석 실패', payload.message || '성분표를 다시 촬영해 주세요.');
+          appAlert('분석 실패', payload.message || '성분표를 다시 촬영해 주세요.');
           return;
         }
 
@@ -100,7 +100,7 @@ export default function SupplementLabelPreviewScreen() {
           }
           return getBackendErrorMessage(e, '성분표 분석 중 오류가 발생했습니다.');
         })();
-        Alert.alert('분석 오류', msg);
+        appAlert('분석 오류', msg);
       }
     })();
 

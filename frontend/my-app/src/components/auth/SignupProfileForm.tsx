@@ -1,5 +1,5 @@
 import React, { useState, type ReactNode } from 'react';
-import { View, TextInput, Text, Alert, Pressable, TouchableOpacity, Platform } from 'react-native';
+import { View, TextInput, Text, Pressable, TouchableOpacity, Platform } from 'react-native';
 import { router } from 'expo-router';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { CalendarDays } from 'lucide-react-native';
@@ -10,6 +10,7 @@ import { getSignupErrorMessage, useSignupMutation } from '@/hooks/useSignupMutat
 import { colors } from '@/constants/theme/colors';
 import { neuInset } from '@/constants/theme/neumorphism';
 import { AppIcon } from '@/src/components/common/AppIcon';
+import { appAlert } from '@/src/utils/appAlert';
 
 export function SignupProfileForm() {
   const step1 = useSignupStore((state) => state.step1);
@@ -71,7 +72,7 @@ export function SignupProfileForm() {
     setErrorMessage('');
     signupMutation.mutate(requestPayload, {
       onSuccess: () => {
-        Alert.alert('회원가입 완료');
+        appAlert('회원가입 완료');
         reset();
         router.replace('/(auth)/login');
       },

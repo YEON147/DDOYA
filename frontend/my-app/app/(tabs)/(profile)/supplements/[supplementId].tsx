@@ -7,7 +7,6 @@ import {
   Image,
   ScrollView,
   Switch,
-  Alert,
   StyleSheet,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -25,6 +24,7 @@ import {
 } from '@/hooks/useSupplement';
 import { useReport } from '@/hooks/useReport';
 import { getBodyPartImageSource } from '@/constants/bodyPartImages';
+import { appAlert } from '@/src/utils/appAlert';
 
 const line = `${colors.shadowDark}44`;
 
@@ -146,13 +146,13 @@ export default function SupplementDetailScreen() {
   const handleSave = () => {
     // Validation
     if (intakeSchedules.some((s) => s.intakeTime === '')) {
-      Alert.alert('알림', '모든 섭취 시점의 시간을 선택해 주세요.');
+      appAlert('알림', '모든 섭취 시점의 시간을 선택해 주세요.');
       return;
     }
 
     const uniqueTimes = new Set(intakeSchedules.map(s => s.intakeTime));
     if (uniqueTimes.size !== intakeSchedules.length) {
-      Alert.alert('알림', '중복된 섭취 시간이 있습니다.');
+      appAlert('알림', '중복된 섭취 시간이 있습니다.');
       return;
     }
 
@@ -171,17 +171,17 @@ export default function SupplementDetailScreen() {
       }
     }, {
       onSuccess: () => {
-        Alert.alert('성공', '수정사항이 저장되었습니다.');
+        appAlert('성공', '수정사항이 저장되었습니다.');
         router.back();
       },
       onError: () => {
-        Alert.alert('오류', '저장에 실패했습니다.');
+        appAlert('오류', '저장에 실패했습니다.');
       }
     });
   };
 
   const handleDelete = () => {
-    Alert.alert(
+    appAlert(
       '영양제 삭제',
       '정말로 삭제하시겠습니까?',
       [
@@ -192,11 +192,11 @@ export default function SupplementDetailScreen() {
           onPress: () => {
             deleteMutation.mutate(id, {
               onSuccess: () => {
-                Alert.alert('성공', '삭제되었습니다.');
+                appAlert('성공', '삭제되었습니다.');
                 router.replace('/(tabs)/(profile)/supplements');
               },
               onError: () => {
-                Alert.alert('오류', '삭제에 실패했습니다.');
+                appAlert('오류', '삭제에 실패했습니다.');
               }
             });
           }

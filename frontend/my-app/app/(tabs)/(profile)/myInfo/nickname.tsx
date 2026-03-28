@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, TextInput, Alert, KeyboardAvoidingView, Platform, Keyboard, TouchableWithoutFeedback } from 'react-native';
+import { View, Text, TextInput, KeyboardAvoidingView, Platform, Keyboard, TouchableWithoutFeedback } from 'react-native';
 import { router } from 'expo-router';
 import { ScreenContainer } from '@/src/components/common/ScreenContainer';
 import { TopHeader } from '@/src/components/common/TopHeader';
@@ -7,6 +7,7 @@ import { colors } from '@/constants/theme/colors';
 import { neuInset } from '@/constants/theme/neumorphism';
 import { useUserProfileStore } from '@/src/store/userProfileStore';
 import { AppButton } from '@/src/components/common/AppButton';
+import { appAlert } from '@/src/utils/appAlert';
 
 export default function MyInfoNicknameScreen() {
   const nickname = useUserProfileStore((s) => s.profile.nickname);
@@ -16,7 +17,7 @@ export default function MyInfoNicknameScreen() {
 
   const handleSave = () => {
     if (!isValid) {
-      Alert.alert('닉네임', '닉네임을 입력해주세요.');
+      appAlert('닉네임', '닉네임을 입력해주세요.');
       return;
     }
     setProfile({ nickname: value.trim() });
