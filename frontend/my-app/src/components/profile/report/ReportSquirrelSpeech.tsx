@@ -2,16 +2,15 @@ import React from 'react';
 import {
   View,
   Text,
-  Image,
   useWindowDimensions,
   type StyleProp,
   type TextStyle,
   type ViewStyle,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { colors } from '@/constants/theme/colors';
+import { REPORT_SQUIRREL_IMAGE } from '@/src/constants/reportSquirrelImage';
 import { scaleByWidth } from '@/src/utils/responsive';
-
-const REPORT_SQUIRREL = require('../../../../assets/images/DDOYA_report.png');
 
 type SpeechBubbleProps = {
   title?: string;
@@ -20,12 +19,27 @@ type SpeechBubbleProps = {
   leadInTextStyle?: StyleProp<TextStyle>;
   children?: React.ReactNode;
   style?: StyleProp<ViewStyle>;
+  /** true면 본문·꼬리에 윤곽 테두리 (인사 말풍선 + 다람쥐 조합용) */
+  withDarkBorder?: boolean;
 };
 
-/** 리포트 말풍선 — 테두리 없음, 은은한 그림자만 */
-function SpeechBubble({ title, titleColor, leadIn, leadInTextStyle, children, style }: SpeechBubbleProps) {
+const GREETING_BUBBLE_BORDER = colors.textMuted;
+const GREETING_BUBBLE_BORDER_WIDTH = 1;
+/** 살짝 아이보리 띤 흰 면 (불투명) */
+const GREETING_BUBBLE_BG = '#FCFAF5';
+
+/** 리포트 말풍선 — 기본은 그림자만, withDarkBorder 시 연한 윤곽선 */
+function SpeechBubble({
+  title,
+  titleColor,
+  leadIn,
+  leadInTextStyle,
+  children,
+  style,
+  withDarkBorder = false,
+}: SpeechBubbleProps) {
   const { width } = useWindowDimensions();
-  const bubbleBg = `${colors.cardIvory}CC`;
+  const bubbleBg = withDarkBorder ? GREETING_BUBBLE_BG : `${colors.cardIvory}CC`;
   const ph = scaleByWidth(width, 18, { min: 14, max: 22 });
   const pv = scaleByWidth(width, 16, { min: 14, max: 22 });
 
@@ -44,6 +58,8 @@ function SpeechBubble({ title, titleColor, leadIn, leadInTextStyle, children, st
           shadowOpacity: 0.06,
           shadowRadius: 10,
           elevation: 1,
+          borderWidth: withDarkBorder ? GREETING_BUBBLE_BORDER_WIDTH : 0,
+          borderColor: withDarkBorder ? GREETING_BUBBLE_BORDER : 'transparent',
         },
         style,
       ]}
@@ -57,10 +73,20 @@ function SpeechBubble({ title, titleColor, leadIn, leadInTextStyle, children, st
           height: scaleByWidth(width, 12, { min: 10, max: 14 }),
           backgroundColor: bubbleBg,
           transform: [{ rotate: '45deg' }],
+          ...(withDarkBorder
+            ? {
+                borderTopWidth: GREETING_BUBBLE_BORDER_WIDTH,
+                borderRightWidth: GREETING_BUBBLE_BORDER_WIDTH,
+                borderColor: GREETING_BUBBLE_BORDER,
+              }
+            : null),
         }}
       />
       {leadIn ? (
-        <Text className="mb-2 text-base font-scdream" style={[{ color: colors.text }, leadInTextStyle]}>
+        <Text
+          className={`mb-2 text-base ${withDarkBorder ? 'font-scdream-bold' : 'font-scdream'}`}
+          style={[{ color: colors.text }, leadInTextStyle]}
+        >
           {leadIn}
         </Text>
       ) : null}
@@ -89,14 +115,14 @@ export function GreetingBubbleWithSquirrel({ leadIn }: GreetingBubbleWithSquirre
   return (
     <View className="w-full flex-row items-center">
       <View
-        className="min-w-0"
+        className="min-w-0 flex-1"
         style={{
-          maxWidth: '76%',
-          flexShrink: 1,
+          paddingRight: scaleByWidth(width, 25, { min: 6, max: 25 }),
           transform: [{ translateY: -scaleByWidth(width, 8, { min: 4, max: 12 }) }],
         }}
       >
         <SpeechBubble
+          withDarkBorder
           leadIn={leadIn}
           leadInTextStyle={{
             lineHeight: scaleByWidth(width, 27, { min: 23, max: 31 }),
@@ -106,9 +132,15 @@ export function GreetingBubbleWithSquirrel({ leadIn }: GreetingBubbleWithSquirre
           }}
         />
       </View>
-      <View className="min-w-0 flex-1" />
       <View style={{ flexShrink: 0 }}>
-        <Image source={REPORT_SQUIRREL} style={{ width: imgW, height: imgH }} resizeMode="contain" />
+        <Image
+          source={REPORT_SQUIRREL_IMAGE}
+          style={{ width: imgW, height: imgH }}
+          contentFit="contain"
+          cachePolicy="memory-disk"
+          priority="high"
+          transition={null}
+        />
       </View>
     </View>
   );
