@@ -4,9 +4,10 @@ import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 import '@/global.css';
 import { colors } from '@/constants/theme/colors';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { focusManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { useEffect } from 'react';
+import { AppState, Platform } from 'react-native';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { useRouter } from 'expo-router';
@@ -64,6 +65,15 @@ export default function RootLayout() {
     void useAuthStore.getState().loadToken();
   }, []);
 
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    focusManager.setFocused(AppState.currentState === 'active');
+    const sub = AppState.addEventListener('change', (state) => {
+      focusManager.setFocused(state === 'active');
+    });
+    return () => sub.remove();
+  }, []);
+
   // 로그인 상태 복원 완료 후, 알림 토큰 서버 동기화
   useEffect(() => {
     if (hasHydratedFromStorage && isLoggedIn) {
@@ -77,7 +87,6 @@ export default function RootLayout() {
     const notificationListener = Notifications.addNotificationReceivedListener(notification => {
       console.log('💡 [DEBUG] 포그라운드 알림 낚아챔! 수신됨:', notification);
     });
-
 
     // 2. 알림 클릭 리스너 (알림바 클릭 시 동작)
     const responseListener = Notifications.addNotificationResponseReceivedListener(handleNotificationClick);
