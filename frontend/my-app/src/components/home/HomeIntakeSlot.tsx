@@ -1,6 +1,8 @@
-import { View, Text, Pressable, Image, useWindowDimensions } from 'react-native';
+import { View, Text, Pressable, useWindowDimensions } from 'react-native';
+import { Image } from 'expo-image';
 import { Camera } from 'lucide-react-native';
 import { colors } from '@/constants/theme/colors';
+import { INTAKE_STAMP_FAIL, INTAKE_STAMP_SUCCESS } from '@/src/constants/intakeStampImages';
 import { AppIcon } from '@/src/components/common/AppIcon';
 import type { DailyIntakeScheduleSlotItem } from '@/src/types/intakeRoutine';
 import { scaleByWidth } from '@/src/utils/responsive';
@@ -30,8 +32,6 @@ export function HomeIntakeSlot({ timeLabel, intakeTime, items, onPressCamera }: 
   const success = '#2FB58A';
   const successBg = `${success}12`;
   const successBorder = `${success}33`;
-  const STAMP_IMAGE = require('../../../assets/images/DDOYA_stamp.png');
-  const FAIL_STAMP_IMAGE = require('../../../assets/images/fail.png');
   const bubblePaddingH = scaleByWidth(width, 22, { min: 16, max: 24 });
   const bubblePaddingV = scaleByWidth(width, 18, { min: 14, max: 22 });
   const BUBBLE_RADIUS = 'rounded-3xl';
@@ -69,9 +69,12 @@ export function HomeIntakeSlot({ timeLabel, intakeTime, items, onPressCamera }: 
                 }}
               >
                 <Image
-                  source={showFailStamp ? FAIL_STAMP_IMAGE : STAMP_IMAGE}
+                  source={showFailStamp ? INTAKE_STAMP_FAIL : INTAKE_STAMP_SUCCESS}
                   style={{ width: stampSize, height: stampSize, alignSelf: 'center' }}
-                  resizeMode="contain"
+                  contentFit="contain"
+                  cachePolicy="memory-disk"
+                  priority="high"
+                  transition={null}
                 />
               </View>
             ) : null}

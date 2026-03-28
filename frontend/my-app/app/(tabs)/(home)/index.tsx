@@ -12,6 +12,7 @@ import { formatKoreanTime, formatKoreanTodayParts } from '@/src/utils/nextIntake
 import { SvgXml } from 'react-native-svg';
 import { useAuthStore } from '@/src/store/authStore';
 import { scaleByWidth } from '@/src/utils/responsive';
+import { prefetchIntakeStampImages } from '@/src/constants/intakeStampImages';
 import { useCallback, useEffect, useRef } from 'react';
 import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 
@@ -42,6 +43,10 @@ export default function HomeScreen() {
   const dateBarHeight = scaleByWidth(width, 40, { min: 34, max: 48 });
   const scrollRef = useRef<ScrollView>(null);
   useScrollToTop(scrollRef);
+
+  useEffect(() => {
+    prefetchIntakeStampImages();
+  }, []);
 
   // 탭 포커스 시 스크롤 맨 위 + 루틴 재조회
   useFocusEffect(

@@ -37,8 +37,6 @@ export function CaptureGuideScreenLayout({
 }: CaptureGuideScreenLayoutProps) {
   return (
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
-      {topOverlay}
-
       <View className="flex-1 justify-center px-6" style={{ minHeight: 0 }}>
         <View
           className="w-full max-w-[360px] self-center overflow-hidden rounded-3xl"
@@ -90,6 +88,9 @@ export function CaptureGuideScreenLayout({
           {secondaryLabel}
         </Text>
       </TouchableOpacity>
+
+      {/* 마지막에 그려서 로딩 오버레이가 가이드·버튼 위에 보이도록 함 */}
+      {topOverlay}
     </View>
   );
 }
