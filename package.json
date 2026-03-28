@@ -1,0 +1,10 @@
+{
+  "name": "s14p21b202",
+  "private": true,
+  "description": "모노레포 루트 — Expo는 frontend/my-app 에서 실행합니다.",
+  "scripts": {
+    "expo": "npm --prefix frontend/my-app run start",
+    "expo:tunnel": "npm --prefix frontend/my-app run start:tunnel",
+    "expo:dev-client": "npm --prefix frontend/my-app run start:dev-client"
+  }
+}
