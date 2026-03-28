@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class SignUpResponseDto {
+public class SignUpResponse {
     private Long userId;
     private String email;
     private String nickname;
@@ -25,8 +25,8 @@ public class SignUpResponseDto {
     private BigDecimal weightKg;
     private LocalDateTime createdAt;
 
-    public static SignUpResponseDto from(User user) {
-        return SignUpResponseDto.builder()
+    public static SignUpResponse from(User user) {
+        return SignUpResponse.builder()
                 .userId(user.getUserId())
                 .email(user.getEmail())
                 .nickname(user.getNickname())

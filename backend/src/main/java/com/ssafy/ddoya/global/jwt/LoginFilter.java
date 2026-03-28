@@ -2,8 +2,8 @@ package com.ssafy.ddoya.global.jwt;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.ddoya.domain.auth.dto.CustomUserDetails;
-import com.ssafy.ddoya.domain.auth.dto.LoginRequestDto;
-import com.ssafy.ddoya.domain.auth.dto.LoginResponseDto;
+import com.ssafy.ddoya.domain.auth.dto.LoginRequest;
+import com.ssafy.ddoya.domain.auth.dto.LoginResponse;
 import com.ssafy.ddoya.domain.auth.entity.RefreshToken;
 import com.ssafy.ddoya.domain.auth.repository.RefreshTokenRepository;
 import com.ssafy.ddoya.global.response.ErrorResponse;
@@ -37,7 +37,7 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
 
         try {
             // 로그인 요청 JSON을 LoginRequestDto로 변환
-            LoginRequestDto loginRequest = objectMapper.readValue(request.getInputStream(), LoginRequestDto.class);
+            LoginRequest loginRequest = objectMapper.readValue(request.getInputStream(), LoginRequest.class);
 
             // 이메일과 비밀번호 추출
             String email = loginRequest.getEmail();
@@ -83,7 +83,7 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
         refreshTokenRepository.save(tokenEntity);
 
         // 응답 데이터 생성
-        LoginResponseDto loginResponse = LoginResponseDto.builder()
+        LoginResponse loginResponse = LoginResponse.builder()
                 .userId(userId)
                 .email(email)
                 .nickname(customUserDetails.getUser().getNickname())
@@ -91,7 +91,7 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
                 .refreshToken(refreshToken)
                 .build();
 
-        SuccessResponse<LoginResponseDto> successResponse = SuccessResponse.of("로그인에 성공했습니다.", loginResponse);
+        SuccessResponse<LoginResponse> successResponse = SuccessResponse.of("로그인에 성공했습니다.", loginResponse);
 
         // 클라이언트에게 JSON 응답 반환
         response.setContentType("application/json;charset=UTF-8");
