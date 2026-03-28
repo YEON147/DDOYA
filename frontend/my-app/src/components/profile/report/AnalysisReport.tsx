@@ -2,8 +2,12 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/constants/theme/colors';
-import { softWellnessCard } from '@/constants/theme/neumorphism';
 import { ReportComments, IngredientAnalysis } from '@/src/types/report';
+import {
+  GreetingBubbleWithSquirrel,
+  ReportSquirrelCommentSection,
+  SpeechBubble,
+} from '@/src/components/profile/report/ReportSquirrelSpeech';
 
 /** 성분 적정(정상) 활성 표시 */
 const ADEQUATE_GREEN = '#2FB58A';
@@ -203,53 +207,48 @@ export const AnalysisReport: React.FC<AnalysisReportProps> = ({
           )}
         </View>
 
-        {(comments.excessComment || comments.deficiencyComment) && (
-          <View className="p-5" style={softWellnessCard(22)}>
-            <Text className="mb-3 text-sm font-scdream-bold" style={{ color: colors.text }}>
-              섭취 상태 요약
-            </Text>
+        <ReportSquirrelCommentSection>
+          {(comments.excessComment || comments.deficiencyComment) && (
+            <GreetingBubbleWithSquirrel leadIn={'DDOYA와 함께\n섭취상태를 확인해볼까요 !'} />
+          )}
+          {comments.excessComment ? (
+            <SpeechBubble title="과잉 섭취 주의" titleColor={STATUS_LED_COLORS.EXCESS}>
+              <Text className="text-base font-scdream leading-7" style={{ color: colors.textMuted }}>
+                {comments.excessComment}
+              </Text>
+            </SpeechBubble>
+          ) : null}
+          {comments.deficiencyComment ? (
+            <SpeechBubble title="부족 성분 보완" titleColor={STATUS_LED_COLORS.DEFICIENCY}>
+              <Text className="text-sm font-scdream leading-6" style={{ color: colors.textMuted }}>
+                {comments.deficiencyComment}
+              </Text>
+            </SpeechBubble>
+          ) : null}
 
-            {comments.excessComment && (
-              <View className="mb-3">
-                <Text className="mb-1 text-xs font-scdream-bold" style={{ color: colors.primary }}>
-                  과잉 섭취 주의
-                </Text>
-                <Text className="text-sm font-scdream leading-6" style={{ color: colors.textMuted }}>
-                  {comments.excessComment}
-                </Text>
-              </View>
-            )}
-
-            {comments.deficiencyComment && (
-              <View>
-                <Text className="mb-1 text-xs font-scdream-bold" style={{ color: colors.brown }}>
-                  부족 성분 보완
-                </Text>
-                <Text className="text-sm font-scdream leading-6" style={{ color: colors.textMuted }}>
-                  {comments.deficiencyComment}
-                </Text>
-              </View>
-            )}
-          </View>
-        )}
-
-        {(comments.productComment || comments.scheduleComment) && (
-          <View className="p-5" style={softWellnessCard(22)}>
-            <Text className="mb-3 text-sm font-scdream-bold" style={{ color: colors.text }}>
-              맞춤 제안
-            </Text>
-            {comments.productComment && (
-              <Text className="mb-2 text-sm font-scdream leading-6" style={{ color: colors.textMuted }}>
+          {(comments.productComment || comments.scheduleComment) &&
+          (comments.excessComment || comments.deficiencyComment) ? (
+            <SpeechBubble leadIn="그리고 참고하면 좋을 만한 제안도 적어 뒀어요." />
+          ) : null}
+          {(comments.productComment || comments.scheduleComment) &&
+          !(comments.excessComment || comments.deficiencyComment) ? (
+            <SpeechBubble leadIn="참고하면 좋을 만한 제안을 적어 뒀어요." />
+          ) : null}
+          {comments.productComment ? (
+            <SpeechBubble title="제품·선택">
+              <Text className="text-base font-scdream leading-7" style={{ color: colors.textMuted }}>
                 {comments.productComment}
               </Text>
-            )}
-            {comments.scheduleComment && (
-              <Text className="text-sm font-scdream leading-6" style={{ color: colors.textMuted }}>
+            </SpeechBubble>
+          ) : null}
+          {comments.scheduleComment ? (
+            <SpeechBubble title="섭취 루틴">
+              <Text className="text-base font-scdream leading-7" style={{ color: colors.textMuted }}>
                 {comments.scheduleComment}
               </Text>
-            )}
-          </View>
-        )}
+            </SpeechBubble>
+          ) : null}
+        </ReportSquirrelCommentSection>
       </View>
     </View>
   );
