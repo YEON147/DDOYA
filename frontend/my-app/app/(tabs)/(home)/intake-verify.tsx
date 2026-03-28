@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, Platform, View } from 'react-native';
+import { ActivityIndicator, Platform, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { useQueryClient } from '@tanstack/react-query';
@@ -135,18 +135,27 @@ export default function IntakeVerifyScreen() {
         topOverlay={
           isProcessing ? (
             <View
+              pointerEvents="auto"
               style={{
                 position: 'absolute',
                 top: 0,
                 left: 0,
                 right: 0,
                 bottom: 0,
+                zIndex: 50,
+                elevation: 50,
                 alignItems: 'center',
                 justifyContent: 'center',
-                backgroundColor: 'rgba(0,0,0,0.12)',
+                backgroundColor: 'rgba(249, 247, 243, 0.92)',
               }}
             >
               <ActivityIndicator size="large" color={colors.primary} />
+              <Text
+                className="mt-4 text-center text-base font-scdream"
+                style={{ color: colors.textMuted }}
+              >
+                이미지 처리 및 인증 중…
+              </Text>
             </View>
           ) : undefined
         }
