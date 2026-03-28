@@ -243,19 +243,18 @@ export default function ReportsScreen() {
       await queryClient.invalidateQueries({ queryKey: ['intakeSettings'] });
       await queryClient.invalidateQueries({ queryKey: ['supplements'] });
       await queryClient.invalidateQueries({ queryKey: ['supplement'] }); // 개별 상세 쿼리도 무효화
-      // 홈 화면은 `useDailyIntakeSchedule()`(['dailyIntakeSchedule', '__today__'])를 사용
+      // 홈은 `useDailyIntakeSchedule()` → `['dailyIntakeSchedule', 로컬 YYYY-MM-DD]`
       await queryClient.invalidateQueries({ queryKey: ['dailyIntakeSchedule'] });
       // 화면에 즉시 반영되도록 강제 재조회
       await queryClient.refetchQueries({ queryKey: ['report'] });
       
-      appAlert('저장 완료', '맞춤 복용 시간이 반영되었습니다.', [
-        { text: '확인', onPress: () => {
-          if (router.canDismiss()) {
-            router.dismissAll();
-          }
-          router.replace('/(tabs)/(home)');
-        }}
-      ]);
+      appAlert('', '맞춤 복용 시간이 반영되었습니다.', undefined, { autoDismissMs: 1000 });
+      setTimeout(() => {
+        if (router.canDismiss()) {
+          router.dismissAll();
+        }
+        router.replace('/(tabs)/(home)');
+      }, 1000);
     } catch (err) {
       const e = err as any;
       const status = e?.response?.status;
@@ -367,7 +366,7 @@ export default function ReportsScreen() {
 
   if (isLoading) {
     return (
-      <ScreenContainer header={<TopHeader title="분석 리포트" onBackPress={() => router.back()} />}>
+      <ScreenContainer header={<TopHeader title="" onBackPress={() => router.back()} />}>
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator size="large" color={colors.primary} />
           <Text className="mt-4 font-scdream text-gray-400">데이터를 불러오는 중...</Text>
@@ -378,7 +377,7 @@ export default function ReportsScreen() {
 
   if (error || !report) {
     return (
-      <ScreenContainer header={<TopHeader title="분석 리포트" onBackPress={() => router.back()} />}>
+      <ScreenContainer header={<TopHeader title="" onBackPress={() => router.back()} />}>
         <View className="flex-1 items-center justify-center px-6">
           <Ionicons name="alert-circle-outline" size={48} color={colors.textMuted} className="mb-4" />
           <Text className="text-base font-scdream text-center mb-6" style={{ color: colors.text }}>
@@ -394,9 +393,9 @@ export default function ReportsScreen() {
   const displayDate = updatedAt ? updatedAt.split('T')[0].replace(/-/g, '.') : '';
 
   return (
-    <ScreenContainer header={<TopHeader title={mode === 'edit' ? "리포트 갱신" : "분석 리포트"} onBackPress={() => router.back()} />}>
-      <ScrollView 
-        showsVerticalScrollIndicator={false} 
+    <ScreenContainer header={<TopHeader title={mode === 'edit' ? '리포트 갱신' : ''} onBackPress={() => router.back()} />}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 100 }}
       >
         <View className="py-2">
@@ -411,16 +410,16 @@ export default function ReportsScreen() {
           />
 
           {/* 추천 제품 섹션 */}
-          <ProductRecommendation 
-            nickname={authNickname || profile.nickname || '회원'} 
-            products={(report.recommended_products_by_ingredient || report.recommendedProductsByIngredient || []).flatMap((group: any) => 
+          <ProductRecommendation
+            nickname={authNickname || profile.nickname || '회원'}
+            products={(report.recommended_products_by_ingredient || report.recommendedProductsByIngredient || []).flatMap((group: any) =>
               (group.recommended_products || group.recommendedProducts || []).map((p: any) => ({
                 productCode: p.product_code || p.productCode,
                 productName: p.product_name || p.productName,
                 brand: p.brand || '',
-                pillImageUrl: p.pill_image_url || p.pillImageUrl || ''
+                pillImageUrl: p.pill_image_url || p.pillImageUrl || '',
               }))
-            ).slice(0, 5)} 
+            ).slice(0, 5)}
           />
 
           {/* 갱신 모드 전용 섹션 */}

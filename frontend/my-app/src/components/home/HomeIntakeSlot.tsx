@@ -4,31 +4,29 @@ import { colors } from '@/constants/theme/colors';
 import { AppIcon } from '@/src/components/common/AppIcon';
 import type { DailyIntakeScheduleSlotItem } from '@/src/types/intakeRoutine';
 import { scaleByWidth } from '@/src/utils/responsive';
-import { slotFailDeadline } from '@/src/utils/nextIntake';
 
 export type HomeIntakeSlotProps = {
   timeLabel: string;
   intakeTime: string;
-  plannedAt?: string;
-  now: Date;
   items: DailyIntakeScheduleSlotItem[];
   onPressCamera?: (scheduleIds: number[]) => void;
 };
 
-/** 홈 — 시간대별 섭취 인증 카드 (Soft Wellness) */
-export function HomeIntakeSlot({ timeLabel, intakeTime, plannedAt, now, items, onPressCamera }: HomeIntakeSlotProps) {
+/** 홈 — 시간대별 섭취 인증 카드. `TAKEN`만 완료 도장, `SKIPPED`만 실패 도장, `MISSED`는 인증 유도(도장 없음). */
+export function HomeIntakeSlot({ timeLabel, intakeTime, items, onPressCamera }: HomeIntakeSlotProps) {
   const { width } = useWindowDimensions();
   const scheduleIds = items.map((i) => i.scheduleId);
   const hasItems = items.length > 0;
-  const completedCount = items.filter((i) => i.status === 'TAKEN' || i.status === 'SKIPPED' || i.status === 'MISSED').length;
-  const pendingCount = Math.max(0, items.length - completedCount);
-  const pseudoSlot = { intakeTime, plannedAt: plannedAt ?? '', items };
-  const deadline = slotFailDeadline(pseudoSlot);
-  const isTimedOut = hasItems && pendingCount > 0 && !!deadline && now.getTime() >= deadline.getTime();
-  const hasMissed = items.some((i) => i.status === 'MISSED');
-  const isFailedSlot = isTimedOut || hasMissed;
-  const remainingCount = isTimedOut ? 0 : pendingCount;
-  const isSlotCompleted = hasItems && remainingCount === 0;
+  const takenCount = items.filter((i) => i.status === 'TAKEN').length;
+  const missedCount = items.filter((i) => i.status === 'MISSED').length;
+  const hasSkipped = items.some((i) => i.status === 'SKIPPED');
+  const allTaken = hasItems && items.every((i) => i.status === 'TAKEN');
+  const showSuccessStamp = allTaken;
+  const showFailStamp = hasItems && hasSkipped;
+  const showStamp = showSuccessStamp || showFailStamp;
+  const needsPhotoVerify = hasItems && !allTaken && !hasSkipped && missedCount > 0;
+  const failSlotMessage = '섭취 가능 시간이 지나 실패 처리됐어요';
+  const missedPromptMessage = '사진을 찍어 섭취 인증을 해 주세요';
   const success = '#2FB58A';
   const successBg = `${success}12`;
   const successBorder = `${success}33`;
@@ -55,7 +53,7 @@ export function HomeIntakeSlot({ timeLabel, intakeTime, plannedAt, now, items, o
               paddingVertical: bubblePaddingV,
             }}
           >
-            {isSlotCompleted ? (
+            {showStamp ? (
               <View
                 pointerEvents="none"
                 style={{
@@ -71,7 +69,7 @@ export function HomeIntakeSlot({ timeLabel, intakeTime, plannedAt, now, items, o
                 }}
               >
                 <Image
-                  source={isFailedSlot ? FAIL_STAMP_IMAGE : STAMP_IMAGE}
+                  source={showFailStamp ? FAIL_STAMP_IMAGE : STAMP_IMAGE}
                   style={{ width: stampSize, height: stampSize, alignSelf: 'center' }}
                   resizeMode="contain"
                 />
@@ -104,16 +102,16 @@ export function HomeIntakeSlot({ timeLabel, intakeTime, plannedAt, now, items, o
 
                 {/* 우측 영역 폭 고정 (완료/카메라 전환 시 레이아웃 흔들림 방지) */}
                 <View className="h-10 w-10 items-center justify-center">
-                  {isSlotCompleted ? (
+                  {allTaken || hasSkipped ? (
                     <View />
                   ) : (
                     <Pressable
-                      disabled={!hasItems || isFailedSlot}
+                      disabled={!hasItems}
                       onPress={() => onPressCamera?.(scheduleIds)}
                       hitSlop={10}
                       className="h-10 w-10 items-center justify-center rounded-full"
                       style={({ pressed }) => ({
-                        opacity: !hasItems || isFailedSlot ? 0.42 : pressed ? 0.86 : 1,
+                        opacity: !hasItems ? 0.42 : pressed ? 0.86 : 1,
                         backgroundColor: `${colors.primary}0F`,
                         borderWidth: 1,
                         borderColor: `${colors.shadowDark}18`,
@@ -127,11 +125,13 @@ export function HomeIntakeSlot({ timeLabel, intakeTime, plannedAt, now, items, o
               <Text className="mt-1 p-1 text-base font-scdream" style={{ color: colors.textMuted }}>
                 {!hasItems
                   ? '이 시간대엔 등록된 영양제가 없어요.'
-                  : isSlotCompleted
-                    ? isFailedSlot
-                      ? '섭취 가능 시간이 지나 실패 처리됐어요'
-                      : '이 시간대 섭취를 완료했어요'
-                    : '사진으로 섭취 인증을 해주세요'}
+                  : showSuccessStamp
+                    ? '이 시간대 섭취를 완료했어요'
+                    : showFailStamp
+                      ? failSlotMessage
+                      : needsPhotoVerify
+                        ? missedPromptMessage
+                        : '사진으로 섭취 인증을 해주세요'}
               </Text>
             </View>
 
@@ -142,7 +142,7 @@ export function HomeIntakeSlot({ timeLabel, intakeTime, plannedAt, now, items, o
                     섭취할 영양제
                   </Text>
                   <Text className="text-sm font-scdream" style={{ color: colors.textMuted }}>
-                    남은 {remainingCount} · 완료 {completedCount}
+                    미인증 {missedCount} · 완료 {takenCount}
                   </Text>
                 </View>
 

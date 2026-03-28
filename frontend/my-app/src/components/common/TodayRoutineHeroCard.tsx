@@ -59,7 +59,7 @@ export function TodayRoutineHeroCard({ timeSlots, isPending, isError, className 
   const speechTitle = useMemo(() => {
     if (isPending) return '오늘 루틴 불러오는 중…';
     if (isError) return '오늘 루틴을 불러오지 못했어요';
-    if (slotCount === 0) return '오늘은 등록된 섭취 일정이 없어요';
+    if (slotCount === 0) return '등록된 섭취 일정이 없어요';
     if (!nextSlot) return '오늘 섭취 루틴이 끝났어요';
     return '오늘도 루틴 체크해볼까요?';
   }, [isPending, isError, slotCount, nextSlot]);
@@ -67,7 +67,7 @@ export function TodayRoutineHeroCard({ timeSlots, isPending, isError, className 
   const speechBody = useMemo(() => {
     if (isPending) return '잠시만 기다려줘요.';
     if (isError) return '잠깐만요… 잠시 후 다시 시도해 주세요.';
-    if (slotCount === 0) return '루틴을 추가하면 여기서 바로 확인할 수 있어요.';
+    if (slotCount === 0) return '루틴을 추가하면 여기서 바로  확인할 수 있어요 !';
     if (!nextSlot) return '우리 내일 또봐요 !!';
     if (!nextTarget) return '다음 섭취 시간을 확인해 주세요.';
     // 정상 상태 메시지는 UI에서 타이머 중심으로 조합
@@ -92,7 +92,7 @@ export function TodayRoutineHeroCard({ timeSlots, isPending, isError, className 
                 borderWidth: 1,
                 borderColor: `${colors.shadowDark}22`,
                 paddingHorizontal: scaleByWidth(width, 18, { min: 14, max: 22 }),
-                paddingVertical: scaleByWidth(width, 20, { min: 18, max: 26 }),
+                paddingVertical: scaleByWidth(width, 16, { min: 14, max: 22 }),
                 height: bubbleHeight,
                 shadowColor: colors.shadowDark,
                 shadowOffset: { width: 0, height: 4 },
@@ -105,6 +105,7 @@ export function TodayRoutineHeroCard({ timeSlots, isPending, isError, className 
               <View
                 pointerEvents="none"
                 style={{
+                  zIndex: 0,
                   position: 'absolute',
                   top: -scaleByWidth(width, 18, { min: 14, max: 24 }),
                   right: -scaleByWidth(width, 22, { min: 16, max: 28 }),
@@ -117,6 +118,7 @@ export function TodayRoutineHeroCard({ timeSlots, isPending, isError, className 
               <View
                 pointerEvents="none"
                 style={{
+                  zIndex: 0,
                   position: 'absolute',
                   bottom: -scaleByWidth(width, 22, { min: 16, max: 28 }),
                   left: -scaleByWidth(width, 18, { min: 14, max: 24 }),
@@ -130,6 +132,7 @@ export function TodayRoutineHeroCard({ timeSlots, isPending, isError, className 
               {/* 꼬리 */}
               <View
                 style={{
+                  zIndex: 0,
                   position: 'absolute',
                   right: -scaleByWidth(width, 6, { min: 5, max: 8 }),
                   bottom: scaleByWidth(width, 18, { min: 14, max: 24 }),
@@ -143,55 +146,57 @@ export function TodayRoutineHeroCard({ timeSlots, isPending, isError, className 
                 }}
               />
 
-              <View className="flex-row items-start justify-between gap-3">
-                <View className="flex-1">
+              <View className="flex-1 flex-row items-start justify-between gap-3" style={{ zIndex: 1 }}>
+                <View className="min-h-0 flex-1">
                   <View className="px-1">
                     <Text
                       className="text-[16px] font-scdream-regular"
-                      style={{ color: colors.text, letterSpacing: -0.2 }}
-                      numberOfLines={1}
+                      style={{ color: colors.text, letterSpacing: -0.2, lineHeight: 22 }}
+                      numberOfLines={2}
                       ellipsizeMode="tail"
                     >
                       {(nickname ?? '회원') + '님, 오셨군요.'}
                     </Text>
                     <Text
-                      className="mt-2 text-[16px] font-scdream-regular"
-                      style={{ color: colors.text, letterSpacing: -0.2 }}
-                      numberOfLines={1}
+                      className="mt-1.5 text-[16px] font-scdream-regular"
+                      style={{ color: colors.text, letterSpacing: -0.2, lineHeight: 22 }}
+                      numberOfLines={2}
                       ellipsizeMode="tail"
                     >
                       {speechTitle}
                     </Text>
                     <View
-                      className="mt-2"
+                      className="mt-1.5"
                       style={{ height: 1, backgroundColor: `${colors.shadowDark}22` }}
                     />
                   </View>
-                  <View className="mt-3 px-1">
+                  <View className="mt-2 px-1">
                     {showTimerStyle ? (
-                      <View className="py-1">
+                      <View className="py-0.5">
                         <Text
                           className="text-base font-scdream"
-                          style={{ color: colors.textMuted }}
-                          numberOfLines={1}
+                          style={{ color: colors.textMuted, lineHeight: 20 }}
+                          numberOfLines={2}
                           ellipsizeMode="tail"
                         >
                           다음 복용까지 남은 시간
                         </Text>
                         <Text
-                          className="mt-1 text-[20px] font-scdream-bold tracking-tight"
-                          style={{ color: colors.text }}
+                          className="mt-0.5 text-[20px] font-scdream-bold tracking-tight"
+                          style={{ color: colors.text, lineHeight: 24 }}
                           numberOfLines={1}
-                          ellipsizeMode="clip"
+                          ellipsizeMode="tail"
+                          adjustsFontSizeToFit
+                          minimumFontScale={0.75}
                         >
                           {timerLine}
                         </Text>
                       </View>
                     ) : (
                       <Text
-                        className="text-base font-scdream leading-5"
-                        style={{ color: colors.textMuted }}
-                        numberOfLines={1}
+                        className="text-base font-scdream"
+                        style={{ color: colors.textMuted, lineHeight: 20 }}
+                        numberOfLines={3}
                         ellipsizeMode="tail"
                       >
                         {speechBody}
