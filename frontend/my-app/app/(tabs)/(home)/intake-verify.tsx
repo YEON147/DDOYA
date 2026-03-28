@@ -74,12 +74,18 @@ export default function IntakeVerifyScreen() {
 
         await queryClient.invalidateQueries({ queryKey: ['dailyIntakeSchedule'] });
 
-        const matchedCount = certificationResult.results.filter((r) => r.matched).length;
-        appAlert(
-          certificationResult.success ? '인증 완료' : '인증 결과',
-          `${certificationResult.message}\n일치 ${matchedCount}/${certificationResult.results.length}건`,
-          [{ text: '확인', onPress: () => router.back() }],
-        );
+        if (certificationResult.success) {
+          appAlert('', '섭취인증이 완료되었습니다.', [
+            { text: '확인', onPress: () => router.back() },
+          ]);
+        } else {
+          const matchedCount = certificationResult.results.filter((r) => r.matched).length;
+          appAlert(
+            '인증 결과',
+            `${certificationResult.message}\n일치 ${matchedCount}/${certificationResult.results.length}건`,
+            [{ text: '확인', onPress: () => router.back() }],
+          );
+        }
       } catch (apiErr) {
         // 413(용량 초과)면 한 단계 더 압축해서 재시도
         if (axios.isAxiosError(apiErr) && apiErr.response?.status === 413) {
@@ -89,12 +95,18 @@ export default function IntakeVerifyScreen() {
           const certificationResult = res.data.data;
 
           await queryClient.invalidateQueries({ queryKey: ['dailyIntakeSchedule'] });
-          const matchedCount = certificationResult.results.filter((r) => r.matched).length;
-          appAlert(
-            certificationResult.success ? '인증 완료' : '인증 결과',
-            `${certificationResult.message}\n일치 ${matchedCount}/${certificationResult.results.length}건`,
-            [{ text: '확인', onPress: () => router.back() }],
-          );
+          if (certificationResult.success) {
+            appAlert('', '섭취인증이 완료되었습니다.', [
+              { text: '확인', onPress: () => router.back() },
+            ]);
+          } else {
+            const matchedCount = certificationResult.results.filter((r) => r.matched).length;
+            appAlert(
+              '인증 결과',
+              `${certificationResult.message}\n일치 ${matchedCount}/${certificationResult.results.length}건`,
+              [{ text: '확인', onPress: () => router.back() }],
+            );
+          }
           return;
         }
         throw apiErr;
