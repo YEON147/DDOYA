@@ -80,21 +80,12 @@ export default function RootLayout() {
 
 
     // 2. 알림 클릭 리스너 (알림바 클릭 시 동작)
-    const responseListener = Notifications.addNotificationResponseReceivedListener(response => {
-      console.log('💡 [DEBUG] 클릭 데이터:', response.notification.request.content.data);
+    const responseListener = Notifications.addNotificationResponseReceivedListener(handleNotificationClick);
 
-      const data = response.notification.request.content.data;
-
-      // 알림 Data Payload에 맞춤 라우팅 처리
-      if (data?.url) {
-        // 백엔드에서 명시적 경로(ex '/reports')를 준 경우
-        router.push(data.url as any);
-      } else if (data?.type === 'INTAKE') {
-        // 섭취/챙김 알림 -> 루틴 화면으로
-        router.push('/(tabs)/(home)' as any);
-      } else if (data?.type === 'STOCK' && data.supplementId) {
-        // 재고 알림 -> 해당 영양제 상세 화면으로
-        router.push(`/(tabs)/(profile)/supplements/${data.supplementId}` as any);
+    // 3. 앱이 종료된 상태에서 알림을 클릭해 실행된 경우 처리
+    Notifications.getLastNotificationResponseAsync().then(response => {
+      if (response) {
+        handleNotificationClick(response);
       }
     });
 
@@ -104,6 +95,21 @@ export default function RootLayout() {
       responseListener.remove();
     };
   }, []);
+
+  // 알림 클릭 공통 처리 로직
+  const handleNotificationClick = (response: Notifications.NotificationResponse) => {
+    console.log('💡 [DEBUG] 클릭 데이터:', response.notification.request.content.data);
+    const data = response.notification.request.content.data;
+
+    // 알림 Data Payload에 맞춤 라우팅 처리
+    if (data?.url) {
+      router.push(data.url as any);
+    } else if (data?.type === 'INTAKE') {
+      router.push('/(tabs)/(home)' as any);
+    } else if (data?.type === 'STOCK' && data.supplementId) {
+      router.push(`/(tabs)/(profile)/supplements/${data.supplementId}` as any);
+    }
+  };
 
   if (!loaded) {
     return null;

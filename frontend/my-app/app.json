@@ -27,7 +27,9 @@
       "googleServicesFile": "./google-services.json",
       "permissions": [
         "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.RECORD_AUDIO",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.WAKE_LOCK"
       ]
     },
     "web": {
@@ -72,7 +74,13 @@
           "cameraPermission": "Allow $(PRODUCT_NAME) to use the camera to photograph supplement labels."
         }
       ],
-      "expo-notifications",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/ddoya_logo.png",
+          "color": "#FF231F7C"
+        }
+      ],
       "expo-localization"
     ],
     "experiments": {
