@@ -15,32 +15,19 @@ const REPORT_SQUIRREL = require('../../../../assets/images/DDOYA_report.png');
 
 type SpeechBubbleProps = {
   title?: string;
-  /** 제목 색(미지정 시 본문 톤) */
   titleColor?: string;
   leadIn?: string;
-  /** leadIn 줄 간격 등 (예: 인사 2줄) */
   leadInTextStyle?: StyleProp<TextStyle>;
   children?: React.ReactNode;
   style?: StyleProp<ViewStyle>;
-  /** 본체·꼬리 테두리 (미지정 시 연한 라인) */
-  frameBorderColor?: string;
 };
 
-/** 말풍선 — 장식 원(blob) 없음, 꼬리만 유지 */
-function SpeechBubble({
-  title,
-  titleColor,
-  leadIn,
-  leadInTextStyle,
-  children,
-  style,
-  frameBorderColor,
-}: SpeechBubbleProps) {
+/** 리포트 말풍선 — 테두리 없음, 은은한 그림자만 */
+function SpeechBubble({ title, titleColor, leadIn, leadInTextStyle, children, style }: SpeechBubbleProps) {
   const { width } = useWindowDimensions();
   const bubbleBg = `${colors.cardIvory}CC`;
   const ph = scaleByWidth(width, 18, { min: 14, max: 22 });
   const pv = scaleByWidth(width, 16, { min: 14, max: 22 });
-  const edge = frameBorderColor ?? `${colors.shadowDark}22`;
 
   return (
     <View
@@ -49,16 +36,14 @@ function SpeechBubble({
         {
           alignSelf: 'stretch',
           backgroundColor: bubbleBg,
-          borderWidth: 1,
-          borderColor: edge,
           paddingHorizontal: ph,
           paddingTop: pv,
           paddingBottom: scaleByWidth(width, 18, { min: 14, max: 22 }),
           shadowColor: colors.shadowDark,
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.1,
-          shadowRadius: 8,
-          elevation: 2,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.06,
+          shadowRadius: 10,
+          elevation: 1,
         },
         style,
       ]}
@@ -71,9 +56,6 @@ function SpeechBubble({
           width: scaleByWidth(width, 12, { min: 10, max: 14 }),
           height: scaleByWidth(width, 12, { min: 10, max: 14 }),
           backgroundColor: bubbleBg,
-          borderRightWidth: 1,
-          borderTopWidth: 1,
-          borderColor: edge,
           transform: [{ rotate: '45deg' }],
         }}
       />
@@ -99,7 +81,6 @@ type GreetingBubbleWithSquirrelProps = {
   leadIn: string;
 };
 
-/** 인사 말풍선 오른쪽에 다람쥐만 (하단 큰 캐릭터 없음) */
 export function GreetingBubbleWithSquirrel({ leadIn }: GreetingBubbleWithSquirrelProps) {
   const { width } = useWindowDimensions();
   const imgW = scaleByWidth(width, 84, { min: 72, max: 100 });
@@ -110,16 +91,15 @@ export function GreetingBubbleWithSquirrel({ leadIn }: GreetingBubbleWithSquirre
       <View
         className="min-w-0"
         style={{
-          maxWidth: '70%',
+          maxWidth: '76%',
           flexShrink: 1,
-          transform: [{ translateY: -scaleByWidth(width, 14, { min: 4, max: 12 }) }],
+          transform: [{ translateY: -scaleByWidth(width, 8, { min: 4, max: 12 }) }],
         }}
       >
         <SpeechBubble
-          frameBorderColor={colors.dark}
           leadIn={leadIn}
           leadInTextStyle={{
-            lineHeight: scaleByWidth(width, 20, { min: 23, max: 31 }),
+            lineHeight: scaleByWidth(width, 27, { min: 23, max: 31 }),
             paddingTop: 2,
             textAlign: 'center',
             alignSelf: 'stretch',
@@ -143,8 +123,8 @@ export function ReportSquirrelCommentSection({ children }: ReportSquirrelComment
   if (items.length === 0) return null;
 
   return (
-    <View className="mt-1 w-full">
-      <View className="w-full gap-3">{items}</View>
+    <View className="w-full">
+      <View className="w-full gap-4">{items}</View>
     </View>
   );
 }

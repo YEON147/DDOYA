@@ -394,8 +394,8 @@ export default function ReportsScreen() {
 
   return (
     <ScreenContainer header={<TopHeader title={mode === 'edit' ? '리포트 갱신' : ''} onBackPress={() => router.back()} />}>
-      <ScrollView 
-        showsVerticalScrollIndicator={false} 
+      <ScrollView
+        showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 100 }}
       >
         <View className="py-2">
@@ -410,16 +410,16 @@ export default function ReportsScreen() {
           />
 
           {/* 추천 제품 섹션 */}
-          <ProductRecommendation 
-            nickname={authNickname || profile.nickname || '회원'} 
-            products={(report.recommended_products_by_ingredient || report.recommendedProductsByIngredient || []).flatMap((group: any) => 
+          <ProductRecommendation
+            nickname={authNickname || profile.nickname || '회원'}
+            products={(report.recommended_products_by_ingredient || report.recommendedProductsByIngredient || []).flatMap((group: any) =>
               (group.recommended_products || group.recommendedProducts || []).map((p: any) => ({
                 productCode: p.product_code || p.productCode,
                 productName: p.product_name || p.productName,
                 brand: p.brand || '',
-                pillImageUrl: p.pill_image_url || p.pillImageUrl || ''
+                pillImageUrl: p.pill_image_url || p.pillImageUrl || '',
               }))
-            ).slice(0, 5)} 
+            ).slice(0, 5)}
           />
 
           {/* 갱신 모드 전용 섹션 */}
