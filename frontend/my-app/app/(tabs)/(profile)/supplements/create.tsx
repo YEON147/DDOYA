@@ -1,11 +1,12 @@
 import React from 'react';
-import { Alert, Platform } from 'react-native';
+import { Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { ScreenContainer } from '@/src/components/common/ScreenContainer';
 import { TopHeader } from '@/src/components/common/TopHeader';
 import { CaptureGuideScreenLayout } from '@/src/components/common/CaptureGuideScreenLayout';
 import { useSupplementCreateStore } from '@/src/store/supplementCreateStore';
+import { appAlert } from '@/src/utils/appAlert';
  
 const REGISTER_GUIDE_IMAGE = require('../../../../assets/images/ocr_example.jpg');
 
@@ -16,13 +17,13 @@ export default function SupplementCreateScreen() {
 
   const handleCapture = async () => {
     if (Platform.OS === 'web') {
-      Alert.alert('안내', '웹에서는 카메라 촬영을 지원하지 않습니다.');
+      appAlert('안내', '웹에서는 카메라 촬영을 지원하지 않습니다.');
       return;
     }
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('안내', '카메라 권한이 필요합니다.');
+        appAlert('안내', '카메라 권한이 필요합니다.');
         return;
       }
       const result = await ImagePicker.launchCameraAsync({
@@ -34,14 +35,14 @@ export default function SupplementCreateScreen() {
       const asset = result.assets[0];
       const uri = asset?.uri;
       if (!uri) {
-        Alert.alert('오류', '촬영 결과를 불러오지 못했습니다.');
+        appAlert('오류', '촬영 결과를 불러오지 못했습니다.');
         return;
       }
       setOcrResult(null);
       setIngredientLabelUri(uri, asset.mimeType ?? null);
       router.push('/supplements/label-preview' as never);
     } catch {
-      Alert.alert('오류', '촬영에 실패했습니다. 다시 시도해 주세요.');
+      appAlert('오류', '촬영에 실패했습니다. 다시 시도해 주세요.');
     }
   };
 

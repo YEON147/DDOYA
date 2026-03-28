@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Alert, ActivityIndicator, Platform, View } from 'react-native';
+import { ActivityIndicator, Platform, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { useQueryClient } from '@tanstack/react-query';
@@ -11,6 +11,7 @@ import { buildIntakeCertificationFormData, intakeRoutineApi } from '@/src/api/in
 import { prepareLabelImageForOcr } from '@/src/utils/labelImageForUpload';
 import { colors } from '@/constants/theme/colors';
 import apiClient from '@/src/api/client';
+import { appAlert } from '@/src/utils/appAlert';
 
 const INTAKE_GUIDE_IMAGE = require('../../../assets/images/intake_verify_example.jpg');
 
@@ -22,13 +23,13 @@ export default function IntakeVerifyScreen() {
 
   const handleCapture = async () => {
     if (Platform.OS === 'web') {
-      Alert.alert('안내', '웹에서는 카메라 촬영을 지원하지 않습니다.');
+      appAlert('안내', '웹에서는 카메라 촬영을 지원하지 않습니다.');
       return;
     }
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('안내', '카메라 권한이 필요합니다.');
+        appAlert('안내', '카메라 권한이 필요합니다.');
         return;
       }
       const result = await ImagePicker.launchCameraAsync({
@@ -39,7 +40,7 @@ export default function IntakeVerifyScreen() {
       if (result.canceled) return;
       const uri = result.assets[0]?.uri;
       if (!uri) {
-        Alert.alert('오류', '촬영 결과를 불러오지 못했습니다.');
+        appAlert('오류', '촬영 결과를 불러오지 못했습니다.');
         return;
       }
 
@@ -49,7 +50,7 @@ export default function IntakeVerifyScreen() {
         .filter((v) => Number.isFinite(v) && v > 0);
 
       if (parsedScheduleIds.length === 0) {
-        Alert.alert('안내', '인증 대상 스케줄이 없습니다. 홈에서 다시 시도해 주세요.');
+        appAlert('안내', '인증 대상 스케줄이 없습니다. 홈에서 다시 시도해 주세요.');
         return;
       }
 
@@ -74,7 +75,7 @@ export default function IntakeVerifyScreen() {
         await queryClient.invalidateQueries({ queryKey: ['dailyIntakeSchedule'] });
 
         const matchedCount = certificationResult.results.filter((r) => r.matched).length;
-        Alert.alert(
+        appAlert(
           certificationResult.success ? '인증 완료' : '인증 결과',
           `${certificationResult.message}\n일치 ${matchedCount}/${certificationResult.results.length}건`,
           [{ text: '확인', onPress: () => router.back() }],
@@ -89,7 +90,7 @@ export default function IntakeVerifyScreen() {
 
           await queryClient.invalidateQueries({ queryKey: ['dailyIntakeSchedule'] });
           const matchedCount = certificationResult.results.filter((r) => r.matched).length;
-          Alert.alert(
+          appAlert(
             certificationResult.success ? '인증 완료' : '인증 결과',
             `${certificationResult.message}\n일치 ${matchedCount}/${certificationResult.results.length}건`,
             [{ text: '확인', onPress: () => router.back() }],
@@ -106,7 +107,7 @@ export default function IntakeVerifyScreen() {
       const baseURL = anyErr?.config?.baseURL ?? apiClient.defaults.baseURL;
       const serverMessage = anyErr?.response?.data?.message ?? anyErr?.response?.data?.data?.message ?? null;
       const fallbackMessage = anyErr?.message ?? '알 수 없는 오류';
-      Alert.alert(
+      appAlert(
         '인증 실패',
         status
           ? `${status} ${serverMessage ? String(serverMessage) : String(fallbackMessage)}\n${baseURL ?? ''}${reqUrl ?? ''}`

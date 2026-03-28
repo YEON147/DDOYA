@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Pressable } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/constants/theme/colors';
@@ -7,6 +7,7 @@ import { neuInset, neuRaised } from '@/constants/theme/neumorphism';
 import { TimePicker } from '@/src/components/common/TimePicker';
 import { useIntakeRoutineList, useUpdateIntakeTime } from '@/hooks/useIntakeRoutine';
 import { IntakeRoutineSettingItem } from '@/src/types/intakeRoutine';
+import { appAlert } from '@/src/utils/appAlert';
 
 export default function IntakeRoutineEditScreen() {
   const router = useRouter();
@@ -70,10 +71,10 @@ export default function IntakeRoutineEditScreen() {
         )
       );
 
-      Alert.alert('성공', '섭취 루틴이 수정되었습니다.');
+      appAlert('성공', '섭취 루틴이 수정되었습니다.');
       router.back();
     } catch {
-      Alert.alert('오류', '수정 중 문제가 발생했습니다.');
+      appAlert('오류', '수정 중 문제가 발생했습니다.');
     } finally {
       setIsSaving(false);
     }

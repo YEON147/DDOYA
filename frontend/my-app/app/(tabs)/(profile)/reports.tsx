@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, ScrollView, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { reportApi } from '@/src/api/report';
@@ -17,6 +17,7 @@ import { TimePicker } from '@/src/components/common/TimePicker';
 import { colors } from '@/constants/theme/colors';
 import { softWellnessCard } from '@/constants/theme/neumorphism';
 import { Ionicons } from '@expo/vector-icons';
+import { appAlert } from '@/src/utils/appAlert';
 
 const TIMING_DISPLAY_MAP: Record<string, string> = {
   BEFORE_BREAKFAST: '아침 식전',
@@ -119,10 +120,10 @@ export default function ReportsScreen() {
       await queryClient.refetchQueries({ queryKey: ['report'] });
       
       setMode('edit');
-      Alert.alert('리포트 갱신 완료', '최신 정보를 바탕으로 분석이 완료되었습니다. 영양제별 추천 시간을 확인해 주세요.');
+      appAlert('리포트 갱신 완료', '최신 정보를 바탕으로 분석이 완료되었습니다. 영양제별 추천 시간을 확인해 주세요.');
     },
     onError: () => {
-      Alert.alert('오류', '리포트 갱신 중 문제가 발생했습니다.');
+      appAlert('오류', '리포트 갱신 중 문제가 발생했습니다.');
     },
   });
 
@@ -143,7 +144,7 @@ export default function ReportsScreen() {
     try {
       const reportId = report?.reportId ?? report?.report_id;
       if (!reportId) {
-        Alert.alert('저장 실패', '리포트 ID를 확인할 수 없습니다.');
+        appAlert('저장 실패', '리포트 ID를 확인할 수 없습니다.');
         return;
       }
 
@@ -188,7 +189,7 @@ export default function ReportsScreen() {
       }
 
       if (userSupplements.length === 0) {
-        Alert.alert('저장 실패', '확정 저장할 영양제/시간이 없습니다.');
+        appAlert('저장 실패', '확정 저장할 영양제/시간이 없습니다.');
         return;
       }
 
@@ -231,7 +232,7 @@ export default function ReportsScreen() {
         console.log('[Report Refresh Error] status:', refreshStatus);
         console.log('[Report Refresh Error] data:', refreshData);
         console.log('[Report Refresh Error] request url:', re?.config?.url);
-        Alert.alert(
+        appAlert(
           '일부 완료',
           '복용 시각 저장은 완료되었지만 리포트 갱신에 실패했습니다.\n네트워크 상태 확인 후 다시 시도해 주세요.',
         );
@@ -247,7 +248,7 @@ export default function ReportsScreen() {
       // 화면에 즉시 반영되도록 강제 재조회
       await queryClient.refetchQueries({ queryKey: ['report'] });
       
-      Alert.alert('저장 완료', '맞춤 복용 시간이 반영되었습니다.', [
+      appAlert('저장 완료', '맞춤 복용 시간이 반영되었습니다.', [
         { text: '확인', onPress: () => {
           if (router.canDismiss()) {
             router.dismissAll();
@@ -290,7 +291,7 @@ export default function ReportsScreen() {
         }
       }
 
-      Alert.alert('저장 실패', `status=${status ?? 'unknown'}\n${String(message)}`);
+      appAlert('저장 실패', `status=${status ?? 'unknown'}\n${String(message)}`);
     } finally {
       setIsSaving(false);
     }

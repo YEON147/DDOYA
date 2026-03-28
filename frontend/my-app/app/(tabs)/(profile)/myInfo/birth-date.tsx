@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, TouchableOpacity, Alert, Platform, Pressable } from 'react-native';
+import { View, Text, TouchableOpacity, Platform, Pressable } from 'react-native';
 import { router } from 'expo-router';
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { CalendarDays } from 'lucide-react-native';
@@ -9,6 +9,7 @@ import { colors } from '@/constants/theme/colors';
 import { neuInset } from '@/constants/theme/neumorphism';
 import { useUserProfileStore } from '@/src/store/userProfileStore';
 import { AppButton } from '@/src/components/common/AppButton';
+import { appAlert } from '@/src/utils/appAlert';
 import { AppIcon } from '@/src/components/common/AppIcon';
 
 export default function MyInfoBirthDateScreen() {
@@ -51,7 +52,7 @@ export default function MyInfoBirthDateScreen() {
 
   const handleSave = () => {
     if (!isValid) {
-      Alert.alert('생년월일', '생년월일을 입력해주세요.');
+      appAlert('생년월일', '생년월일을 입력해주세요.');
       return;
     }
     setProfile({ birthDate: value.trim() });

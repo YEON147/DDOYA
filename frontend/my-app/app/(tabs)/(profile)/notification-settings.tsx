@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Switch, StyleSheet, Alert, TouchableOpacity } from 'react-native';
+import { View, Text, Switch, StyleSheet, TouchableOpacity } from 'react-native';
 import { ScreenContainer } from '@/src/components/common/ScreenContainer';
 import { TopHeader } from '@/src/components/common/TopHeader';
 import { TimePicker } from '@/src/components/common/TimePicker';
 import { colors } from '@/constants/theme/colors';
 import { neuRaised } from '@/constants/theme/neumorphism';
 import { notificationApi, NotificationSettings } from '@/src/api/notification';
+import { appAlert } from '@/src/utils/appAlert';
 
 /**
  * 알림 설정 화면
@@ -58,7 +59,7 @@ export default function NotificationSettingsScreen() {
         await notificationApi.updateCarryNotificationSetting(value);
       }
     } catch {
-      Alert.alert('오류', '알림 설정을 저장하지 못했습니다.');
+      appAlert('오류', '알림 설정을 저장하지 못했습니다.');
       // 실패 시 롤백
       setSettings(settings);
     }
@@ -70,7 +71,7 @@ export default function NotificationSettingsScreen() {
       await notificationApi.updateCarryNotificationTime(selectedTime);
       setCarryTime(selectedTime);
     } catch {
-      Alert.alert('오류', '알림 시각을 저장하지 못했습니다.');
+      appAlert('오류', '알림 시각을 저장하지 못했습니다.');
     } finally {
       setIsTimePickerVisible(false);
     }
