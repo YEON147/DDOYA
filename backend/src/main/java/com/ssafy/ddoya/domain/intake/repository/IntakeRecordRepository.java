@@ -71,6 +71,18 @@ public interface IntakeRecordRepository extends JpaRepository<IntakeRecord, Long
             @Param("start") LocalDateTime start,
             @Param("end") LocalDateTime end);
 
+    @Query("""
+    SELECT r.intakeRecordId FROM IntakeRecord r
+    WHERE r.schedule.scheduleId = :scheduleId
+      AND r.plannedAt >= :start
+      AND r.plannedAt < :end
+      AND r.status = com.ssafy.ddoya.domain.intake.entity.IntakeStatus.MISSED
+""")
+    List<Long> findIdsByScheduleIdAndPlannedAtRange(
+            @Param("scheduleId") Long scheduleId,
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end);
+
     /**
      * 특정 기간 내에 계획된 섭취 기록이 있는 활성 일정 ID 목록을 조회합니다. (배치용)
      */
@@ -146,6 +158,22 @@ public interface IntakeRecordRepository extends JpaRepository<IntakeRecord, Long
               )
     """)
     void deleteTodayMissedAndFutureRecords(
+            @Param("scheduleId") Long scheduleId,
+            @Param("todayStart") LocalDateTime todayStart,
+            @Param("todayEnd") LocalDateTime todayEnd);
+
+    /**
+     * 특정 스케줄에 대해 삭제 대상이 될 섭취 기록의 ID 목록을 조회합니다. (FK 로그 선삭제를 위한 전처리)
+     */
+    @Query("""
+        SELECT r.intakeRecordId FROM IntakeRecord r
+        WHERE r.schedule.scheduleId = :scheduleId
+          AND (
+                (r.plannedAt >= :todayStart AND r.plannedAt < :todayEnd AND r.status = com.ssafy.ddoya.domain.intake.entity.IntakeStatus.MISSED)
+                OR (r.plannedAt >= :todayEnd)
+              )
+    """)
+    List<Long> findIdsByScheduleIdAndSyncRange(
             @Param("scheduleId") Long scheduleId,
             @Param("todayStart") LocalDateTime todayStart,
             @Param("todayEnd") LocalDateTime todayEnd);

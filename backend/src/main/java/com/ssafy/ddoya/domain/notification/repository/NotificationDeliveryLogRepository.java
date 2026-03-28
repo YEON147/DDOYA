@@ -39,4 +39,11 @@ public interface NotificationDeliveryLogRepository extends JpaRepository<Notific
     @Modifying(clearAutomatically = true)
     @Query("DELETE FROM NotificationDeliveryLog n WHERE n.schedule.scheduleId IN :scheduleIds")
     void deleteByScheduleIdIn(@Param("scheduleIds") List<Long> scheduleIds);
+
+    /**
+     * 특정 섭취 기록 ID 목록에 해당하는 모든 알림 로그를 일괄 삭제합니다. (FK 제약 조건 해결용)
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("DELETE FROM NotificationDeliveryLog n WHERE n.intakeRecord.intakeRecordId IN :intakeRecordIds")
+    void deleteByIntakeRecordIdIn(@Param("intakeRecordIds") List<Long> intakeRecordIds);
 }
