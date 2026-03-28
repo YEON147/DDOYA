@@ -8,12 +8,11 @@ import { colors } from '@/constants/theme/colors';
 import { neuInset, neuRaised } from '@/constants/theme/neumorphism';
 import { AppIcon } from '@/src/components/common/AppIcon';
 import { useDailyIntakeSchedule } from '@/hooks/useIntakeRoutine';
-import { formatKoreanTime, formatKoreanTodayParts, hasPendingItems, slotFailDeadline } from '@/src/utils/nextIntake';
+import { formatKoreanTime, formatKoreanTodayParts } from '@/src/utils/nextIntake';
 import { SvgXml } from 'react-native-svg';
 import { useAuthStore } from '@/src/store/authStore';
 import { scaleByWidth } from '@/src/utils/responsive';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { intakeRoutineApi } from '@/src/api/intakeRoutine';
+import { useCallback, useEffect, useRef } from 'react';
 import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 
 const DDOYA_LOGO_XML = `<svg width="1106" height="479" viewBox="0 0 1106 479" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -41,15 +40,8 @@ export default function HomeScreen() {
   const horizontalPadding = scaleByWidth(width, 18, { min: 14, max: 22 });
   const topPadding = scaleByWidth(width, 18, { min: 14, max: 24 });
   const dateBarHeight = scaleByWidth(width, 40, { min: 34, max: 48 });
-  const [now, setNow] = useState(() => new Date());
-  const processingRef = useRef<Set<number>>(new Set());
   const scrollRef = useRef<ScrollView>(null);
   useScrollToTop(scrollRef);
-
-  useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(id);
-  }, []);
 
   // 탭 포커스 시 스크롤 맨 위 + 루틴 재조회
   useFocusEffect(
@@ -61,34 +53,22 @@ export default function HomeScreen() {
 
   useEffect(() => {
     if (!schedule || isPending || isError) return;
-
-    const overdueRecordIds = schedule.timeSlots
-      .filter((slot) => {
-        const deadline = slotFailDeadline(slot);
-        if (!deadline) return false;
-        return hasPendingItems(slot) && now.getTime() >= deadline.getTime();
-      })
-      .flatMap((slot) =>
-        slot.items
-          .filter((item) => item.status !== 'TAKEN' && item.status !== 'SKIPPED' && item.status !== 'MISSED')
-          .map((item) => item.intakeRecordId),
-      )
-      .filter((id) => !processingRef.current.has(id));
-
-    if (overdueRecordIds.length === 0) return;
-
-    overdueRecordIds.forEach((id) => processingRef.current.add(id));
-
-    void Promise.allSettled(
-      overdueRecordIds.map((intakeRecordId) =>
-        intakeRoutineApi.updateIntakeRecordStatus(intakeRecordId, { status: 'MISSED' }),
-      ),
-    )
-      .then(() => refetch())
-      .finally(() => {
-        overdueRecordIds.forEach((id) => processingRef.current.delete(id));
-      });
-  }, [schedule, isPending, isError, now, refetch]);
+    const rows = schedule.timeSlots.flatMap((slot) =>
+      slot.items.map((item) => ({
+        intakeTime: slot.intakeTime,
+        plannedAt: slot.plannedAt,
+        intakeRecordId: item.intakeRecordId,
+        scheduleId: item.scheduleId,
+        alias: item.alias,
+        status: item.status,
+      })),
+    );
+    console.log('[home] dailyIntakeSchedule status', {
+      targetDate: schedule.targetDate,
+      count: rows.length,
+      items: rows,
+    });
+  }, [schedule, isPending, isError]);
 
   return (
     <ScreenContainer
@@ -188,8 +168,6 @@ export default function HomeScreen() {
               key={slot.plannedAt}
               timeLabel={formatKoreanTime(slot.intakeTime)}
               intakeTime={slot.intakeTime}
-              plannedAt={slot.plannedAt}
-              now={now}
               items={slot.items}
               onPressCamera={(scheduleIds: number[]) =>
                 router.push(`/intake-verify?scheduleIds=${encodeURIComponent(scheduleIds.join(','))}` as never)

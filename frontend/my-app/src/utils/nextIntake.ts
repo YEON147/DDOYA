@@ -35,6 +35,14 @@ export function formatKoreanTodayLine(date: Date = new Date()): string {
   return `${monthDay} ${weekday}`;
 }
 
+/** 기기 로컬 캘린더 기준 `YYYY-MM-DD` — 일별 스케줄 API·React Query 키에 사용 */
+export function formatLocalDateKey(d: Date = new Date()): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 export function formatKoreanTime(hhmm: string): string {
   const [hStr, mStr] = hhmm.split(':');
   const h = parseInt(hStr, 10);
@@ -62,18 +70,6 @@ export function findNextAttentionSlot(slots: DailyIntakeTimeSlot[]): DailyIntake
 
 export function hasPendingItems(slot: DailyIntakeTimeSlot): boolean {
   return slot.items.some((i) => i.status !== 'TAKEN' && i.status !== 'SKIPPED' && i.status !== 'MISSED');
-}
-
-export function slotFailDeadline(slot: DailyIntakeTimeSlot): Date | null {
-  const target = slotTargetDate(slot);
-  if (!target) return null;
-  return new Date(target.getTime() + 20 * 60 * 1000);
-}
-
-export function isSlotTimedOut(slot: DailyIntakeTimeSlot, now: Date = new Date()): boolean {
-  const deadline = slotFailDeadline(slot);
-  if (!deadline) return false;
-  return hasPendingItems(slot) && now.getTime() >= deadline.getTime();
 }
 
 /** 현재 시각보다 미래에 있는 루틴 중 가장 이른 슬롯 */

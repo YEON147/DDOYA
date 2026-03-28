@@ -10,10 +10,16 @@ export type AppAlertButton = {
   style?: 'default' | 'cancel' | 'destructive';
 };
 
+export type AppAlertOptions = {
+  /** 설정 시 확인 버튼 없이 해당 ms 후 자동으로 닫힘 */
+  autoDismissMs?: number;
+};
+
 export type AppAlertPayload = {
   title: string;
   message?: string;
   buttons?: AppAlertButton[];
+  autoDismissMs?: number;
 };
 
 type Listener = (p: AppAlertPayload) => void;
@@ -24,9 +30,19 @@ export function registerAppAlert(fn: Listener | null) {
   listener = fn;
 }
 
-export function appAlert(title: string, message?: string, buttons?: AppAlertButton[]) {
+export function appAlert(
+  title: string,
+  message?: string,
+  buttons?: AppAlertButton[],
+  options?: AppAlertOptions,
+) {
   if (listener) {
-    listener({ title, message, buttons });
+    listener({
+      title,
+      message,
+      buttons,
+      autoDismissMs: options?.autoDismissMs,
+    });
     return;
   }
   Alert.alert(title, message, buttons);

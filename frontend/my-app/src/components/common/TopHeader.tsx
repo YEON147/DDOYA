@@ -35,7 +35,7 @@ export function TopHeader({
             onPress={onBackPress ?? (() => router.back())}
             hitSlop={{ top: 16, bottom: 16, left: 12, right: 20 }}
             style={({ pressed }) => ({
-              marginRight: 4,
+              marginRight: title.trim() ? 4 : 0,
               paddingVertical: 4,
               paddingRight: 8,
               opacity: pressed ? 0.55 : 1,
@@ -44,9 +44,11 @@ export function TopHeader({
             <AppIcon icon={ChevronLeft} size={28} color={colors.text} />
           </Pressable>
         )}
-        <Text className="text-[23px] font-scdream-medium" style={{ color: colors.text }}>
-          {title}
-        </Text>
+        {title.trim() ? (
+          <Text className="text-[23px] font-scdream-medium" style={{ color: colors.text }}>
+            {title}
+          </Text>
+        ) : null}
       </View>
       {right ? <View>{right}</View> : <View style={{ width: 32 }} />}
     </View>
