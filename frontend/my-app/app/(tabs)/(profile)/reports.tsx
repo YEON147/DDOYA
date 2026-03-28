@@ -248,14 +248,13 @@ export default function ReportsScreen() {
       // 화면에 즉시 반영되도록 강제 재조회
       await queryClient.refetchQueries({ queryKey: ['report'] });
       
-      appAlert('저장 완료', '맞춤 복용 시간이 반영되었습니다.', [
-        { text: '확인', onPress: () => {
-          if (router.canDismiss()) {
-            router.dismissAll();
-          }
-          router.replace('/(tabs)/(home)');
-        }}
-      ]);
+      appAlert('', '맞춤 복용 시간이 반영되었습니다.', undefined, { autoDismissMs: 1000 });
+      setTimeout(() => {
+        if (router.canDismiss()) {
+          router.dismissAll();
+        }
+        router.replace('/(tabs)/(home)');
+      }, 1000);
     } catch (err) {
       const e = err as any;
       const status = e?.response?.status;
