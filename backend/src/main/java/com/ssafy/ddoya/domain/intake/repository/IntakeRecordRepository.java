@@ -193,4 +193,20 @@ public interface IntakeRecordRepository extends JpaRepository<IntakeRecord, Long
             @Param("supplementId") Long supplementId,
             @Param("start") LocalDateTime start,
             @Param("end") LocalDateTime end);
+
+    /**
+     * 지정된 시간(예: 20분 경과) 기준으로 자동 SKIPPED 처리 대상이 될 수 있는 MISSED 기록들을 조회합니다.
+     * N+1 방지를 위해 스케줄 및 영양제 정보를 페치 조인합니다.
+     */
+    @Query("""
+        SELECT ir FROM IntakeRecord ir 
+        JOIN FETCH ir.schedule s 
+        JOIN FETCH s.supplement supp 
+        WHERE ir.status = com.ssafy.ddoya.domain.intake.entity.IntakeStatus.MISSED 
+          AND ir.plannedAt >= :startOfDay 
+          AND ir.plannedAt <= :threshold
+    """)
+    List<IntakeRecord> findAutoSkipCandidates(
+            @Param("threshold") LocalDateTime threshold,
+            @Param("startOfDay") LocalDateTime startOfDay);
 }
