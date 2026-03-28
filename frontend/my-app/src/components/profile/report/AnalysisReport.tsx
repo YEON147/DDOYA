@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/constants/theme/colors';
+import { ReportDecorAcornImage } from '@/src/constants/reportDecorAcorn';
 import { ReportComments, IngredientAnalysis } from '@/src/types/report';
 import {
   GreetingBubbleWithSquirrel,
@@ -64,23 +64,33 @@ export const AnalysisReport: React.FC<AnalysisReportProps> = ({
 
   return (
     <View className="mb-2">
-      <View className="mb-5 flex-row items-center">
-        <View
-          className="mr-3 h-8 w-8 items-center justify-center rounded-xl"
-          style={{ backgroundColor: '#262626' }}
+      <View className="mb-8 flex-row items-center">
+        <Text
+          className="shrink text-2xl font-scdream-bold"
+          style={{ color: colors.text }}
+          numberOfLines={1}
         >
-          <Ionicons name="star" size={14} color="#FFFFFF" />
-        </View>
-        <Text className="text-lg font-scdream-bold" style={{ color: colors.text }}>
-          분석 리포트
+          영양 분석 리포트
         </Text>
+        <View
+          className="ml-3 min-h-0 flex-1"
+          style={{
+            height: StyleSheet.hairlineWidth,
+            backgroundColor: STATUS_DIVIDER,
+          }}
+        />
       </View>
 
       <View className="gap-8">
         <View>
-            <Text className="mb-3 text-sm font-scdream-bold" style={{ color: colors.text }}>
-              성분 상태
-            </Text>
+            <View className="mb-3 flex-row items-center">
+              <View className="mr-2 justify-center" style={{ transform: [{ translateY: -2 }] }}>
+                <ReportDecorAcornImage size={22} />
+              </View>
+              <Text className="text-lg font-scdream-bold" style={{ color: colors.text }}>
+                성분 상태
+              </Text>
+            </View>
 
             {items.length === 0 ? (
               <Text className="py-1 text-sm font-scdream leading-5" style={{ color: colors.textMuted }}>

@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Image, TouchableOpacity } from 'react-native';
 import { colors } from '@/constants/theme/colors';
+import { ReportDecorAcornImage } from '@/src/constants/reportDecorAcorn';
 import { RecommendedProduct } from '@/src/types/report';
 import { Ionicons } from '@expo/vector-icons';
 import { softWellnessCard } from '@/constants/theme/neumorphism';
@@ -14,7 +15,7 @@ export const ProductRecommendation: React.FC<ProductRecommendationProps> = ({ ni
   if (!products || products.length === 0) {
     return (
       <View
-        className="mb-10 items-center justify-center p-8"
+        className="mb-10 mt-8 items-center justify-center p-8"
         style={[softWellnessCard(28), { borderStyle: 'dashed', borderColor: `${colors.shadowDark}35` }]}
       >
         <Ionicons name="basket-outline" size={32} color={colors.textMuted} className="mb-2" />
@@ -26,11 +27,20 @@ export const ProductRecommendation: React.FC<ProductRecommendationProps> = ({ ni
   }
 
   return (
-    <View className="mb-10">
+    <View className="mb-10 mt-8">
       <View className="mb-5 flex-row items-center justify-between">
-        <Text className="text-lg font-scdream-bold" style={{ color: colors.text }}>
-          {nickname}님을 위한 맞춤 제품
-        </Text>
+        <View className="min-w-0 flex-1 flex-row items-center">
+          <View className="mr-2 justify-center" style={{ transform: [{ translateY: -2 }] }}>
+            <ReportDecorAcornImage size={22} />
+          </View>
+          <Text
+            className="flex-1 text-lg font-scdream-bold"
+            style={{ color: colors.text }}
+            numberOfLines={2}
+          >
+            {nickname}님을 위한 맞춤 제품
+          </Text>
+        </View>
       </View>
 
       <View className="flex-row flex-wrap justify-between">

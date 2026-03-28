@@ -18,6 +18,8 @@ import { colors } from '@/constants/theme/colors';
 import { softWellnessCard } from '@/constants/theme/neumorphism';
 import { Ionicons } from '@expo/vector-icons';
 import { appAlert } from '@/src/utils/appAlert';
+import { prefetchReportSquirrelImage } from '@/src/constants/reportSquirrelImage';
+import { prefetchReportDecorAcorn } from '@/src/constants/reportDecorAcorn';
 
 const TIMING_DISPLAY_MAP: Record<string, string> = {
   BEFORE_BREAKFAST: '아침 식전',
@@ -47,6 +49,11 @@ export default function ReportsScreen() {
   // 수정된 시간들을 보관하는 로컬 맵 { "userSupplementId_INTAKE_TIMING_ENUM": 'HH:mm' }
   const [tempSupplementTimes, setTempSupplementTimes] = useState<Record<string, string>>({});
   const hasTriggeredAutoReportRefresh = useRef(false);
+
+  useEffect(() => {
+    prefetchReportSquirrelImage();
+    prefetchReportDecorAcorn();
+  }, []);
 
   // 헬퍼: 추천 시점 정보를 찾아 반환 (SNAKE_CASE/camelCase 대응)
   const getTimingRecommendations = (rep: any) => {
