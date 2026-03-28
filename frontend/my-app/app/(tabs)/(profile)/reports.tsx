@@ -366,7 +366,7 @@ export default function ReportsScreen() {
 
   if (isLoading) {
     return (
-      <ScreenContainer header={<TopHeader title="분석 리포트" onBackPress={() => router.back()} />}>
+      <ScreenContainer header={<TopHeader title="" onBackPress={() => router.back()} />}>
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator size="large" color={colors.primary} />
           <Text className="mt-4 font-scdream text-gray-400">데이터를 불러오는 중...</Text>
@@ -377,7 +377,7 @@ export default function ReportsScreen() {
 
   if (error || !report) {
     return (
-      <ScreenContainer header={<TopHeader title="분석 리포트" onBackPress={() => router.back()} />}>
+      <ScreenContainer header={<TopHeader title="" onBackPress={() => router.back()} />}>
         <View className="flex-1 items-center justify-center px-6">
           <Ionicons name="alert-circle-outline" size={48} color={colors.textMuted} className="mb-4" />
           <Text className="text-base font-scdream text-center mb-6" style={{ color: colors.text }}>
@@ -393,7 +393,7 @@ export default function ReportsScreen() {
   const displayDate = updatedAt ? updatedAt.split('T')[0].replace(/-/g, '.') : '';
 
   return (
-    <ScreenContainer header={<TopHeader title={mode === 'edit' ? "리포트 갱신" : "분석 리포트"} onBackPress={() => router.back()} />}>
+    <ScreenContainer header={<TopHeader title={mode === 'edit' ? '리포트 갱신' : ''} onBackPress={() => router.back()} />}>
       <ScrollView 
         showsVerticalScrollIndicator={false} 
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 100 }}
