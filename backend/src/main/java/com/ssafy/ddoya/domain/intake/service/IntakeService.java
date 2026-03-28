@@ -15,6 +15,7 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -74,8 +75,31 @@ public class IntakeService {
                 })
                 .toList();
 
-        // 시간대별 그룹핑 및 정렬
-        Map<LocalTime, List<IntakeScheduleResponse.IntakeItemDto>> groupedByTime = items.stream()
+        // [DEDUP] 같은 영양제(userSupplementId)에 대해 대표 1개만 선정 (우선순위: 확정이력 > 활성스케줄)
+        Map<Long, List<IntakeScheduleResponse.IntakeItemDto>> groupedBySupplement = items.stream()
+                .collect(Collectors.groupingBy(IntakeScheduleResponse.IntakeItemDto::getUserSupplementId));
+
+        List<IntakeScheduleResponse.IntakeItemDto> dedupedItems = groupedBySupplement.values().stream()
+                .map(group -> {
+                    // 동일 영양제 그룹 중 대표 1개 선택
+                    // 1. TAKEN 또는 SKIPPED 상태(확정 이력)인 것을 우선 검색
+                    Optional<IntakeScheduleResponse.IntakeItemDto> finalizedItem = group.stream()
+                            .filter(i -> "TAKEN".equals(i.getStatus()) || "SKIPPED".equals(i.getStatus()))
+                            .findFirst();
+
+                    if (finalizedItem.isPresent()) {
+                        return finalizedItem.get();
+                    }
+
+                    // 2. 확정 이력이 없으면, 현재 활성화(isActive=true)된 스케줄 항목 선택
+                    // (isActive 정보가 DTO에는 없으므로, records에서 다시 확인하거나 우선순위상 나머지에 대해 유연하게 선택)
+                    // 현재는 isActive=true 인 레코드들이 쿼리로 걸러져서 오고, TAKEN/SKIPPED가 아닌 것은 활성 스케줄임이 전제됨
+                    return group.get(0);
+                })
+                .toList();
+
+        // 시간대별 그룹핑 및 정렬 (중복 제거된 항목 기준)
+        Map<LocalTime, List<IntakeScheduleResponse.IntakeItemDto>> groupedByTime = dedupedItems.stream()
                 .collect(Collectors.groupingBy(IntakeScheduleResponse.IntakeItemDto::getRawIntakeTime));
 
         // 시간 오름차순 정렬

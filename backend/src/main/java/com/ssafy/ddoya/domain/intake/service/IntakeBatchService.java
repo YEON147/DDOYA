@@ -42,13 +42,13 @@ public class IntakeBatchService {
         LocalDateTime start = targetDate.atStartOfDay();
         LocalDateTime end = targetDate.plusDays(1).atStartOfDay();
 
-        // INTAKE 타입의 모든 스케줄 조회
+        // INTAKE 타입의 활성 스케줄만 조회
         List<IntakeSchedule> schedules =
-                intakeScheduleRepository.findAllByScheduleType(ScheduleType.INTAKE);
+                intakeScheduleRepository.findAllByScheduleTypeAndIsActiveTrue(ScheduleType.INTAKE);
 
-        // 해당 날짜에 이미 record가 존재하는 scheduleId 목록 조회
+        // 해당 날짜에 이미 record가 존재하는 활성 scheduleId 목록 조회
         Set<Long> existingScheduleIds = intakeRecordRepository
-                .findExistingScheduleIdsByPlannedAtBetween(start, end)
+                .findExistingActiveScheduleIdsByPlannedAtBetween(start, end)
                 .stream()
                 .collect(Collectors.toSet());
 

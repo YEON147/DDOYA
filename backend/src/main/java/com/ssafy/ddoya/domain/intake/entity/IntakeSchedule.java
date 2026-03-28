@@ -71,20 +71,28 @@ public class IntakeSchedule {
     private Integer dosePerIntake;
 
     /**
+     * 일정 활성화 여부 (삭제 대신 비활성화 처리하여 과거 기록 유지)
+     */
+    @Column(name = "is_active", nullable = false)
+    private Boolean isActive;
+
+    /**
      * @param user          일정을 소유한 사용자
      * @param supplement    대상 영양제
      * @param intakeTime    섭취 시간
      * @param scheduleType  일정 유형
      * @param dosePerIntake 1회 섭취량
+     * @param isActive      활성화 여부
      */
     @Builder
     private IntakeSchedule(User user, Supplement supplement, LocalTime intakeTime,
-            ScheduleType scheduleType, Integer dosePerIntake) {
+            ScheduleType scheduleType, Integer dosePerIntake, Boolean isActive) {
         this.user = user;
         this.supplement = supplement;
         this.intakeTime = intakeTime;
         this.scheduleType = scheduleType;
         this.dosePerIntake = dosePerIntake;
+        this.isActive = isActive != null ? isActive : true;
     }
 
     /**
@@ -94,5 +102,12 @@ public class IntakeSchedule {
      */
     public void updateIntakeTime(LocalTime intakeTime) {
         this.intakeTime = intakeTime;
+    }
+
+    /**
+     * 일정을 비활성화합니다. (물리 삭제 대신 필드값 변경)
+     */
+    public void deactivate() {
+        this.isActive = false;
     }
 }

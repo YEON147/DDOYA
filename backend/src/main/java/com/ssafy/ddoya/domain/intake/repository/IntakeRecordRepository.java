@@ -31,6 +31,8 @@ public interface IntakeRecordRepository extends JpaRepository<IntakeRecord, Long
         JOIN FETCH s.supplement supp 
         LEFT JOIN FETCH supp.bodyPart 
         WHERE s.user.userId = :userId 
+          AND (s.isActive = true OR ir.status = com.ssafy.ddoya.domain.intake.entity.IntakeStatus.TAKEN 
+                                 OR ir.status = com.ssafy.ddoya.domain.intake.entity.IntakeStatus.SKIPPED)
           AND ir.plannedAt >= :start 
           AND ir.plannedAt < :end
     """)
@@ -70,18 +72,15 @@ public interface IntakeRecordRepository extends JpaRepository<IntakeRecord, Long
             @Param("end") LocalDateTime end);
 
     /**
-     * 특정 기간 내에 계획된 섭취 기록이 있는 일정 ID 목록을 조회합니다.
-     *
-     * @param start 시작 일시
-     * @param end   종료 일시
-     * @return 일정 ID 리스트
+     * 특정 기간 내에 계획된 섭취 기록이 있는 활성 일정 ID 목록을 조회합니다. (배치용)
      */
     @Query("""
         select ir.schedule.scheduleId
         from IntakeRecord ir
         where ir.plannedAt >= :start and ir.plannedAt < :end
+          and ir.schedule.isActive = true
     """)
-    List<Long> findExistingScheduleIdsByPlannedAtBetween(
+    List<Long> findExistingActiveScheduleIdsByPlannedAtBetween(
             @Param("start") LocalDateTime start,
             @Param("end") LocalDateTime end
     );
@@ -121,6 +120,7 @@ public interface IntakeRecordRepository extends JpaRepository<IntakeRecord, Long
         JOIN FETCH u.notificationSetting ns
         LEFT JOIN FETCH s.supplement supp
         WHERE ir.status = com.ssafy.ddoya.domain.intake.entity.IntakeStatus.MISSED
+          AND s.isActive = true
           AND ir.plannedAt >= :startOfDay
           AND ir.plannedAt <= :now
           AND ns.intakeNotificationEnabled = true
@@ -132,4 +132,37 @@ public interface IntakeRecordRepository extends JpaRepository<IntakeRecord, Long
     @Modifying(clearAutomatically = true)
     @Query("DELETE FROM IntakeRecord r WHERE r.schedule.scheduleId IN :scheduleIds")
     void deleteByScheduleIdIn(@Param("scheduleIds") List<Long> scheduleIds);
+
+    /**
+     * 특정 스케줄에 대해 오늘 MISSED 상태인 기록과 미래의 모든 기록을 일괄 삭제합니다.
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+        DELETE FROM IntakeRecord r
+        WHERE r.schedule.scheduleId = :scheduleId
+          AND (
+                (r.plannedAt >= :todayStart AND r.plannedAt < :todayEnd AND r.status = com.ssafy.ddoya.domain.intake.entity.IntakeStatus.MISSED)
+                OR (r.plannedAt >= :todayEnd)
+              )
+    """)
+    void deleteTodayMissedAndFutureRecords(
+            @Param("scheduleId") Long scheduleId,
+            @Param("todayStart") LocalDateTime todayStart,
+            @Param("todayEnd") LocalDateTime todayEnd);
+
+    /**
+     * 특정 영양제에 대해 특정 기간 내에 섭취 기록이 존재하는지 확인합니다.
+     * 오늘 이미 TAKEN 또는 SKIPPED 인 기록이 있는지 확인하는 용도입니다.
+     */
+    @Query("""
+        SELECT COUNT(ir) > 0 FROM IntakeRecord ir
+        WHERE ir.schedule.supplement.userSupplementId = :supplementId
+          AND ir.plannedAt >= :start AND ir.plannedAt < :end
+          AND ir.status IN (com.ssafy.ddoya.domain.intake.entity.IntakeStatus.TAKEN, 
+                           com.ssafy.ddoya.domain.intake.entity.IntakeStatus.SKIPPED)
+    """)
+    boolean existsTakenOrSkippedBySupplementIdAndPlannedAtBetween(
+            @Param("supplementId") Long supplementId,
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end);
 }

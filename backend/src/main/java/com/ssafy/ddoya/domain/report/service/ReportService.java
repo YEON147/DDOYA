@@ -272,24 +272,18 @@ public class ReportService {
             throw CustomException.badRequest("중복된 영양제 ID가 요청에 포함되어 있습니다.");
         }
 
-        // 3. 기존 INTAKE 스케줄 일괄 조회
-        List<IntakeSchedule> existingSchedules = intakeScheduleRepository.findBySupplementIdInAndScheduleType(requestedSupplementIds, ScheduleType.INTAKE);
+        // 3. 기존 INTAKE 스케줄 일괄 조회 (사용자 ID 및 활성 상태 보안 필터링)
+        List<IntakeSchedule> existingSchedules = intakeScheduleRepository.findByUserSupplementIdInAndUserIdAndScheduleTypeAndIsActiveTrue(requestedSupplementIds, userId, ScheduleType.INTAKE);
 
-        // 4. 기존 스케줄에 대한 intake_record 정리 및 스케줄 삭제
+        // 4. 기존 스케줄 비활성화 및 기록 정리
+        // [중요: 비활성화 처리 후 새 스케줄 생성 전까지의 상태를 확실히 하기 위함]
         for (IntakeSchedule schedule : existingSchedules) {
-            // 해당 영양제가 실제 사용자 소유인지 최종 검증 (보안 강화)
-            if (!schedule.getUser().getUserId().equals(userId)) {
-                throw CustomException.forbidden("요청하신 영양제 중 일부에 대한 권한이 없습니다.");
-            }
-            // 미복용 기록 정리 정책 적용
-            intakeRecordSyncService.syncOnDelete(schedule.getScheduleId());
+            // 오늘 MISSED + 미래 기록만 삭제 (과거/확정 이력은 보존)
+            intakeRecordSyncService.syncOnUpdate(schedule.getScheduleId());
+            schedule.deactivate();
         }
-
-        // 스케줄 일괄 삭제
-        if (!existingSchedules.isEmpty()) {
-            List<Long> scheduleIdsToDelete = existingSchedules.stream().map(IntakeSchedule::getScheduleId).collect(Collectors.toList());
-            intakeScheduleRepository.deleteAllByIdInBatch(scheduleIdsToDelete);
-        }
+        // 명시적 반영 (선택 사항이나 확실성을 위해 호출)
+        intakeScheduleRepository.saveAllAndFlush(existingSchedules);
 
         // 5. 새 INTAKE 스케줄 생성
         int totalSavedCount = 0;
@@ -300,12 +294,14 @@ public class ReportService {
             for (String timeStr : supplementRequest.getIntakeTimes()) {
                 LocalTime intakeTime = LocalTime.parse(timeStr);
                 
+                // 새로운 스케줄 생성 (isActive = true)
                 IntakeSchedule newSchedule = IntakeSchedule.builder()
                         .user(user)
                         .supplement(supplement)
                         .intakeTime(intakeTime)
                         .scheduleType(ScheduleType.INTAKE)
-                        .dosePerIntake(supplement.getDosePerIntake()) // 기본 1회 섭취량 사용
+                        .dosePerIntake(supplement.getDosePerIntake()) 
+                        .isActive(true)
                         .build();
                 
                 intakeScheduleRepository.save(newSchedule);
@@ -491,7 +487,7 @@ public class ReportService {
         for (FastApiReportResponse.TimingRecommendationDto dto : timingDtos) {
             Long supplementId = dto.getUserSupplementId();
             List<IntakeSchedule> registeredSchedules = intakeScheduleRepository
-                    .findBySupplementIdAndUserIdAndScheduleType(supplementId, userId, ScheduleType.INTAKE);
+                    .findBySupplementIdAndUserIdAndScheduleTypeAndIsActiveTrue(supplementId, userId, ScheduleType.INTAKE);
 
             boolean hasRegisteredSchedule = !registeredSchedules.isEmpty();
             List<ReportCreateResponse.TimingRecommendationWithTimeDto.IntakeTimingInfo> timingInfos = new ArrayList<>();

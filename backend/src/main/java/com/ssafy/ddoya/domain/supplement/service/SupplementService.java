@@ -669,7 +669,7 @@ public class SupplementService {
 
         // 스케줄 조회
         List<IntakeScheduleDto> scheduleDtos = intakeScheduleRepository
-                .findBySupplementId(supplementId)
+                .findBySupplementIdAndIsActiveTrue(supplementId)
                 .stream()
                 .map(s -> IntakeScheduleDto.builder()
                         .scheduleId(s.getScheduleId())
@@ -784,7 +784,7 @@ public class SupplementService {
 
         // 기존 INTAKE 스케줄 목록 조회
         List<IntakeSchedule> existingSchedules = intakeScheduleRepository
-                .findBySupplementIdAndUserIdAndScheduleType(supplementId, userId, ScheduleType.INTAKE);
+                .findBySupplementIdAndUserIdAndScheduleTypeAndIsActiveTrue(supplementId, userId, ScheduleType.INTAKE);
 
         // 빠른 조회를 위해 scheduleId → IntakeSchedule Map 생성
         Map<Long, IntakeSchedule> existingMap = existingSchedules.stream()
@@ -796,15 +796,16 @@ public class SupplementService {
                 .map(IntakeScheduleUpdateDto::getScheduleId)
                 .collect(Collectors.toSet());
 
-        // 기존에는 있지만 요청에 없는 스케줄 삭제
-        List<IntakeSchedule> schedulesToDelete = existingSchedules.stream()
+        // 기존에는 있지만 요청에 없는 스케줄 비활성화 (물리 삭제 대신 Soft Delete)
+        List<IntakeSchedule> schedulesToDeactivate = existingSchedules.stream()
                 .filter(s -> !requestedExistingIds.contains(s.getScheduleId()))
                 .collect(Collectors.toList());
-        if (!schedulesToDelete.isEmpty()) {
-            for (IntakeSchedule s : schedulesToDelete) {
-                intakeRecordSyncService.syncOnDelete(s.getScheduleId());
+        if (!schedulesToDeactivate.isEmpty()) {
+            for (IntakeSchedule s : schedulesToDeactivate) {
+                // 이력 보존을 위해 물리 삭제 대신 비활성화
+                intakeRecordSyncService.syncOnUpdate(s.getScheduleId());
+                s.deactivate();
             }
-            intakeScheduleRepository.deleteAll(schedulesToDelete);
         }
 
         User userRef = entityManager.getReference(User.class, userId);
@@ -816,25 +817,43 @@ public class SupplementService {
             LocalTime parsedTime = LocalTime.parse(dto.getIntakeTime());
 
             if (dto.getScheduleId() != null) {
-                // scheduleId 있음 → 기존 스케줄 수정
+                // scheduleId 있음 → 기존 스케줄 수정 or 교환
                 IntakeSchedule existing = existingMap.get(dto.getScheduleId());
                 if (existing == null) {
-                    // 이 영양제의 INTAKE 스케줄이 아니면 scheduleId 입력 차단
-                    throw CustomException.badRequest(
-                            "scheduleId " + dto.getScheduleId() +
-                                    "는 존재하지 않거나 해당 영양제의 INTAKE 스케줄이 아닙니다.");
+                    throw CustomException.badRequest("존재하지 않거나 권한이 없는 scheduleId입니다.");
                 }
-                existing.updateIntakeTime(parsedTime);
-                updatedSchedules.add(existing);
-                intakeRecordSyncService.syncOnUpsert(existing);
+
+                // 시간이 변경된 경우에만 기존 것 비활성화 + 신규 생성 (이력 보존 목적)
+                if (!existing.getIntakeTime().equals(parsedTime)) {
+                    // 오늘 기록이 지워졌다면(MISSED 등) 새 레코드를 생성해야 함
+                    boolean shouldRecreate = intakeRecordSyncService.syncOnUpdate(existing.getScheduleId());
+                    existing.deactivate();
+
+                    IntakeSchedule newSchedule = IntakeSchedule.builder()
+                            .user(userRef)
+                            .supplement(supplementRef)
+                            .intakeTime(parsedTime)
+                            .scheduleType(ScheduleType.INTAKE)
+                            .dosePerIntake(supplement.getDosePerIntake())
+                            .isActive(true)
+                            .build();
+                    IntakeSchedule saved = intakeScheduleRepository.save(newSchedule);
+                    updatedSchedules.add(saved);
+                    // 정리 여부에 따라 오늘 레코드 재생성 결정
+                    intakeRecordSyncService.syncOnUpsert(saved, shouldRecreate);
+                } else {
+                    // 시간 변경 없으면 기존 스케줄 유지 및 동기화 (MISSED 상태 시간 수정 대응)
+                    updatedSchedules.add(existing);
+                    intakeRecordSyncService.syncOnUpsert(existing, true);
+                }
             } else {
-                // scheduleId 없음 → 신규 스케줄 생성
                 IntakeSchedule newSchedule = IntakeSchedule.builder()
                         .user(userRef)
                         .supplement(supplementRef)
                         .intakeTime(parsedTime)
                         .scheduleType(ScheduleType.INTAKE)
                         .dosePerIntake(supplement.getDosePerIntake())
+                        .isActive(true)
                         .build();
                 IntakeSchedule saved = intakeScheduleRepository.save(newSchedule);
                 updatedSchedules.add(saved);
