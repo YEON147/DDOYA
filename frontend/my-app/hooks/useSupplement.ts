@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supplementApi } from '@/src/api/supplement';
 import { SupplementUpdateRequest } from '@/src/types/types';
 import { useAuthStore } from '@/src/store/authStore';
+import { refreshCachesAfterSupplementChange } from '@/src/utils/supplementDbChangeSync';
 
 const SUPPLEMENTS_LIST_KEY = ['supplements'] as const;
 
@@ -36,12 +37,8 @@ export const useUpdateSupplement = () => {
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: SupplementUpdateRequest }) =>
       supplementApi.updateSupplement(id, data),
-    onSuccess: (_, { id }) => {
-      queryClient.invalidateQueries({ queryKey: ['supplement', id] });
-      queryClient.invalidateQueries({ queryKey: SUPPLEMENTS_LIST_KEY });
-      queryClient.invalidateQueries({ queryKey: ['report'] });
-      // 홈 화면 일별 루틴 즉시 반영
-      queryClient.invalidateQueries({ queryKey: ['dailyIntakeSchedule'] });
+    onSuccess: async () => {
+      await refreshCachesAfterSupplementChange(queryClient);
     },
   });
 };
@@ -51,9 +48,8 @@ export const useDeleteSupplement = () => {
 
   return useMutation({
     mutationFn: (id: number) => supplementApi.deleteSupplement(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: SUPPLEMENTS_LIST_KEY });
-      queryClient.invalidateQueries({ queryKey: ['report'] });
+    onSuccess: async (_, id) => {
+      await refreshCachesAfterSupplementChange(queryClient, { removedSupplementId: id });
     },
   });
 };

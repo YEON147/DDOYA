@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, StyleSheet } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { reportApi } from '@/src/api/report';
 import { useSupplementsList } from '@/hooks/useSupplement';
@@ -20,6 +21,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { appAlert } from '@/src/utils/appAlert';
 import { prefetchReportSquirrelImage } from '@/src/constants/reportSquirrelImage';
 import { prefetchReportDecorAcorn } from '@/src/constants/reportDecorAcorn';
+import { refreshCachesAfterSupplementChange } from '@/src/utils/supplementDbChangeSync';
 
 const TIMING_DISPLAY_MAP: Record<string, string> = {
   BEFORE_BREAKFAST: '아침 식전',
@@ -31,14 +33,56 @@ const TIMING_DISPLAY_MAP: Record<string, string> = {
   BEFORE_SLEEP: '취침 전',
 };
 
+const HH_MM = /^([01]\d|2[0-3]):([0-5]\d)$/;
+
+/**
+ * GET/POST 리포트 응답의 intake_time은 전역 섭취 설정 등과 섞여 PATCH로 확정한 시각과 다를 수 있음.
+ * 방금 저장한 temp 맵으로 timing_recommendations의 HH:mm만 덮어 UI·캐시를 확정값과 맞춤.
+ */
+function applyTempTimesToReportCache(reportData: any, temp: Record<string, string>): any {
+  if (!reportData) return reportData;
+  const list = reportData.timing_recommendations || reportData.timingRecommendations;
+  if (!Array.isArray(list) || list.length === 0) return reportData;
+
+  const newList = list.map((rec: any) => {
+    const supId = rec.user_supplement_id || rec.userSupplementId;
+    const timings = rec.intake_timings || rec.intakeTimings;
+    if (!supId || !Array.isArray(timings)) return rec;
+
+    const newTimings = timings.map((info: any) => {
+      const en = info.intake_timing || info.intakeTiming;
+      const key = `${supId}_${en}`;
+      const fromTemp = temp[key];
+      if (fromTemp && HH_MM.test(fromTemp)) {
+        return { ...info, intake_time: fromTemp, intakeTime: fromTemp };
+      }
+      return info;
+    });
+    return { ...rec, intake_timings: newTimings, intakeTimings: newTimings };
+  });
+
+  return {
+    ...reportData,
+    timing_recommendations: newList,
+    timingRecommendations: newList,
+  };
+}
+
 export default function ReportsScreen() {
   const queryClient = useQueryClient();
   const { profile } = useUserProfileStore();
   const authNickname = useAuthStore((s) => s.nickname);
-  const params = useLocalSearchParams<{ mode?: 'view' | 'edit'; from?: 'banner' }>();
-  
+  const params = useLocalSearchParams<{ mode?: 'view' | 'edit'; from?: string | string[] }>();
+  const fromBanner =
+    params.from === 'banner' ||
+    (Array.isArray(params.from) && params.from.some((v) => v === 'banner'));
+  const rawMode = params.mode;
+  const paramMode = Array.isArray(rawMode) ? rawMode[0] : rawMode;
+
   // 화면 모드: 'view' (마이페이지 진입 시), 'edit' (갱신 버튼 클릭 시 또는 파라미터로 전달 시)
-  const [mode, setMode] = useState<'view' | 'edit'>(params.mode || 'view');
+  const [mode, setMode] = useState<'view' | 'edit'>(() =>
+    paramMode === 'edit' || fromBanner ? 'edit' : 'view',
+  );
   
   // 시간 수정 관련 상태
   const [isTimePickerVisible, setTimePickerVisible] = useState(false);
@@ -49,11 +93,23 @@ export default function ReportsScreen() {
   // 수정된 시간들을 보관하는 로컬 맵 { "userSupplementId_INTAKE_TIMING_ENUM": 'HH:mm' }
   const [tempSupplementTimes, setTempSupplementTimes] = useState<Record<string, string>>({});
   const hasTriggeredAutoReportRefresh = useRef(false);
+  /** `from=banner`는 파라미터가 남아 있으면 매 렌더마다 true라, 자동 갱신 1회만 소비 */
+  const bannerAutoRefreshConsumedRef = useRef(false);
+  /** 리포트 쿼리가 무효화·재조회돼도 피커로 수정한 값을 덮어쓰지 않도록 함 */
+  const protectUserTimeEditsRef = useRef(false);
+  const prevModeForTimesRef = useRef(mode);
 
   useEffect(() => {
     prefetchReportSquirrelImage();
     prefetchReportDecorAcorn();
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      hasTriggeredAutoReportRefresh.current = false;
+      bannerAutoRefreshConsumedRef.current = false;
+    }, []),
+  );
 
   // 헬퍼: 추천 시점 정보를 찾아 반환 (SNAKE_CASE/camelCase 대응)
   const getTimingRecommendations = (rep: any) => {
@@ -98,53 +154,84 @@ export default function ReportsScreen() {
   });
   const settings = settingsResponse?.data?.data?.settings || [];
 
-  // 갱신 모드로 진입 시 초기 데이터 설정
+  // 편집 모드에서만 서버 리포트로 temp 초기화. 이미 시간을 고친 뒤에는 report 리패치만으로 덮어쓰지 않음.
   useEffect(() => {
-    if (mode === 'edit' && report) {
-      const initialTimes: Record<string, string> = {};
-      const recommendations = getTimingRecommendations(report);
-      
-      recommendations.forEach((rec: any) => {
-        const supId = rec.user_supplement_id || rec.userSupplementId;
-        const timings = rec.intake_timings || rec.intakeTimings || [];
-        timings.forEach((info: any) => {
-          const timingEnum = info.intake_timing || info.intakeTiming;
-          const intakeTime = info.intake_time || info.intakeTime;
-          if (supId && timingEnum && intakeTime) {
-            initialTimes[`${supId}_${timingEnum}`] = intakeTime;
-          }
-        });
-      });
-      setTempSupplementTimes(initialTimes);
+    const prev = prevModeForTimesRef.current;
+    prevModeForTimesRef.current = mode;
+
+    if (mode !== 'edit') {
+      protectUserTimeEditsRef.current = false;
+      return;
     }
+
+    if (prev !== 'edit') {
+      protectUserTimeEditsRef.current = false;
+    }
+
+    if (!report) return;
+    if (protectUserTimeEditsRef.current) return;
+
+    const initialTimes: Record<string, string> = {};
+    const recommendations = getTimingRecommendations(report);
+
+    recommendations.forEach((rec: any) => {
+      const supId = rec.user_supplement_id || rec.userSupplementId;
+      const timings = rec.intake_timings || rec.intakeTimings || [];
+      timings.forEach((info: any) => {
+        const timingEnum = info.intake_timing || info.intakeTiming;
+        const intakeTime = info.intake_time || info.intakeTime;
+        if (supId && timingEnum && intakeTime) {
+          initialTimes[`${supId}_${timingEnum}`] = intakeTime;
+        }
+      });
+    });
+    setTempSupplementTimes(initialTimes);
   }, [mode, report]);
 
   // 리포트 갱신 Mutation
   const refreshMutation = useMutation({
     mutationFn: () => reportApi.updateReport(),
-    onSuccess: async (res) => {
-      // 갱신 성공 시 데이터 정합성을 위해 쿼리 무효화 및 다시 불러오기
+    onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['report'] });
       await queryClient.invalidateQueries({ queryKey: ['intakeSettings'] });
       await queryClient.refetchQueries({ queryKey: ['report'] });
-      
+
       setMode('edit');
-      appAlert('리포트 갱신 완료', '최신 정보를 바탕으로 분석이 완료되었습니다. 영양제별 추천 시간을 확인해 주세요.');
+      appAlert(
+        '리포트 갱신 완료',
+        '최신 정보를 바탕으로 분석이 완료되었습니다. 영양제별 추천 시간을 확인해 주세요.',
+      );
     },
     onError: () => {
-      appAlert('오류', '리포트 갱신 중 문제가 발생했습니다.');
+      hasTriggeredAutoReportRefresh.current = false;
+      bannerAutoRefreshConsumedRef.current = false;
+      appAlert('오류', '리포트 갱신 중 문제가 발생했습니다. 네트워크 상태를 확인한 뒤 다시 시도해 주세요.');
     },
   });
 
-  // GET 리포트에 성분 분석이 비어 있으면 1회 자동 갱신 시도
+  const handleManualRefreshReport = () => {
+    refreshMutation.mutate();
+  };
+
+  // 성분 분석 비어 있음 / 서버 needsRefresh / 영양제 목록 불일치 / 배너(1회) 진입 시 POST로 리포트 재생성
   useEffect(() => {
     if (!report || refreshMutation.isPending || hasTriggeredAutoReportRefresh.current) return;
+
     const ingredientAnalysis = report.ingredient_analysis || report.ingredientAnalysis || [];
-    if (Array.isArray(ingredientAnalysis) && ingredientAnalysis.length === 0) {
-      hasTriggeredAutoReportRefresh.current = true;
-      refreshMutation.mutate();
+    const emptyIngredients = !Array.isArray(ingredientAnalysis) || ingredientAnalysis.length === 0;
+    const serverNeedsRefresh = !!report.needsRefresh;
+    const fromBannerOnce = fromBanner && !bannerAutoRefreshConsumedRef.current;
+
+    const shouldRefresh =
+      emptyIngredients || serverNeedsRefresh || isDataMismatch || fromBannerOnce;
+    if (!shouldRefresh) return;
+
+    if (fromBannerOnce) {
+      bannerAutoRefreshConsumedRef.current = true;
     }
-  }, [report, refreshMutation]);
+    hasTriggeredAutoReportRefresh.current = true;
+    refreshMutation.mutate();
+  }, [report, refreshMutation, isDataMismatch, fromBanner]);
 
   // 저장 처리
   const [isSaving, setIsSaving] = useState(false);
@@ -157,44 +244,38 @@ export default function ReportsScreen() {
         return;
       }
 
-      const recommendations = getTimingRecommendations(report);
-      let userSupplements = recommendations
-        .map((rec: any) => {
-          const userSupplementId = rec.user_supplement_id || rec.userSupplementId;
-          const intakeTimings = rec.intake_timings || rec.intakeTimings || [];
-          const intakeTimes = Array.from(
-            new Set(
-              intakeTimings
-                .map((info: any) => {
-                  const timingEnum = info.intake_timing || info.intakeTiming;
-                  const defaultTime = info.intake_time || info.intakeTime || '';
-                  return tempSupplementTimes[`${userSupplementId}_${timingEnum}`] || defaultTime;
-                })
-                .filter((time: string) => /^([01]\d|2[0-3]):([0-5]\d)$/.test(time)),
-            ),
-          );
+      // 화면(TimeRecommendation)과 동일한 `supplementRecommendations`에서만 페이로드를 만든다.
+      // 리포트 raw `intake_time`만 쓰면 전역 설정·피커로 보이는 시각과 어긋날 수 있음(특히 null일 때).
+      // 회차별로 시각이 같아도 별도 스케줄이므로 Set으로 합치지 않는다.
+      let userSupplements = supplementRecommendations
+        .map((item) => ({
+          userSupplementId: item.userSupplementId,
+          intakeTimes: item.timings
+            .map((t: { intakeTime: string }) => t.intakeTime)
+            .filter((time: string) => HH_MM.test(time)),
+        }))
+        .filter((item) => item.userSupplementId && item.intakeTimes.length > 0);
 
-          return { userSupplementId, intakeTimes };
-        })
-        .filter(
-          (item: { userSupplementId: number; intakeTimes: string[] } | null): item is { userSupplementId: number; intakeTimes: string[] } =>
-            !!item && !!item.userSupplementId && item.intakeTimes.length > 0,
-        );
-
-      // recommendations 기반 결과가 비어 있으면 화면에 표시 중인 값으로 fallback 구성
+      // 목록이 아직 없을 때만 리포트 구조로 최소 구성 (이론상 드묾)
       if (userSupplements.length === 0) {
-        userSupplements = supplementRecommendations
-          .map((item) => ({
-            userSupplementId: item.userSupplementId,
-            intakeTimes: Array.from(
-              new Set(
-                item.timings
-                  .map((t: { intakeTime: string }) => t.intakeTime)
-                  .filter((time: string) => /^([01]\d|2[0-3]):([0-5]\d)$/.test(time)),
-              ),
-            ),
-          }))
-          .filter((item) => item.intakeTimes.length > 0);
+        const recommendations = getTimingRecommendations(report);
+        userSupplements = recommendations
+          .map((rec: any) => {
+            const userSupplementId = rec.user_supplement_id || rec.userSupplementId;
+            const intakeTimings = rec.intake_timings || rec.intakeTimings || [];
+            const intakeTimes = intakeTimings
+              .map((info: any) => {
+                const timingEnum = info.intake_timing || info.intakeTiming;
+                const defaultTime = info.intake_time || info.intakeTime || '';
+                return tempSupplementTimes[`${userSupplementId}_${timingEnum}`] || defaultTime;
+              })
+              .filter((time: string) => HH_MM.test(time));
+            return { userSupplementId, intakeTimes };
+          })
+          .filter(
+            (item: { userSupplementId: number; intakeTimes: string[] }): item is { userSupplementId: number; intakeTimes: string[] } =>
+              !!item.userSupplementId && item.intakeTimes.length > 0,
+          );
       }
 
       if (userSupplements.length === 0) {
@@ -205,17 +286,19 @@ export default function ReportsScreen() {
       // 1) 복용 시각 확정 저장
       await reportApi.saveIntakeTimings(reportId, { userSupplements });
 
+      queryClient.setQueryData(['report'], (prev: any) =>
+        applyTempTimesToReportCache(prev ?? report, tempSupplementTimes),
+      );
+
       // 2) 저장 성공 후 리포트 재생성/갱신
       try {
         const refreshed = await reportApi.updateReport();
 
-        // POST /reports 응답에 최신 timing_recommendations가 포함되므로,
-        // GET /reports 재조회 타이밍 이슈가 있어도 화면에 즉시 반영되도록 캐시를 선반영
         const refreshedData = refreshed?.data?.data;
         if (refreshedData) {
           queryClient.setQueryData(['report'], (prev: any) => {
             const prevDetail = prev ?? {};
-            return {
+            const merged = {
               ...prevDetail,
               ...(refreshedData.timing_recommendations && {
                 timing_recommendations: refreshedData.timing_recommendations,
@@ -226,6 +309,7 @@ export default function ReportsScreen() {
               updated_at: refreshedData.updatedAt ?? prevDetail.updated_at,
               updatedAt: refreshedData.updatedAt ?? prevDetail.updatedAt,
             };
+            return applyTempTimesToReportCache(merged, tempSupplementTimes);
           });
         }
       } catch {
@@ -235,16 +319,12 @@ export default function ReportsScreen() {
         );
       }
       
-      // 저장 성공 후 모든 관련 쿼리 무효화 (동기화)
-      await queryClient.invalidateQueries({ queryKey: ['report'] });
-      await queryClient.invalidateQueries({ queryKey: ['intakeSettings'] });
-      await queryClient.invalidateQueries({ queryKey: ['supplements'] });
-      await queryClient.invalidateQueries({ queryKey: ['supplement'] }); // 개별 상세 쿼리도 무효화
-      // 홈은 `useDailyIntakeSchedule()` → `['dailyIntakeSchedule', 로컬 YYYY-MM-DD]`
-      await queryClient.invalidateQueries({ queryKey: ['dailyIntakeSchedule'] });
-      // 화면에 즉시 반영되도록 강제 재조회
-      await queryClient.refetchQueries({ queryKey: ['report'] });
-      
+      // 저장 성공 후 리포트·루틴·영양제 캐시를 서버와 맞춤 (홈 일별 스케줄·목록 즉시 prefetch 포함)
+      await refreshCachesAfterSupplementChange(queryClient);
+      queryClient.setQueryData(['report'], (prev: any) =>
+        applyTempTimesToReportCache(prev, tempSupplementTimes),
+      );
+
       appAlert('', '맞춤 복용 시간이 반영되었습니다.', undefined, { autoDismissMs: 1000 });
       setTimeout(() => {
         if (router.canDismiss()) {
@@ -273,9 +353,10 @@ export default function ReportsScreen() {
 
   const handleTimeConfirm = (time: string) => {
     if (selectedSupplementId && selectedTiming) {
-      setTempSupplementTimes(prev => ({ 
-        ...prev, 
-        [`${selectedSupplementId}_${selectedTiming}`]: time 
+      protectUserTimeEditsRef.current = true;
+      setTempSupplementTimes((prev) => ({
+        ...prev,
+        [`${selectedSupplementId}_${selectedTiming}`]: time,
       }));
     }
   };
@@ -362,6 +443,22 @@ export default function ReportsScreen() {
 
   return (
     <ScreenContainer header={<TopHeader title="" onBackPress={() => router.back()} />}>
+      {refreshMutation.isPending && report ? (
+        <View
+          pointerEvents="auto"
+          style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(0,0,0,0.35)', zIndex: 50 }]}
+          className="items-center justify-center px-8"
+        >
+          <ActivityIndicator size="large" color={colors.surface} />
+          <Text className="mt-4 text-center text-base font-scdream-bold" style={{ color: colors.surface }}>
+            리포트를 최신 정보로 갱신하는 중입니다
+          </Text>
+          <Text className="mt-2 text-center text-sm font-scdream" style={{ color: `${colors.surface}CC` }}>
+            잠시만 기다려 주세요. (최대 수 분 걸릴 수 있어요)
+          </Text>
+        </View>
+      ) : null}
+
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 100 }}
@@ -417,11 +514,17 @@ export default function ReportsScreen() {
           )}
           
           {mode === 'view' && (
-             <AppButton
-               title="확인"
-               onPress={() => router.back()}
-               className="mt-8 mb-4"
-             />
+            <View className="mt-8 mb-4 gap-3">
+              {needsRefresh ? (
+                <AppButton
+                  title={refreshMutation.isPending ? '갱신 중...' : '리포트 분석 갱신'}
+                  onPress={handleManualRefreshReport}
+                  disabled={refreshMutation.isPending}
+                  className="bg-primary shadow-lg"
+                />
+              ) : null}
+              <AppButton title="확인" onPress={() => router.back()} />
+            </View>
           )}
         </View>
       </ScrollView>
