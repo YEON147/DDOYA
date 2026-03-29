@@ -71,18 +71,6 @@ export default function ReportsScreen() {
 
   const { data: supplementsResponse } = useSupplementsList();
 
-  // 개발: GET 리포트의 comments 원문 (Metro/Expo 터미널·디버거 콘솔)
-  useEffect(() => {
-    if (!__DEV__) return;
-    const raw = report?.comments ?? null;
-    console.log('[Report][comments] object:', raw);
-    try {
-      console.log('[Report][comments] JSON:\n', JSON.stringify(raw, null, 2));
-    } catch (e) {
-      console.log('[Report][comments] JSON.stringify 실패:', e);
-    }
-  }, [report?.comments]);
-
   // 데이터 변동 감지 (백엔드 needsRefresh 보완)
   const isDataMismatch = React.useMemo(() => {
     if (!report || !supplementsResponse?.supplements) return false;
