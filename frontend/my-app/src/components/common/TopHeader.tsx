@@ -6,14 +6,15 @@ import { colors } from '@/constants/theme/colors';
 import { AppIcon } from '@/src/components/common/AppIcon';
 
 type TopHeaderProps = {
-  title: string;
+  /** 비우면 뒤로가기 옆 타이틀 미표시 */
+  title?: string;
   right?: ReactNode;
   showBackButton?: boolean;
   onBackPress?: () => void;
 };
 
 export function TopHeader({
-  title,
+  title = '',
   right,
   showBackButton = true,
   onBackPress,

@@ -37,7 +37,10 @@ export function HomeIntakeSlot({ timeLabel, intakeTime, items, onPressCamera }: 
   const BUBBLE_RADIUS = 'rounded-3xl';
   const tailSize = scaleByWidth(width, 12, { min: 10, max: 14 });
   const tailOffset = scaleByWidth(width, 18, { min: 14, max: 24 });
-  const stampSize = scaleByWidth(width, 150, { min: 112, max: 182 });
+  const stampSuccessSize = scaleByWidth(width, 168, { min: 124, max: 198 });
+  /** fail.png 여백 보정만 살짝 (성공 대비 과하게 키우지 않음) */
+  const stampFailSize = Math.round(stampSuccessSize * 1.05);
+  const stampDisplaySize = showFailStamp ? stampFailSize : stampSuccessSize;
 
   return (
     <View className="w-full">
@@ -61,8 +64,8 @@ export function HomeIntakeSlot({ timeLabel, intakeTime, items, onPressCamera }: 
                   top: '50%',
                   left: '50%',
                   transform: [
-                    { translateX: -(stampSize / 2) + scaleByWidth(width, 26, { min: 18, max: 34 }) },
-                    { translateY: -(stampSize / 2) + scaleByWidth(width, 18, { min: 12, max: 26 }) },
+                    { translateX: -(stampDisplaySize / 2) + scaleByWidth(width, 26, { min: 18, max: 34 }) },
+                    { translateY: -(stampDisplaySize / 2) + scaleByWidth(width, 18, { min: 12, max: 26 }) },
                   ],
                   zIndex: 50,
                   opacity: 0.88,
@@ -70,7 +73,7 @@ export function HomeIntakeSlot({ timeLabel, intakeTime, items, onPressCamera }: 
               >
                 <Image
                   source={showFailStamp ? INTAKE_STAMP_FAIL : INTAKE_STAMP_SUCCESS}
-                  style={{ width: stampSize, height: stampSize, alignSelf: 'center' }}
+                  style={{ width: stampDisplaySize, height: stampDisplaySize, alignSelf: 'center' }}
                   contentFit="contain"
                   cachePolicy="memory-disk"
                   priority="high"
