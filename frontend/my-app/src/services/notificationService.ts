@@ -40,7 +40,6 @@ export const notificationService = {
 
     // 0. 웹 환경은 Web Push(VAPID) 별도 설정이 필요하므로 우선 건너뜁니다.
     if (Platform.OS === 'web') {
-      console.log('💡 [DEBUG] 웹 환경이므로 푸시 토큰 발급을 건너뜁니다.');
       return null;
     }
 
@@ -65,9 +64,8 @@ export const notificationService = {
     try {
       const projectId = Constants?.expoConfig?.extra?.eas?.projectId ?? Constants?.easConfig?.projectId;
       token = (await Notifications.getDevicePushTokenAsync()).data;
-      console.log('💡 [DEBUG] 현재 기기 푸시 토큰:', token);
-    } catch (e) {
-      console.error('토큰 획득 실패:', e);
+    } catch {
+      // 토큰 획득 실패 시 null 반환 경로로 이어짐
     }
 
     // 4. Android용 채널 설정 (필수)
@@ -128,7 +126,6 @@ export const notificationService = {
           return;
         }
       }
-      console.error('서버 토큰 동기화 오류:', error);
     }
   },
 
@@ -138,8 +135,8 @@ export const notificationService = {
   deactivateTokenOnServer: async (token: string) => {
     try {
       await notificationApi.deactivateToken(token);
-    } catch (error) {
-      console.error('토큰 비활성화 오류:', error);
+    } catch {
+      // 서버 비활성화 실패는 조용히 무시
     }
   }
 };

@@ -83,31 +83,21 @@ export default function RootLayout() {
 
   // 알림 리스너 환경 구성
   useEffect(() => {
-    // 1. 알림 수신 리스너 (포그라운드 환경)
-    const notificationListener = Notifications.addNotificationReceivedListener(notification => {
-      console.log('💡 [DEBUG] 포그라운드 알림 낚아챔! 수신됨:', notification);
-    });
-
-    // 2. 알림 클릭 리스너 (알림바 클릭 시 동작)
     const responseListener = Notifications.addNotificationResponseReceivedListener(handleNotificationClick);
 
-    // 3. 앱이 종료된 상태에서 알림을 클릭해 실행된 경우 처리
     Notifications.getLastNotificationResponseAsync().then(response => {
       if (response) {
         handleNotificationClick(response);
       }
     });
 
-    // 컴포넌트 언마운트 시 리스너 제거
     return () => {
-      notificationListener.remove();
       responseListener.remove();
     };
   }, []);
 
   // 알림 클릭 공통 처리 로직
   const handleNotificationClick = (response: Notifications.NotificationResponse) => {
-    console.log('💡 [DEBUG] 클릭 데이터:', response.notification.request.content.data);
     const data = response.notification.request.content.data;
 
     // 알림 Data Payload에 맞춤 라우팅 처리

@@ -42,8 +42,8 @@ export function AppAlertProvider({ children }: Props) {
         setTimeout(() => {
           try {
             cb();
-          } catch (e) {
-            console.error('[appAlert] onPress error', e);
+          } catch {
+            // 콜백 내부 오류는 삼킴 (알럿은 이미 닫힘)
           }
         }, 0);
       }

@@ -77,7 +77,6 @@ export function SignupProfileForm() {
         router.replace('/(auth)/login');
       },
       onError: (error) => {
-        console.log('회원가입 API 실패:', error);
         setErrorMessage(getSignupErrorMessage(error));
       },
     });

@@ -63,11 +63,6 @@ export default function IntakeVerifyScreen() {
         let prepared = await prepareLabelImageForOcr(uri, 'normal');
 
         const formData = buildIntakeCertificationFormData(prepared.uri, request, prepared.mimeType);
-        console.log('[intake-verify] calling verify api', {
-          scheduleIds: parsedScheduleIds,
-          originalUri: uri,
-          preparedUri: prepared.uri,
-        });
 
         const res = await intakeRoutineApi.postIntakeCertification(formData);
         const certificationResult = res.data.data;
@@ -112,7 +107,6 @@ export default function IntakeVerifyScreen() {
         throw apiErr;
       }
     } catch (e) {
-      console.error('[intake-verify] failed', e);
       const anyErr = e as any;
       const status = anyErr?.response?.status;
       const reqUrl = anyErr?.config?.url ?? anyErr?.response?.config?.url;
