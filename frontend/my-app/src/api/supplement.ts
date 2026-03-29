@@ -1,5 +1,6 @@
 import apiClient from './client';
 import { useAuthStore } from '../store/authStore';
+import { Platform } from 'react-native';
 import {
     SupplementCreateRequest,
     SupplementUpdateRequest,
@@ -31,7 +32,13 @@ export function buildSupplementRegisterFormData(
     const type =
         pillMimeType ||
         (lower.endsWith('.png') ? 'image/png' : lower.endsWith('.webp') ? 'image/webp' : 'image/jpeg');
-    formData.append('pillImg', { uri: pillUri, name, type } as unknown as Blob);
+
+    let formattedUri = pillUri;
+    if (Platform.OS === 'android' && !pillUri.startsWith('file://')) {
+        formattedUri = `file://${pillUri}`;
+    }
+
+    formData.append('pillImg', { uri: formattedUri, name, type } as unknown as Blob);
     formData.append('register', JSON.stringify(register));
     return formData;
 }
@@ -51,7 +58,13 @@ export function buildPillValidateFormData(
     const type =
         pillMimeType ||
         (lower.endsWith('.png') ? 'image/png' : lower.endsWith('.webp') ? 'image/webp' : 'image/jpeg');
-    formData.append('pillImg', { uri: pillUri, name, type } as unknown as Blob);
+
+    let formattedUri = pillUri;
+    if (Platform.OS === 'android' && !pillUri.startsWith('file://')) {
+        formattedUri = `file://${pillUri}`;
+    }
+
+    formData.append('pillImg', { uri: formattedUri, name, type } as unknown as Blob);
     return formData;
 }
 

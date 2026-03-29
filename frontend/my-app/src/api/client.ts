@@ -37,21 +37,17 @@ apiClient.interceptors.request.use((config) => {
   const token = useAuthStore.getState().accessToken;
   if (token) config.headers.Authorization = `Bearer ${token}`;
 
-  // FormData(multipart): 인스턴스 기본 application/json 이 남으면 본문이 깨짐.
-  // Content-Type 을 비워 두어야 RN/axios 가 boundary 포함 multipart 로 보냄.
+  // 최신 RN(0.73+) + Axios(1.6+) 환경에서는 FormData 전송 시 Content-Type을 임의로 
+  // 삭제하거나 강제 주입하면 'Network Error'가 발생하며 안드로이드 OkHttp가 전송을 거부할 수 있음.
+  // 따라서 오리지널 Axios가 스스로 boundary를 포함한 헤더를 계산하도록 아무런 조작도 하지 않음.
   const data = config.data as unknown;
   const isFormDataLike =
     typeof FormData !== 'undefined' &&
     (data instanceof FormData ||
-      // RN에서 `instanceof FormData`가 안 먹는 환경 대응
       (data != null && typeof (data as any).append === 'function'));
 
   if (isFormDataLike) {
-    if (typeof config.headers.delete === 'function') {
-      config.headers.delete('Content-Type');
-    } else {
-      delete (config.headers as Record<string, unknown>)['Content-Type'];
-    }
+    config.headers['Content-Type'] = 'multipart/form-data';
   }
 
   return config;
