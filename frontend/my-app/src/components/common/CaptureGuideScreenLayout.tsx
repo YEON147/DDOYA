@@ -64,7 +64,7 @@ export function CaptureGuideScreenLayout({
         ) : null}
       </View>
 
-      <View className="px-6 pb-8 pt-4">
+      <View className="px-6 pb-6 pt-4">
         <Text className="mb-4 text-center font-scdream" style={{ color: colors.textMuted }}>
           {instructionText}
         </Text>
@@ -76,18 +76,17 @@ export function CaptureGuideScreenLayout({
         >
           <Text className="font-semibold text-white">{primaryLabel}</Text>
         </TouchableOpacity>
+        <TouchableOpacity
+          onPress={onSecondary}
+          activeOpacity={0.9}
+          className="mt-3 items-center px-6 py-3"
+          style={neuRaised(999, colors.surface)}
+        >
+          <Text className="font-semibold" style={{ color: colors.text }}>
+            {secondaryLabel}
+          </Text>
+        </TouchableOpacity>
       </View>
-
-      <TouchableOpacity
-        onPress={onSecondary}
-        activeOpacity={0.9}
-        className="mx-6 mb-8 items-center px-6 py-3"
-        style={neuRaised(999, colors.surface)}
-      >
-        <Text className="font-semibold" style={{ color: colors.text }}>
-          {secondaryLabel}
-        </Text>
-      </TouchableOpacity>
 
       {/* 마지막에 그려서 로딩 오버레이가 가이드·버튼 위에 보이도록 함 */}
       {topOverlay}

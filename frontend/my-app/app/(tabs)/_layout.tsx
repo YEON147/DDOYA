@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 import { Redirect, Tabs, usePathname } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { House, UserRound } from 'lucide-react-native';
 
 import { HapticTab } from '@/src/components/common/haptic-tab';
@@ -34,6 +35,7 @@ function isMainTabPath(pathname: string): boolean {
 export default function TabLayout() {
   useColorScheme();
   const pathname = usePathname();
+  const insets = useSafeAreaInsets();
   const showTabBar = isMainTabPath(pathname);
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const hasHydratedFromStorage = useAuthStore((s) => s.hasHydratedFromStorage);
@@ -56,11 +58,18 @@ export default function TabLayout() {
               backgroundColor: colors.surface,
               borderTopWidth: 0,
               ...tabBarShadow,
+              // Android edge-to-edge: 시스템 내비게이션 바와 탭바가 겹치지 않게
+              ...(Platform.OS === 'android'
+                ? {
+                    paddingBottom: Math.max(insets.bottom, 8),
+                    minHeight: 52 + Math.max(insets.bottom, 8),
+                  }
+                : {}),
             }
           : { display: 'none' },
         tabBarItemStyle: {
           paddingTop: 8,
-          paddingBottom: Platform.OS === 'ios' ? 8 : 10,
+          paddingBottom: Platform.OS === 'ios' ? 8 : 6,
         },
         tabBarShowLabel: false,
         headerShown: false,
