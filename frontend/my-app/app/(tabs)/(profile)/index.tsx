@@ -8,12 +8,16 @@ import { View, Text, Pressable, useWindowDimensions, ScrollView } from 'react-na
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { neuRaised } from '@/constants/theme/neumorphism';
 import { scaleByWidth } from '@/src/utils/responsive';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import { tokenService } from '@/src/api/token';
 import { Calendar } from 'react-native-calendars';
 import { useDailyIntakeSchedule } from '@/hooks/useIntakeRoutine';
 import { useSupplementsList } from '@/hooks/useSupplement';
+import {
+  getLocalCalendarDateKeySnapshot,
+  subscribeLocalCalendarDay,
+} from '@/src/utils/localCalendarDay';
 
 export default function ProfileScreen() {
   const { width } = useWindowDimensions();
@@ -22,7 +26,16 @@ export default function ProfileScreen() {
   const horizontalPadding = scaleByWidth(width, 18, { min: 14, max: 22 });
   const cardRadius = scaleByWidth(width, 20, { min: 16, max: 22 });
   const [ddoyaStartIso, setDdoyaStartIso] = useState<string | null>(null);
-  const { data: todaySchedule, isPending: isSchedulePending } = useDailyIntakeSchedule();
+  const {
+    data: todaySchedule,
+    isPending: isSchedulePending,
+    refetch: refetchTodaySchedule,
+  } = useDailyIntakeSchedule();
+  const calendarDayKey = useSyncExternalStore(
+    subscribeLocalCalendarDay,
+    getLocalCalendarDateKeySnapshot,
+    getLocalCalendarDateKeySnapshot,
+  );
   const { data: supplementsData } = useSupplementsList();
   const scrollRef = useRef<ScrollView>(null);
   useScrollToTop(scrollRef);
@@ -30,7 +43,8 @@ export default function ProfileScreen() {
   useFocusEffect(
     useCallback(() => {
       scrollRef.current?.scrollTo({ y: 0, animated: false });
-    }, []),
+      void refetchTodaySchedule();
+    }, [refetchTodaySchedule]),
   );
 
   useEffect(() => {
@@ -60,23 +74,22 @@ export default function ProfileScreen() {
     return Math.max(1, diffDays + 1);
   }, [ddoyaStartIso]);
 
-  const todayIso = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const markedDates = useMemo(
     () => ({
-      [todayIso]: {
+      [calendarDayKey]: {
         selected: true,
         selectedColor: `${colors.brown}CC`,
         selectedTextColor: '#FFFFFF',
       },
     }),
-    [todayIso],
+    [calendarDayKey],
   );
 
   const todayMetrics = useMemo(() => {
     const timeSlots = todaySchedule?.timeSlots ?? [];
     const items = timeSlots.flatMap((s) => s.items ?? []);
     const total = items.length;
-    const completed = items.filter((i) => i.status === 'TAKEN' || i.status === 'SKIPPED').length;
+    const completed = items.filter((i) => i.status === 'TAKEN').length;
     const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
     return { total, completed, percent };
   }, [todaySchedule]);
@@ -233,7 +246,7 @@ export default function ProfileScreen() {
             ]}
           >
             <Calendar
-              current={todayIso}
+              current={calendarDayKey}
               markedDates={markedDates}
               hideExtraDays={false}
               theme={{
