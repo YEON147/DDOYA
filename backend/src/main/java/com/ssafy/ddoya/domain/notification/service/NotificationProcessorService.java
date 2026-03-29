@@ -226,8 +226,8 @@ public class NotificationProcessorService {
         if (lastLog == null) {
             return true;
         }
-        // 마지막 발송으로부터 1분 이상 경과했는가 (1분 간격 재시도)
-        return lastLog.getSentAt().plusMinutes(1).isBefore(now) || lastLog.getSentAt().plusMinutes(1).isEqual(now);
+        // 마지막 발송으로부터 55초 이상 경과했는가 (1분 간격 재시도를 보장하기 위해 5초의 여유를 둠)
+        return lastLog.getSentAt().plusSeconds(55).isBefore(now);
     }
 
     private int resolveNextAttemptNo(NotificationDeliveryLog lastLog) {
