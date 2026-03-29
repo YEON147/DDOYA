@@ -71,7 +71,7 @@ public class NotificationSettingService {
     public CarryNotificationTimeUpdateResponse updateCarryNotificationTime(Long userId, String carryNotificationTime) {
         LocalTime time = LocalTime.parse(carryNotificationTime);
         
-        IntakeSchedule carrySchedule = intakeScheduleRepository.findByUser_UserIdAndScheduleType(userId, ScheduleType.CARRY)
+        IntakeSchedule carrySchedule = intakeScheduleRepository.findByUser_UserIdAndScheduleTypeAndIsActiveTrue(userId, ScheduleType.CARRY)
                 .orElseThrow(() -> CustomException.notFound("약 챙김 알림 스케줄을 찾을 수 없습니다."));
 
         carrySchedule.updateIntakeTime(time);
@@ -81,7 +81,7 @@ public class NotificationSettingService {
 
     /** 챙김 알림 시각 조회 */
     public CarryNotificationTimeUpdateResponse getCarryNotificationTime(Long userId) {
-        IntakeSchedule carrySchedule = intakeScheduleRepository.findByUser_UserIdAndScheduleType(userId, ScheduleType.CARRY)
+        IntakeSchedule carrySchedule = intakeScheduleRepository.findByUser_UserIdAndScheduleTypeAndIsActiveTrue(userId, ScheduleType.CARRY)
                 .orElseThrow(() -> CustomException.notFound("약 챙김 알림 스케줄을 찾을 수 없습니다."));
 
         return new CarryNotificationTimeUpdateResponse(carrySchedule.getIntakeTime().toString().substring(0, 5));

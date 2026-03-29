@@ -12,7 +12,7 @@ import java.util.List;
 @Repository
 public interface ReportIngredientAnalysisRepository extends JpaRepository<ReportIngredientAnalysis, Long> {
 
-    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Modifying(flushAutomatically = true)
     @Query("DELETE FROM ReportIngredientAnalysis r WHERE r.report.reportId = :reportId")
     void deleteAllByReportId(@Param("reportId") Long reportId);
 

@@ -1,6 +1,11 @@
+import { useSyncExternalStore } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { intakeRoutineApi } from '../src/api/intakeRoutine';
 import { IntakeRoutineUpdateRequest } from '../src/types/intakeRoutine';
+import {
+  getLocalCalendarDateKeySnapshot,
+  subscribeLocalCalendarDay,
+} from '../src/utils/localCalendarDay';
 
 export const useIntakeRoutineList = () => {
   return useQuery({
@@ -24,13 +29,27 @@ export const useUpdateIntakeTime = () => {
   });
 };
 
-/** `date` 생략 시 서버 기준 오늘. 쿼리 키는 `__today__`로 고정(자정 이후 새로고침 시 갱신). */
+/**
+ * 일별 섭취 스케줄.
+ * - `date` 생략: 기기 로컬 `YYYY-MM-DD`를 쿼리 키·`?date=`에 넣어 자정·앱 복귀 후에도 캐시가 날짜별로 갈린다.
+ * - 공유 스토어(`localCalendarDay`)로 탭(훅 인스턴스)마다 서로 다른 "오늘" 키를 쓰는 일을 막는다.
+ */
 export const useDailyIntakeSchedule = (date?: string) => {
+  const calendarKey = useSyncExternalStore(
+    subscribeLocalCalendarDay,
+    getLocalCalendarDateKeySnapshot,
+    getLocalCalendarDateKeySnapshot,
+  );
+  const dateKey = date ?? calendarKey;
+
   return useQuery({
-    queryKey: ['dailyIntakeSchedule', date ?? '__today__'],
+    queryKey: ['dailyIntakeSchedule', dateKey],
     queryFn: async () => {
-      const response = await intakeRoutineApi.getDailySchedule(date ? { date } : undefined);
+      const response = await intakeRoutineApi.getDailySchedule({ date: dateKey });
       return response.data.data;
     },
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   });
 };

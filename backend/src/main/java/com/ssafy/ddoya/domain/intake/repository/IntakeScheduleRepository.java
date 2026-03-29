@@ -18,14 +18,8 @@ import java.util.Optional;
 @Repository
 public interface IntakeScheduleRepository extends JpaRepository<IntakeSchedule, Long> {
 
-        /**
-         * 특정 영양제와 연관된 모든 섭취 일정을 조회합니다.
-         *
-         * @param supplementId 영양제 ID
-         * @return 섭취 일정 리스트
-         */
-        @Query("SELECT s FROM IntakeSchedule s WHERE s.supplement.userSupplementId = :supplementId")
-        List<IntakeSchedule> findBySupplementId(@Param("supplementId") Long supplementId);
+        @Query("SELECT s FROM IntakeSchedule s WHERE s.supplement.userSupplementId = :supplementId AND s.isActive = true")
+        List<IntakeSchedule> findBySupplementIdAndIsActiveTrue(@Param("supplementId") Long supplementId);
 
         /**
          * 영양제 삭제 시 연관된 모든 섭취 일정을 일괄 삭제합니다.
@@ -45,13 +39,14 @@ public interface IntakeScheduleRepository extends JpaRepository<IntakeSchedule, 
          * @param scheduleType 일정 유형
          * @return 정렬된 섭취 일정 리스트
          */
-        // 영양제 수정 API용: supplementId + userId + scheduleType = INTAKE 기준 조회
+        // 영양제 수정 API용: supplementId + userId + scheduleType = INTAKE + isActive = true 기준 조회
         @Query("SELECT s FROM IntakeSchedule s " +
                         "WHERE s.supplement.userSupplementId = :supplementId " +
                         "AND s.user.userId = :userId " +
                         "AND s.scheduleType = :scheduleType " +
+                        "AND s.isActive = true " +
                         "ORDER BY s.intakeTime ASC")
-        List<IntakeSchedule> findBySupplementIdAndUserIdAndScheduleType(
+        List<IntakeSchedule> findBySupplementIdAndUserIdAndScheduleTypeAndIsActiveTrue(
                         @Param("supplementId") Long supplementId,
                         @Param("userId") Long userId,
                         @Param("scheduleType") ScheduleType scheduleType);
@@ -62,7 +57,7 @@ public interface IntakeScheduleRepository extends JpaRepository<IntakeSchedule, 
          * @param scheduleType 일정 유형
          * @return 섭취 일정 리스트
          */
-        List<IntakeSchedule> findAllByScheduleType(ScheduleType scheduleType);
+        List<IntakeSchedule> findAllByScheduleTypeAndIsActiveTrue(ScheduleType scheduleType);
 
         /**
          * 특정 사용자에게 할당된 특정 일정 유형의 스케줄을 조회합니다.
@@ -72,7 +67,7 @@ public interface IntakeScheduleRepository extends JpaRepository<IntakeSchedule, 
          * @param scheduleType 일정 유형
          * @return 조회된 섭취 일정 (Optional)
          */
-        Optional<IntakeSchedule> findByUser_UserIdAndScheduleType(Long userId, ScheduleType scheduleType);
+        Optional<IntakeSchedule> findByUser_UserIdAndScheduleTypeAndIsActiveTrue(Long userId, ScheduleType scheduleType);
 
         /**
          * 특정 시간 및 일치하는 일정 유형을 가진 스케줄 중,
@@ -87,8 +82,9 @@ public interface IntakeScheduleRepository extends JpaRepository<IntakeSchedule, 
                         "JOIN FETCH u.notificationSetting ns " +
                         "WHERE s.scheduleType = :scheduleType " +
                         "AND s.intakeTime = :intakeTime " +
+                        "AND s.isActive = true " +
                         "AND ns.carryNotificationEnabled = true")
-        List<IntakeSchedule> findAllByScheduleTypeAndIntakeTimeAndCarryEnabled(
+        List<IntakeSchedule> findAllByScheduleTypeAndIntakeTimeAndCarryEnabledAndIsActiveTrue(
                         @Param("scheduleType") ScheduleType scheduleType,
                         @Param("intakeTime") LocalTime intakeTime);
 
@@ -99,10 +95,15 @@ public interface IntakeScheduleRepository extends JpaRepository<IntakeSchedule, 
         @Query("DELETE FROM IntakeSchedule s WHERE s.supplement.userSupplementId = :userSupplementId")
         void deleteByUserSupplementId(@Param("userSupplementId") Long userSupplementId);
 
-    @Query("SELECT s FROM IntakeSchedule s " +
-           "WHERE s.supplement.userSupplementId IN :userSupplementIds " +
-           "AND s.scheduleType = :scheduleType")
-    List<IntakeSchedule> findBySupplementIdInAndScheduleType(
+    @Query("""
+        SELECT s FROM IntakeSchedule s 
+        WHERE s.supplement.userSupplementId IN :userSupplementIds 
+          AND s.user.userId = :userId
+          AND s.scheduleType = :scheduleType 
+          AND s.isActive = true
+    """)
+    List<IntakeSchedule> findByUserSupplementIdInAndUserIdAndScheduleTypeAndIsActiveTrue(
             @Param("userSupplementIds") List<Long> userSupplementIds,
+            @Param("userId") Long userId,
             @Param("scheduleType") ScheduleType scheduleType);
 }

@@ -71,7 +71,7 @@ export default function SupplementDetailScreen() {
       setBodyPartId(typeof supplement.bodyPartId === 'number' ? supplement.bodyPartId : null);
       setPillImageLoadFailed(false);
 
-      // 리포트에 저장된 복용 시간(PATCH /reports/{id}/intake-timings 결과)을 우선 반영
+      // 리포트 추천 시간은 '비어 있는 슬롯'만 채움. 상세 저장(PATCH 영양제) 후 GET으로 온 시각을 리포트 캐시가 덮어쓰지 않게 함.
       const reportRecommendations =
         (report as any)?.timing_recommendations ||
         (report as any)?.timingRecommendations ||
@@ -79,45 +79,39 @@ export default function SupplementDetailScreen() {
       const matchedRecommendation = reportRecommendations.find(
         (r: any) => (r.user_supplement_id || r.userSupplementId) === id,
       );
-      const reportTimings = (matchedRecommendation?.intake_timings || matchedRecommendation?.intakeTimings || [])
+      const reportTimings: string[] = (
+        matchedRecommendation?.intake_timings ||
+        matchedRecommendation?.intakeTimings ||
+        []
+      )
         .map((info: any) => info.intake_time || info.intakeTime)
-        .filter((time: string | null | undefined): time is string => !!time);
+        .map((t: string | null | undefined) => (t != null ? String(t).trim() : ''))
+        .filter((t: string): t is string => t.length > 0);
 
-      // Determine daily dose: Priority to report timings if specified
-      let initialDose = supplement.dailyDose;
-      if (reportTimings.length > 0) {
-        initialDose = reportTimings.length;
-      }
+      const initialDose = supplement.dailyDose;
       setDailyDose(initialDose);
 
       setDosePerIntake(supplement.dosePerIntake);
       setStockQuantity(supplement.stockQuantity);
       setStockNotificationEnabled(supplement.stockNotificationEnabled);
 
-      // Process schedules: ensure length matches initialDose
-      let schedules = supplement.intakeSchedules.map(s => ({
-        scheduleId: s.scheduleId,
-        intakeTime: s.intakeTime,
+      const baseSchedules = supplement.intakeSchedules.map((s) => ({
+        scheduleId: s.scheduleId ?? null,
+        intakeTime: (s.intakeTime ?? '').trim(),
       }));
 
-      // 상세 조회에서 리포트 저장 시간이 보이도록 기존 스케줄을 reportTimings로 덮어쓴다.
-      if (reportTimings.length > 0) {
-        schedules = reportTimings.map((time, index) => ({
-          scheduleId: schedules[index]?.scheduleId ?? null,
-          intakeTime: time,
-        }));
+      const schedules: { scheduleId?: number | null; intakeTime: string }[] = [];
+      for (let i = 0; i < initialDose; i++) {
+        const fromSupp = baseSchedules[i];
+        const suppTime = (fromSupp?.intakeTime ?? '').trim();
+        const reportTime = reportTimings[i]?.trim() ?? '';
+        const intakeTime = suppTime !== '' ? suppTime : reportTime !== '' ? reportTime : '';
+        schedules.push({
+          scheduleId: fromSupp?.scheduleId ?? null,
+          intakeTime,
+        });
       }
 
-      // Pad if less than daily dose
-      if (schedules.length < initialDose) {
-        const diff = initialDose - schedules.length;
-        for (let i = 0; i < diff; i++) {
-          schedules.push({ scheduleId: null, intakeTime: '' });
-        }
-      } else if (schedules.length > initialDose) {
-        schedules = schedules.slice(0, initialDose);
-      }
-      
       setIntakeSchedules(schedules);
     }
   }, [supplement, report, id]);
@@ -171,8 +165,8 @@ export default function SupplementDetailScreen() {
       }
     }, {
       onSuccess: () => {
-        appAlert('성공', '수정사항이 저장되었습니다.');
-        router.back();
+        appAlert('', '수정사항이 저장되었습니다.', undefined, { autoDismissMs: 1000 });
+        setTimeout(() => router.back(), 1000);
       },
       onError: () => {
         appAlert('오류', '저장에 실패했습니다.');

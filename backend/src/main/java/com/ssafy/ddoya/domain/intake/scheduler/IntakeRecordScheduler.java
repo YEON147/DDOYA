@@ -7,10 +7,11 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 
 /**
- * 주기적으로 섭취 기록 생성 업무를 수행하는 스케줄러 클래스입니다.
+ * 주기적으로 섭취 기록 생성 및 상태 관리 업무를 수행하는 스케줄러 클래스입니다.
  */
 @Component
 @RequiredArgsConstructor
@@ -29,5 +30,14 @@ public class IntakeRecordScheduler {
         // 호출 시점의 한국 날짜 기준으로 생성
         LocalDate today = LocalDate.now(ZoneId.of(appTimezone));
         intakeBatchService.createDailyIntakeRecords(today);
+    }
+
+    /**
+     * 매 1분마다 실행되어, 복용 시각 20분이 경과한 MISSED 기록을 SKIPPED로 자동 전환합니다.
+     */
+    @Scheduled(cron = "0 * * * * *", zone = "Asia/Seoul")
+    public void scheduleAutoSkipProcess() {
+        LocalDateTime now = LocalDateTime.now(ZoneId.of(appTimezone));
+        intakeBatchService.processAutoSkip(now);
     }
 }
