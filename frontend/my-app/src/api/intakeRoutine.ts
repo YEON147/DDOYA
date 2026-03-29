@@ -1,4 +1,6 @@
 import apiClient from './client';
+import { useAuthStore } from '../store/authStore';
+import { Platform } from 'react-native';
 import {
   IntakeRoutineListResponse,
   IntakeRoutineDetailResponse,
@@ -25,17 +27,36 @@ export const intakeRoutineApi = {
     apiClient.get<DailyIntakeScheduleResponse>('/intake-schedules', { params }),
 
   /** 복용 인증 (이미지 + request JSON) */
-  postIntakeCertification: async (formData: FormData) => {
-    try {
-      return await apiClient.post<IntakeCertificationResponse>('/intake-records/verify', formData);
-    } catch (e: any) {
-      const status = e?.response?.status;
-      if (status === 404) {
-        // (구)스펙/게이트웨이에서 사용하는 경로 fallback
-        return await apiClient.post<IntakeCertificationResponse>('/intake-certifications', formData);
-      }
-      throw e;
+  postIntakeCertification: async (formData: FormData): Promise<{ data: IntakeCertificationResponse }> => {
+    const token = useAuthStore.getState().accessToken;
+    const headers = { 
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    };
+
+    let res = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/intake-records/verify`, {
+      method: 'POST',
+      body: formData,
+      headers,
+    });
+
+    if (res.status === 404) {
+      // (구)스펙/게이트웨이에서 사용하는 경로 fallback
+      res = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/intake-certifications`, {
+        method: 'POST',
+        body: formData,
+        headers,
+      });
     }
+
+    if (!res.ok) {
+      const error: any = new Error('Upload Failed');
+      error.isAxiosError = true;
+      error.response = { status: res.status, data: await res.text() };
+      throw error;
+    }
+
+    const data = await res.json();
+    return { data };
   },
 
   /** 섭취 기록 상태 변경 (`MISSED` | `SKIPPED`) */
@@ -50,8 +71,17 @@ export function buildIntakeCertificationFormData(
 ): FormData {
   const fd = new FormData();
   const ext = mimeType.split('/')[1] || 'jpg';
+  
+  // 안드로이드 통신 에러 방지: URI가 file:// 로 시작하도록 강제
+  let formattedUri = imageUri;
+  if (Platform.OS === 'android' && !imageUri.startsWith('file://')) {
+    formattedUri = `file://${imageUri}`;
+  }
+
+  console.log('[DEBUG] Intake Verify Upload URI (Android):', formattedUri);
+
   fd.append('image', {
-    uri: imageUri,
+    uri: formattedUri,
     type: mimeType,
     name: `intake-verify.${ext}`,
   } as any);

@@ -1,4 +1,5 @@
 import apiClient from './client';
+import { useAuthStore } from '../store/authStore';
 import {
     SupplementCreateRequest,
     SupplementUpdateRequest,
@@ -56,10 +57,27 @@ export function buildPillValidateFormData(
 
 export const supplementApi = {
     /** 성분표 이미지 OCR (서버가 FastAPI `/api/ai/ocr/analyze` 호출) — `ingredientsImg` 필드로 multipart 전송 */
-    analyzeIngredientsOcr: (formData: FormData) =>
-        apiClient.post<SuccessResponse<IngredientAnalyzePayload>>('/supplements/ingredients/ocr', formData, {
-            timeout: 120000,
-        }),
+    analyzeIngredientsOcr: async (formData: FormData): Promise<{ data: SuccessResponse<IngredientAnalyzePayload> }> => {
+        // Axios FormData 버그(Android Network Error) 우회 목적 네이티브 fetch 사용
+        const token = useAuthStore.getState().accessToken;
+        const res = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/supplements/ingredients/ocr`, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+        });
+
+        if (!res.ok) {
+            const error: any = new Error('Upload Failed');
+            error.isAxiosError = true;
+            error.response = { status: res.status, data: await res.text() };
+            throw error;
+        }
+
+        const data = await res.json();
+        return { data };
+    },
 
     /** 영양제 등록 — multipart (`pillImg`, `register` JSON 문자열). 서버는 `MULTIPART_FORM_DATA`만 허용 */
     createSupplementMultipart: (formData: FormData) =>
