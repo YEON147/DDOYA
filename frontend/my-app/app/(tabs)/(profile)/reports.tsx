@@ -22,6 +22,7 @@ import { appAlert } from '@/src/utils/appAlert';
 import { prefetchReportSquirrelImage } from '@/src/constants/reportSquirrelImage';
 import { prefetchReportDecorAcorn } from '@/src/constants/reportDecorAcorn';
 import { refreshCachesAfterSupplementChange } from '@/src/utils/supplementDbChangeSync';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const TIMING_DISPLAY_MAP: Record<string, string> = {
   BEFORE_BREAKFAST: '아침 식전',
@@ -69,6 +70,7 @@ function applyTempTimesToReportCache(reportData: any, temp: Record<string, strin
 }
 
 export default function ReportsScreen() {
+  const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const { profile } = useUserProfileStore();
   const authNickname = useAuthStore((s) => s.nickname);
@@ -98,6 +100,9 @@ export default function ReportsScreen() {
   /** 리포트 쿼리가 무효화·재조회돼도 피커로 수정한 값을 덮어쓰지 않도록 함 */
   const protectUserTimeEditsRef = useRef(false);
   const prevModeForTimesRef = useRef(mode);
+  /** POST /reports 실패 시 오류 모달 — 시작 후 1분 미만이면 띄우지 않음(초기 불안정·재시도 여지) */
+  const reportRefreshStartedAtRef = useRef<number | null>(null);
+  const REPORT_REFRESH_ERR_ALERT_MIN_MS = 60_000;
 
   useEffect(() => {
     prefetchReportSquirrelImage();
@@ -190,8 +195,12 @@ export default function ReportsScreen() {
 
   // 리포트 갱신 Mutation
   const refreshMutation = useMutation({
-    mutationFn: () => reportApi.updateReport(),
+    mutationFn: async () => {
+      reportRefreshStartedAtRef.current = Date.now();
+      return reportApi.updateReport();
+    },
     onSuccess: async () => {
+      reportRefreshStartedAtRef.current = null;
       await queryClient.invalidateQueries({ queryKey: ['report'] });
       await queryClient.invalidateQueries({ queryKey: ['intakeSettings'] });
       await queryClient.refetchQueries({ queryKey: ['report'] });
@@ -203,8 +212,14 @@ export default function ReportsScreen() {
       );
     },
     onError: () => {
+      const started = reportRefreshStartedAtRef.current;
+      reportRefreshStartedAtRef.current = null;
       hasTriggeredAutoReportRefresh.current = false;
       bannerAutoRefreshConsumedRef.current = false;
+      const elapsedMs = started != null ? Date.now() - started : REPORT_REFRESH_ERR_ALERT_MIN_MS;
+      if (elapsedMs < REPORT_REFRESH_ERR_ALERT_MIN_MS) {
+        return;
+      }
       appAlert('오류', '리포트 갱신 중 문제가 발생했습니다. 네트워크 상태를 확인한 뒤 다시 시도해 주세요.');
     },
   });
@@ -290,7 +305,8 @@ export default function ReportsScreen() {
         applyTempTimesToReportCache(prev ?? report, tempSupplementTimes),
       );
 
-      // 2) 저장 성공 후 리포트 재생성/갱신
+      // 2) 별도 단계: POST /reports (AI 리포트 재생성) — 실패해도 1) PATCH 확정 시각은 이미 반영됨
+      let reportRegenerationFailed = false;
       try {
         const refreshed = await reportApi.updateReport();
 
@@ -313,25 +329,33 @@ export default function ReportsScreen() {
           });
         }
       } catch {
-        appAlert(
-          '일부 완료',
-          '복용 시각 저장은 완료되었지만 리포트 갱신에 실패했습니다.\n네트워크 상태 확인 후 다시 시도해 주세요.',
-        );
+        // 타임아웃·502·FastAPI 장애 등으로 POST만 실패한 경우 (PATCH는 성공 상태)
+        reportRegenerationFailed = true;
       }
-      
+
       // 저장 성공 후 리포트·루틴·영양제 캐시를 서버와 맞춤 (홈 일별 스케줄·목록 즉시 prefetch 포함)
       await refreshCachesAfterSupplementChange(queryClient);
       queryClient.setQueryData(['report'], (prev: any) =>
         applyTempTimesToReportCache(prev, tempSupplementTimes),
       );
 
-      appAlert('', '맞춤 복용 시간이 반영되었습니다.', undefined, { autoDismissMs: 1000 });
-      setTimeout(() => {
+      const goHomeAfterSave = () => {
         if (router.canDismiss()) {
           router.dismissAll();
         }
         router.replace('/(tabs)/(home)');
-      }, 1000);
+      };
+
+      if (reportRegenerationFailed) {
+        appAlert(
+          '일부 완료',
+          '복용 시각은 저장되었습니다.\n다만 AI 리포트 재생성(갱신) 요청이 끝나지 않았습니다. (서버 지연·네트워크 등)\n나중에 리포트 화면에서 「리포트 분석 갱신」을 다시 눌러 주세요.',
+          [{ text: '확인', onPress: goHomeAfterSave }],
+        );
+      } else {
+        appAlert('', '맞춤 복용 시간이 반영되었습니다.', undefined, { autoDismissMs: 1000 });
+        setTimeout(goHomeAfterSave, 1000);
+      }
     } catch (err) {
       const e = err as any;
       const status = e?.response?.status;
@@ -415,10 +439,14 @@ export default function ReportsScreen() {
 
   if (isLoading) {
     return (
-      <ScreenContainer header={<TopHeader title="" onBackPress={() => router.back()} />}>
-        <View className="flex-1 items-center justify-center">
+      <ScreenContainer
+        scrollable={false}
+        padding={0}
+        header={<TopHeader title="" onBackPress={() => router.back()} />}
+      >
+        <View className="flex-1 items-center px-6" style={{ paddingTop: 24 }}>
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text className="mt-4 font-scdream text-gray-400">데이터를 불러오는 중...</Text>
+          <Text className="mt-4 text-center font-scdream text-gray-400">데이터를 불러오는 중...</Text>
         </View>
       </ScreenContainer>
     );
@@ -426,8 +454,12 @@ export default function ReportsScreen() {
 
   if (error || !report) {
     return (
-      <ScreenContainer header={<TopHeader title="" onBackPress={() => router.back()} />}>
-        <View className="flex-1 items-center justify-center px-6">
+      <ScreenContainer
+        scrollable={false}
+        padding={0}
+        header={<TopHeader title="" onBackPress={() => router.back()} />}
+      >
+        <View className="flex-1 items-center px-6" style={{ paddingTop: 24 }}>
           <Ionicons name="alert-circle-outline" size={48} color={colors.textMuted} className="mb-4" />
           <Text className="text-base font-scdream text-center mb-6" style={{ color: colors.text }}>
             리포트를 불러오는 중입니다.{"\n"}잠시만 기다려주세요.
@@ -446,8 +478,15 @@ export default function ReportsScreen() {
       {refreshMutation.isPending && report ? (
         <View
           pointerEvents="auto"
-          style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(0,0,0,0.35)', zIndex: 50 }]}
-          className="items-center justify-center px-8"
+          style={[
+            StyleSheet.absoluteFillObject,
+            {
+              backgroundColor: 'rgba(0,0,0,0.35)',
+              zIndex: 50,
+              paddingTop: insets.top + 56,
+            },
+          ]}
+          className="items-center px-8"
         >
           <ActivityIndicator size="large" color={colors.surface} />
           <Text className="mt-4 text-center text-base font-scdream-bold" style={{ color: colors.surface }}>

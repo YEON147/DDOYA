@@ -12,6 +12,10 @@ import { prepareLabelImageForOcr } from '@/src/utils/labelImageForUpload';
 import { colors } from '@/constants/theme/colors';
 import apiClient from '@/src/api/client';
 import { appAlert } from '@/src/utils/appAlert';
+import {
+  syncDailyScheduleCacheAfterIntakeVerify,
+  verifyResultsAnyMatched,
+} from '@/src/utils/intakeVerifyScheduleCache';
 
 const INTAKE_GUIDE_IMAGE = require('../../../assets/images/intake_verify_example.jpg');
 
@@ -64,43 +68,70 @@ export default function IntakeVerifyScreen() {
 
         const formData = buildIntakeCertificationFormData(prepared.uri, request, prepared.mimeType);
 
-        const res = await intakeRoutineApi.postIntakeCertification(formData);
-        const certificationResult = res.data.data;
+        const apiRes = await intakeRoutineApi.postIntakeCertification(formData);
+        const payload = await syncDailyScheduleCacheAfterIntakeVerify(queryClient, apiRes.data);
 
-        await queryClient.invalidateQueries({ queryKey: ['dailyIntakeSchedule'] });
+        if (!payload) {
+          appAlert('오류', '인증 응답을 해석하지 못했습니다.');
+          return;
+        }
 
-        if (certificationResult.success) {
+        const anyMatched = verifyResultsAnyMatched(payload.results);
+        const matchedCount = payload.results.filter(
+          (r) => r && typeof r === 'object' && (r as Record<string, unknown>).matched === true,
+        ).length;
+
+        if (!payload.success) {
+          appAlert(
+            '인증 결과',
+            `${payload.message}\n일치 ${matchedCount}/${payload.results.length}건`,
+            [{ text: '확인', onPress: () => router.back() }],
+          );
+        } else if (!anyMatched) {
+          appAlert(
+            '인증 결과',
+            '사진과 등록 영양제가 일치하지 않아 완료 처리되지 않았습니다.\n다시 촬영해 주세요.',
+            [{ text: '확인', onPress: () => router.back() }],
+          );
+        } else {
           appAlert('', '섭취인증이 완료되었습니다.', [
             { text: '확인', onPress: () => router.back() },
           ]);
-        } else {
-          const matchedCount = certificationResult.results.filter((r) => r.matched).length;
-          appAlert(
-            '인증 결과',
-            `${certificationResult.message}\n일치 ${matchedCount}/${certificationResult.results.length}건`,
-            [{ text: '확인', onPress: () => router.back() }],
-          );
         }
       } catch (apiErr) {
         // 413(용량 초과)면 한 단계 더 압축해서 재시도
         if (axios.isAxiosError(apiErr) && apiErr.response?.status === 413) {
           const preparedStrong = await prepareLabelImageForOcr(uri, 'strong');
           const formData = buildIntakeCertificationFormData(preparedStrong.uri, request, preparedStrong.mimeType);
-          const res = await intakeRoutineApi.postIntakeCertification(formData);
-          const certificationResult = res.data.data;
+          const apiRes = await intakeRoutineApi.postIntakeCertification(formData);
+          const payload = await syncDailyScheduleCacheAfterIntakeVerify(queryClient, apiRes.data);
 
-          await queryClient.invalidateQueries({ queryKey: ['dailyIntakeSchedule'] });
-          if (certificationResult.success) {
+          if (!payload) {
+            appAlert('오류', '인증 응답을 해석하지 못했습니다.');
+            return;
+          }
+
+          const anyMatched = verifyResultsAnyMatched(payload.results);
+          const matchedCount = payload.results.filter(
+            (r) => r && typeof r === 'object' && (r as Record<string, unknown>).matched === true,
+          ).length;
+
+          if (!payload.success) {
+            appAlert(
+              '인증 결과',
+              `${payload.message}\n일치 ${matchedCount}/${payload.results.length}건`,
+              [{ text: '확인', onPress: () => router.back() }],
+            );
+          } else if (!anyMatched) {
+            appAlert(
+              '인증 결과',
+              '사진과 등록 영양제가 일치하지 않아 완료 처리되지 않았습니다.\n다시 촬영해 주세요.',
+              [{ text: '확인', onPress: () => router.back() }],
+            );
+          } else {
             appAlert('', '섭취인증이 완료되었습니다.', [
               { text: '확인', onPress: () => router.back() },
             ]);
-          } else {
-            const matchedCount = certificationResult.results.filter((r) => r.matched).length;
-            appAlert(
-              '인증 결과',
-              `${certificationResult.message}\n일치 ${matchedCount}/${certificationResult.results.length}건`,
-              [{ text: '확인', onPress: () => router.back() }],
-            );
           }
           return;
         }
