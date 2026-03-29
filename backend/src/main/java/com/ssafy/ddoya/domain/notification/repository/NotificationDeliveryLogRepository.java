@@ -33,8 +33,7 @@ public interface NotificationDeliveryLogRepository extends JpaRepository<Notific
     /**
      * 특정 섭취 기록(IntakeRecord)에 대해 가장 최근에 발송된 로그를 조회합니다.
      */
-    @Query("SELECT n FROM NotificationDeliveryLog n WHERE n.intakeRecord.intakeRecordId = :intakeRecordId")
-    Optional<NotificationDeliveryLog> findTopByIntakeRecord_IntakeRecordIdOrderBySentAtDesc(@Param("intakeRecordId") Long intakeRecordId);
+    Optional<NotificationDeliveryLog> findFirstByIntakeRecord_IntakeRecordIdOrderBySentAtDesc(Long intakeRecordId);
 
     @Modifying(clearAutomatically = true)
     @Query("DELETE FROM NotificationDeliveryLog n WHERE n.schedule.scheduleId IN :scheduleIds")
