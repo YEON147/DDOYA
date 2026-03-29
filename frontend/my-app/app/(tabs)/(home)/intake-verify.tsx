@@ -127,7 +127,7 @@ export default function IntakeVerifyScreen() {
   };
 
   return (
-    <ScreenContainer scrollable={false} padding={0} header={<TopHeader title="섭취 인증 촬영" />}>
+    <ScreenContainer scrollable={false} padding={0} header={<TopHeader title="" />}>
       <CaptureGuideScreenLayout
         guideLabel="촬영 가이드 (예시 이미지)"
         guideImageSource={INTAKE_GUIDE_IMAGE}

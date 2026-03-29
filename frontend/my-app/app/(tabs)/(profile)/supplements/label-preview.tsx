@@ -146,7 +146,7 @@ export default function SupplementLabelPreviewScreen() {
       scrollable
       padding={0}
       contentContainerStyle={{ flexGrow: 1 }}
-      header={<TopHeader title="성분표 확인" />}
+      header={<TopHeader title="" />}
     >
       <View className="flex-1 px-6 pt-2 pb-8" style={{ backgroundColor: colors.background }}>
         {/* 성공 시: 촬영 원본은 표시하지 않고 OCR 결과 데이터만 우선 노출 */}

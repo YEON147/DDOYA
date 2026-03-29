@@ -17,6 +17,7 @@ import { useAuthStore } from '@/src/store/authStore';
 import * as Notifications from 'expo-notifications';
 import { notificationService } from '@/src/services/notificationService';
 import { AppAlertProvider } from '@/src/components/common/AppAlertProvider';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -124,19 +125,21 @@ export default function RootLayout() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AppAlertProvider>
-      <ThemeProvider value={theme}>
-        <Stack>
-          <Stack.Screen name="index" options={{ headerShown: false }} />
-          <Stack.Screen name="(auth)/login" options={{ headerShown: false }} />
-          <Stack.Screen name="(auth)/signup" options={{ headerShown: false }} />
-          <Stack.Screen name="(auth)/signup-profile" options={{ headerShown: false }} />
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-        </Stack>
-        <StatusBar style="auto" />
-      </ThemeProvider>
-      </AppAlertProvider>
+      <SafeAreaProvider>
+        <AppAlertProvider>
+          <ThemeProvider value={theme}>
+            <Stack>
+              <Stack.Screen name="index" options={{ headerShown: false }} />
+              <Stack.Screen name="(auth)/login" options={{ headerShown: false }} />
+              <Stack.Screen name="(auth)/signup" options={{ headerShown: false }} />
+              <Stack.Screen name="(auth)/signup-profile" options={{ headerShown: false }} />
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+            </Stack>
+            <StatusBar style="auto" />
+          </ThemeProvider>
+        </AppAlertProvider>
+      </SafeAreaProvider>
     </QueryClientProvider>
   );
 }

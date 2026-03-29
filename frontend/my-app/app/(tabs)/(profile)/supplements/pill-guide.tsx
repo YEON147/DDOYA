@@ -184,7 +184,7 @@ export default function SupplementPillGuideScreen() {
 
   if (phase === 'guide') {
     return (
-      <ScreenContainer scrollable={false} padding={0} header={<TopHeader title="알약 촬영" />}>
+      <ScreenContainer scrollable={false} padding={0} header={<TopHeader title="" />}>
         <CaptureGuideScreenLayout
           guideLabel="촬영 가이드 · 알약 한 알"
           guideImageSource={PILL_GUIDE_IMAGE}
@@ -203,7 +203,7 @@ export default function SupplementPillGuideScreen() {
   const registerPayload = buildCreateRequest();
 
   return (
-    <ScreenContainer scrollable padding={0} header={<TopHeader title="알약 촬영" />} scrollRef={scrollRef}>
+    <ScreenContainer scrollable padding={0} header={<TopHeader title="" />} scrollRef={scrollRef}>
       <View className="px-6 pt-2 pb-8" style={{ backgroundColor: colors.background }}>
         <View className="mb-4 rounded-2xl px-4 py-3" style={neuRaised(16, colors.surface)}>
           <View className="flex-row items-center justify-between">

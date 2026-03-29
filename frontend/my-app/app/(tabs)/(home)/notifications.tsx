@@ -14,7 +14,7 @@ const MOCK_NOTIFICATIONS = [
 
 export default function NotificationsScreen() {
   return (
-    <ScreenContainer scrollable={false} padding={0} header={<TopHeader title="알림센터" />}>
+    <ScreenContainer scrollable={false} padding={0} header={<TopHeader title="" />}>
       <View className="flex-1 px-5 py-4" style={{ backgroundColor: colors.background }}>
         {MOCK_NOTIFICATIONS.map((item) => (
           <View

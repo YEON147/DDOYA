@@ -361,7 +361,7 @@ export default function ReportsScreen() {
   const displayDate = updatedAt ? updatedAt.split('T')[0].replace(/-/g, '.') : '';
 
   return (
-    <ScreenContainer header={<TopHeader title={mode === 'edit' ? '리포트 갱신' : ''} onBackPress={() => router.back()} />}>
+    <ScreenContainer header={<TopHeader title="" onBackPress={() => router.back()} />}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 100 }}

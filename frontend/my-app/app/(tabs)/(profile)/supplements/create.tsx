@@ -47,7 +47,7 @@ export default function SupplementCreateScreen() {
   };
 
   return (
-    <ScreenContainer scrollable={false} padding={0} header={<TopHeader title="영양제 등록" />}>
+    <ScreenContainer scrollable={false} padding={0} header={<TopHeader title="" />}>
       <CaptureGuideScreenLayout
         guideLabel="촬영 가이드 (예시 이미지)"
         guideImageSource={REGISTER_GUIDE_IMAGE}
