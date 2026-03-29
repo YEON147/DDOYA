@@ -30,18 +30,18 @@ public class AuthController {
     }
 
     @PostMapping("/signup")
-    public ResponseEntity<SuccessResponse<SignUpResponseDto>> signUp(
-            @Valid @RequestBody SignUpRequestDto request) {
-        SignUpResponseDto response = authService.signUp(request);
+    public ResponseEntity<SuccessResponse<SignUpResponse>> signUp(
+            @Valid @RequestBody SignUpRequest request) {
+        SignUpResponse response = authService.signUp(request);
         return ResponseEntity.ok(SuccessResponse.of("회원가입에 성공하였습니다.", response));
     }
 
     @PostMapping("/refresh")
-    public ResponseEntity<SuccessResponse<RefreshTokenResponseDto>> refresh(
-            @RequestBody RefreshTokenRequestDto request) {
+    public ResponseEntity<SuccessResponse<RefreshTokenResponse>> refresh(
+            @RequestBody RefreshTokenRequest request) {
 
         String refreshToken = request.getRefreshToken();
-        RefreshTokenResponseDto tokens = authService.refresh(refreshToken);
+        RefreshTokenResponse tokens = authService.refresh(refreshToken);
 
         return ResponseEntity.ok(SuccessResponse.of("토큰이 재발급 되었습니다.", tokens));
     }

@@ -6,7 +6,7 @@ import lombok.Getter;
 
 @Getter
 @Builder
-public class LoginResponseDto {
+public class LoginResponse {
 
     private Long userId;
     private String email;
@@ -15,8 +15,8 @@ public class LoginResponseDto {
     private String accessToken;
     private String refreshToken;
 
-    public static LoginResponseDto from(User user) {
-        return LoginResponseDto.builder()
+    public static LoginResponse from(User user) {
+        return LoginResponse.builder()
                 .userId(user.getUserId())
                 .email(user.getEmail())
                 .nickname(user.getNickname())

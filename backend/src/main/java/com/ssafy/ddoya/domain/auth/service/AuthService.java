@@ -1,8 +1,8 @@
 package com.ssafy.ddoya.domain.auth.service;
 
-import com.ssafy.ddoya.domain.auth.dto.SignUpRequestDto;
-import com.ssafy.ddoya.domain.auth.dto.SignUpResponseDto;
-import com.ssafy.ddoya.domain.auth.dto.RefreshTokenResponseDto;
+import com.ssafy.ddoya.domain.auth.dto.SignUpRequest;
+import com.ssafy.ddoya.domain.auth.dto.SignUpResponse;
+import com.ssafy.ddoya.domain.auth.dto.RefreshTokenResponse;
 import com.ssafy.ddoya.domain.auth.entity.RefreshToken;
 import com.ssafy.ddoya.domain.auth.repository.RefreshTokenRepository;
 import com.ssafy.ddoya.domain.notification.service.NotificationSettingService;
@@ -39,7 +39,7 @@ public class AuthService {
     }
 
     @Transactional
-    public RefreshTokenResponseDto refresh(String refreshToken) {
+    public RefreshTokenResponse refresh(String refreshToken) {
         // Refresh Token 검증
         if (refreshToken == null || refreshToken.isBlank()) {
             throw CustomException.unauthorized("Refresh Token이 없습니다.");
@@ -76,7 +76,7 @@ public class AuthService {
                             .build()
             );
 
-            return RefreshTokenResponseDto.builder()
+            return RefreshTokenResponse.builder()
                     .accessToken(newAccessToken)
                     .refreshToken(newRefreshToken)
                     .build();
@@ -88,7 +88,7 @@ public class AuthService {
     }
 
     @Transactional
-    public SignUpResponseDto signUp(@Valid SignUpRequestDto request) {
+    public SignUpResponse signUp(@Valid SignUpRequest request) {
         String email = request.getEmail();
 
         // 이메일 중복 여부
@@ -133,7 +133,7 @@ public class AuthService {
                 .needsRefresh(false)
                 .build());
 
-        return SignUpResponseDto.from(savedUser);
+        return SignUpResponse.from(savedUser);
     }
 
     public void checkEmailDuplicate(String email) {
