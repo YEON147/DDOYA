@@ -87,25 +87,76 @@ Jenkins 파이프라인에서 작동하며, 로컬에서 수동 스크립트 배
 
 ## 5. 프론트엔드 — 푸시 알림 검증 및 Development Build
 
-앱의 푸시 알림 등 네이티브 인증 기능은 범용 앱인 Expo Go에서는 온전한 테스트가 불가능하므로, 실제 서비스와 가장 유사한 **EAS Development Build** 환경을 권장합니다.
+푸시 알림은 **네이티브 설정**이 필요하므로 **Expo Go**보다 **Development Build**가 실제 환경에 가깝습니다. 개발 빌드는 프로젝트 전용 네이티브 바이너리를 포함합니다.
 
-### 5.1. 프론트엔드 빌드 개요
-- **목적:** 안드로이드 환경에서 푸시 알림 등 Android System 네이티브 기능 구동을 테스트합니다.
-- **실행 방식:** Expo Application Services (EAS) 클라우드 상에서 Android Development Build 바이너리(APK 형태) 생성 후 물리 기기에 직접 설치.
-- **로컬 검증 연결:** 물리 기기와 PC 간 터널링(`npx expo start --dev-client --tunnel`)을 통해 로컬 개발 서버를 실물 디바이스에 연결시킵니다.
-
-### 5.2. 개발 빌드 선행 조건 및 진행 절차
-> 프론트엔드 프로젝트는 **Expo SDK 54** 계열(`expo ~54.x`)에서 동작합니다. **Node.js LTS** 및 Expo 계정(`eas login`) 인증, `eas-cli` 글로벌 설치가 선행되어야 합니다. *(SDK 변경 시 EAS·Native Module 호환 확인 필수)*
-
-| 단계 | 명령어 및 작업 절차 |
+| 항목 | 내용 |
 | --- | --- |
-| 1 | 프로젝트 타겟 폴더로 이동합니다. (`cd frontend/my-app`) |
-| 2 | Expo 계정으로 로그인합니다. (`eas login`) |
-| 3 | 빌드 설정이 초기화되지 않았다면 진행합니다. (`eas.json` 없을 시 `eas build:configure` 수행) |
-| 4 | **Android Development Build 생성:** `eas build --profile development --platform android` <br>*(단, `eas.json` 내 `developmentClient: true` 프로필 설정 필요)* |
-| 5 | 클라우드 빌드 종료 후 도출된 **설치 링크 및 QR 코드**를 열어 개발용 빌드를 안드로이드 공기계에 설치. |
-| 6 | 로컬 PC에서 개발 서버 런타임 구동: `npx expo start --dev-client` <br>*(동일 LAN 공유가 불가능한 네트워크 문제 시 뒤에 `--tunnel` 옵션 추가)* |
-| 7 | 기기(개발용 앱 다운로드 완료 건)에 진입 후 카메라를 켜고 터미널의 서버 연결 QR을 촬영. 연결 목록 또는 URL 입력 후 진입하여 라이브 테스트 및 푸시 검증 진행. |
+| 목적 | 안드로이드에서 푸시 등 네이티브 기능을 실제에 가깝게 테스트 |
+| 실행 방식 | EAS로 Android Development Build 생성 후 기기에 설치 |
+| 로컬 연결 | `npx expo start --dev-client` (필요 시 `--tunnel`) |
+
+### 5.1. 선행 조건
+
+- [Node.js](https://nodejs.org/) (LTS 권장)
+- EAS CLI: `npm i -g eas-cli`
+- [Expo](https://expo.dev/) 계정 (`eas login`)
+
+프로젝트는 **Expo SDK 54** 계열(`expo ~54.x`)을 사용합니다. SDK 업그레이드 시 EAS·네이티브 모듈 호환 여부를 별도 확인해야 합니다.
+
+### 5.2. 절차 요약
+
+| 단계 | 작업 |
+| --- | --- |
+| 1 | `frontend/my-app` 으로 이동 |
+| 2 | `eas login` |
+| 3 | `eas.json` 없으면 `eas build:configure` |
+| 4 | `eas build --profile development --platform android` |
+| 5 | 빌드 완료 후 기기에서 설치 링크로 APK 설치 |
+| 6 | PC에서 `npx expo start --dev-client` (망 문제 시 `--tunnel`) |
+| 7 | 기기 앱에서 QR·서버 목록·URL 입력으로 개발 서버 연결 |
+
+### 5.3. 단계별 세부 가이드
+
+#### 1. 프로젝트 폴더 이동
+```bash
+cd frontend/my-app
+```
+
+#### 2. Expo 계정 로그인
+```bash
+eas login
+```
+
+#### 3. EAS 빌드 설정 초기화
+`eas.json` 이 없을 때만 실행합니다.
+```bash
+eas build:configure
+```
+
+#### 4. Android Development Build 생성
+```bash
+eas build --profile development --platform android
+```
+완료 후 설치 링크 또는 QR이 제공됩니다. `eas.json` 의 `development` 프로필(`developmentClient: true`)이 설정되어 있어야 합니다. 팀에서 프로필 이름이 다르면 해당 이름으로 치환합니다.
+
+#### 5. Android 기기에 설치
+빌드가 제공한 **설치 링크**를 실제 기기 브라우저에서 엽니다.
+
+#### 6. 로컬 개발 서버 구동
+```bash
+npx expo start --dev-client
+```
+기기가 같은 LAN망에서 서버를 찾지 못할 경우:
+```bash
+npx expo start --dev-client --tunnel
+```
+
+#### 7. 앱에서 개발 서버 연결
+1. 터미널의 **QR 코드**를 기기의 **기본 카메라**로 스캔합니다.
+2. 앱의 **개발 서버 목록**에서 해당 서버를 선택합니다.
+3. (필요 시) **서버 URL**을 직접 입력합니다.
+
+정상적으로 연결되면 해당 시점 소스가 기기에서 실행되며, 푸시 알림 등을 검증할 수 있습니다.
 
 ---
 
