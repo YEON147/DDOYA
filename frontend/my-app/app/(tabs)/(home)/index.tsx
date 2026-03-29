@@ -56,25 +56,6 @@ export default function HomeScreen() {
     }, [refetch]),
   );
 
-  useEffect(() => {
-    if (!schedule || isPending || isError) return;
-    const rows = schedule.timeSlots.flatMap((slot) =>
-      slot.items.map((item) => ({
-        intakeTime: slot.intakeTime,
-        plannedAt: slot.plannedAt,
-        intakeRecordId: item.intakeRecordId,
-        scheduleId: item.scheduleId,
-        alias: item.alias,
-        status: item.status,
-      })),
-    );
-    console.log('[home] dailyIntakeSchedule status', {
-      targetDate: schedule.targetDate,
-      count: rows.length,
-      items: rows,
-    });
-  }, [schedule, isPending, isError]);
-
   return (
     <ScreenContainer
       scrollRef={scrollRef}

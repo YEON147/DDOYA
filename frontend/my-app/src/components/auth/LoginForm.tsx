@@ -40,7 +40,6 @@ export function LoginForm() {
           });
         },
         onError: (error) => {
-          console.error('Login failed:', error);
           setErrorMessage(getLoginErrorMessage(error));
         },
       }

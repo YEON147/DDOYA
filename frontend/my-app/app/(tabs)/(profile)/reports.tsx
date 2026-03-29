@@ -200,9 +200,6 @@ export default function ReportsScreen() {
         return;
       }
 
-      console.log('[Report Save Debug] reportId:', reportId);
-      console.log('[Report Save Debug] PATCH payload:', { userSupplements });
-
       // 1) 복용 시각 확정 저장
       await reportApi.saveIntakeTimings(reportId, { userSupplements });
 
@@ -232,13 +229,7 @@ export default function ReportsScreen() {
             };
           });
         }
-      } catch (refreshErr) {
-        const re = refreshErr as any;
-        const refreshStatus = re?.response?.status;
-        const refreshData = re?.response?.data;
-        console.log('[Report Refresh Error] status:', refreshStatus);
-        console.log('[Report Refresh Error] data:', refreshData);
-        console.log('[Report Refresh Error] request url:', re?.config?.url);
+      } catch {
         appAlert(
           '일부 완료',
           '복용 시각 저장은 완료되었지만 리포트 갱신에 실패했습니다.\n네트워크 상태 확인 후 다시 시도해 주세요.',
@@ -267,35 +258,6 @@ export default function ReportsScreen() {
       const status = e?.response?.status;
       const data = e?.response?.data;
       const message = data?.message || e?.message || '정보를 저장하지 못했습니다.';
-      console.log('[Report Save Error] status:', status);
-      console.log('[Report Save Error] data:', data);
-      console.log('[Report Save Error] request url:', e?.config?.url);
-      console.log('[Report Save Error] request data:', e?.config?.data);
-
-      // 디버그 모드: 500 발생 시 영양제 1개씩 분리 요청해 실패 지점 추적
-      if (status === 500) {
-        try {
-          const requestData = JSON.parse(e?.config?.data ?? '{}');
-          const reportId = report?.reportId ?? report?.report_id;
-          const supplements = requestData?.userSupplements ?? [];
-
-          if (reportId && Array.isArray(supplements) && supplements.length > 1) {
-            console.log('[Report Save Debug] start single-supplement probe');
-            for (const item of supplements) {
-              try {
-                await reportApi.saveIntakeTimings(reportId, { userSupplements: [item] });
-                console.log('[Report Save Debug] single success:', item);
-              } catch (probeErr: any) {
-                console.log('[Report Save Debug] single fail item:', item);
-                console.log('[Report Save Debug] single fail status:', probeErr?.response?.status);
-                console.log('[Report Save Debug] single fail data:', probeErr?.response?.data);
-              }
-            }
-          }
-        } catch (probeParseErr) {
-          console.log('[Report Save Debug] single probe skipped:', probeParseErr);
-        }
-      }
 
       appAlert('저장 실패', `status=${status ?? 'unknown'}\n${String(message)}`);
     } finally {
