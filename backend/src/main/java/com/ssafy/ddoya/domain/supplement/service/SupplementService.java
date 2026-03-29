@@ -499,6 +499,16 @@ public class SupplementService {
                     .isPrimary(isPrimary)
                     .build());
 
+            log.info(
+                    "[saveIngredients] save ingredient normalizedIngredientId={}, normalizedName={}, rawName={}, unit={}, amount={}, isPrimary={}",
+                    dto.getNormalizedIngredientId(),
+                    dto.getNormalizedName(),
+                    dto.getRawName(),
+                    dto.getUnit(),
+                    dto.getAmount(),
+                    isPrimary
+            );
+
             dtos.add(SupplementRegisterResponse.IngredientDto.builder()
                     .normalizedIngredientId(dto.getNormalizedIngredientId())
                     .normalizedName(dto.getNormalizedName())
