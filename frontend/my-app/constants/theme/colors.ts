@@ -20,6 +20,10 @@ export const colors = {
   brown: '#3F2207',
   primary: '#F29222',
   point: '#F18A2D',
+  /** 포인트 — 로고 주황 */
+  pointOrange: '#FF8B1F',
+  /** 포인트 — 로고 민트 */
+  pointMint: '#54C3A8',
 } as const;
 
 export type ColorToken = keyof typeof colors;

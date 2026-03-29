@@ -14,7 +14,6 @@ import { scaleByWidth } from '@/src/utils/responsive';
 
 type SpeechBubbleProps = {
   title?: string;
-  titleColor?: string;
   leadIn?: string;
   leadInTextStyle?: StyleProp<TextStyle>;
   children?: React.ReactNode;
@@ -31,7 +30,6 @@ const GREETING_BUBBLE_BG = '#FCFAF5';
 /** 리포트 말풍선 — 기본은 그림자만, withDarkBorder 시 연한 윤곽선 */
 function SpeechBubble({
   title,
-  titleColor,
   leadIn,
   leadInTextStyle,
   children,
@@ -93,7 +91,7 @@ function SpeechBubble({
       {title ? (
         <Text
           className="mb-2 text-base font-scdream-bold"
-          style={{ color: titleColor ?? colors.text, letterSpacing: -0.2 }}
+          style={{ color: colors.text, letterSpacing: -0.2 }}
         >
           {title}
         </Text>

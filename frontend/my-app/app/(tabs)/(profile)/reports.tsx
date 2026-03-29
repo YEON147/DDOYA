@@ -60,14 +60,28 @@ export default function ReportsScreen() {
     return rep?.timing_recommendations || rep?.timingRecommendations || [];
   };
 
-  // 리포트 데이터 조회
-  const { data: reportResponse, isLoading, error, refetch } = useQuery({
+  // 리포트 데이터 조회 (`useReport`와 동일하게 본문만 캐시 — Axios 전체를 넣으면 `useReport`와 캐시 충돌)
+  const { data: report, isLoading, error } = useQuery({
     queryKey: ['report'],
-    queryFn: () => reportApi.getReport(),
+    queryFn: async () => {
+      const res = await reportApi.getReport();
+      return res.data.data;
+    },
   });
 
   const { data: supplementsResponse } = useSupplementsList();
-  const report = reportResponse?.data?.data;
+
+  // 개발: GET 리포트의 comments 원문 (Metro/Expo 터미널·디버거 콘솔)
+  useEffect(() => {
+    if (!__DEV__) return;
+    const raw = report?.comments ?? null;
+    console.log('[Report][comments] object:', raw);
+    try {
+      console.log('[Report][comments] JSON:\n', JSON.stringify(raw, null, 2));
+    } catch (e) {
+      console.log('[Report][comments] JSON.stringify 실패:', e);
+    }
+  }, [report?.comments]);
 
   // 데이터 변동 감지 (백엔드 needsRefresh 보완)
   const isDataMismatch = React.useMemo(() => {
@@ -210,22 +224,19 @@ export default function ReportsScreen() {
         // POST /reports 응답에 최신 timing_recommendations가 포함되므로,
         // GET /reports 재조회 타이밍 이슈가 있어도 화면에 즉시 반영되도록 캐시를 선반영
         const refreshedData = refreshed?.data?.data;
-        if (refreshedData?.timing_recommendations) {
+        if (refreshedData) {
           queryClient.setQueryData(['report'], (prev: any) => {
-            const prevDetail = prev?.data?.data ?? {};
+            const prevDetail = prev ?? {};
             return {
-              ...prev,
-              data: {
-                ...(prev?.data ?? {}),
-                data: {
-                  ...prevDetail,
-                  timing_recommendations: refreshedData.timing_recommendations,
-                  timingRecommendations: refreshedData.timing_recommendations,
-                  needsRefresh: refreshedData.needsRefresh ?? prevDetail.needsRefresh,
-                  updated_at: refreshedData.updatedAt ?? prevDetail.updated_at,
-                  updatedAt: refreshedData.updatedAt ?? prevDetail.updatedAt,
-                },
-              },
+              ...prevDetail,
+              ...(refreshedData.timing_recommendations && {
+                timing_recommendations: refreshedData.timing_recommendations,
+                timingRecommendations: refreshedData.timing_recommendations,
+              }),
+              ...(refreshedData.comments != null && { comments: refreshedData.comments }),
+              needsRefresh: refreshedData.needsRefresh ?? prevDetail.needsRefresh,
+              updated_at: refreshedData.updatedAt ?? prevDetail.updated_at,
+              updatedAt: refreshedData.updatedAt ?? prevDetail.updatedAt,
             };
           });
         }
