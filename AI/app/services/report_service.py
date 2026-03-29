@@ -154,28 +154,19 @@ def _load_interactions(db: Session, ingredient_ids: list[int]) -> list[dict]:
     ]
 
 
-def _load_product_types(db: Session) -> list[str]:
-    """products 테이블에서 고유 product_type 목록 조회"""
-    result = db.execute(
-        text("SELECT DISTINCT product_type FROM products")
-    ).fetchall()
-    return [row[0] for row in result]
-
-
-def _load_products_by_types(db: Session, product_types: list[str]) -> list[dict]:
-    """product_type 목록으로 제품 검색"""
-    if not product_types:
+def _load_products_by_ingredients(db: Session, ingredient_names: list[str]) -> list[dict]:
+    """부족 성분명이 product_type에 포함된 제품 검색 (복합제품 대응)"""
+    if not ingredient_names:
         return []
-
-    placeholders = ", ".join([f":pt_{i}" for i in range(len(product_types))])
-    params = {f"pt_{i}": pt for i, pt in enumerate(product_types)}
-
+        
+    conditions = " OR ".join([f"product_type LIKE :name_{i}" for i in range(len(ingredient_names))])
+    params = {f"name_{i}": f"%{name}%" for i, name in enumerate(ingredient_names)}
+    
     result = db.execute(
         text(
             f"SELECT product_code, product_name, product_type "
             f"FROM products "
-            f"WHERE product_type IN ({placeholders}) "
-            f"LIMIT 30"
+            f"WHERE {conditions} "
         ),
         params,
     ).fetchall()
@@ -288,6 +279,34 @@ def _analyze_ingredients(totals: dict, master: dict, ri_col: str, ul_col: str) -
     return analysis
 
 
+def _calculate_demographic_score(product_name: str, is_kid: bool, is_female: bool, is_male: bool) -> int:
+    """상품명과 사용자 인구통계학적 특성을 비교하여 적합도 점수 산출"""
+    name_lower = product_name.lower()
+    score = 0
+    kid_keywords = ["키즈", "어린이", "차일드", "kids", "틴"]
+    female_keywords = ["우먼", "여성", "우먼스", "레이디", "for women"]
+    male_keywords = ["남성", "맨", "for men", "남"]
+    
+    # 연령 필터
+    if is_kid and any(kw in name_lower for kw in kid_keywords):
+        score += 100
+    elif not is_kid and any(kw in name_lower for kw in kid_keywords):
+        score -= 1000 # 어른에게 키즈 제품 제공 배제
+        
+    # 성별 필터
+    if is_female and any(kw in name_lower for kw in female_keywords):
+        score += 50
+    elif is_female and any(kw in name_lower for kw in male_keywords) and not any(kw in name_lower for kw in female_keywords):
+        score -= 1000 # 여성에게 남성 제품 제공 배제
+        
+    if is_male and any(kw in name_lower for kw in male_keywords) and not any(kw in name_lower for kw in female_keywords):
+        score += 50
+    elif is_male and any(kw in name_lower for kw in female_keywords):
+        score -= 1000 # 남성에게 여성 제품 제공 배제
+        
+    return score
+
+
 # ── Step 3: 부족 성분 제품 추천 ─────────────────────────────
 def _recommend_products(
     analysis: list[dict],
@@ -327,24 +346,48 @@ def _recommend_products(
             deficient = deficient[:3]
     # 3개 이하면 그대로 사용
 
-    # DB에서 고유 product_type 목록 가져오기
-    all_product_types = _load_product_types(db)
-
-    # LLM으로 부족 성분 → product_type 매핑
+    # LLM 없이 성분명으로 제품 직접 검색
     deficient_names = [d["normalized_ingredient_name"] for d in deficient]
-    deficient_ids = {d["normalized_ingredient_name"]: d["ingredient_id"] for d in deficient}
-    type_mapping = match_product_types(deficient_names, all_product_types)
+    products = _load_products_by_ingredients(db, deficient_names)
 
-    # 매핑된 product_type으로 제품 검색
-    mapped_types = list(set(type_mapping.values()))
-    products = _load_products_by_types(db, mapped_types)
+    # Demographic 필터링 기준값
+    is_kid = age < 13
+    is_female = gender.upper() == "FEMALE"
+    is_male = gender.upper() == "MALE"
+    
+    kid_keywords = ["키즈", "어린이", "차일드", "kids", "틴"]
+    female_keywords = ["우먼", "여성", "우먼스", "레이디", "for women"]
+    male_keywords = ["남성", "맨", "for men", "남"]
 
-    # 성분별로 3개씩 추천 구성
+    # 전체 결핍 성분명 목록 (복합제품 가산점 부여용)
+    all_deficient_names = [d["normalized_ingredient_name"] for d in deficient]
+
+    # 성분별로 추천 구성
     recommended = []
-    for ing_name, ptype in type_mapping.items():
-        ing_id = deficient_ids.get(ing_name)
-        matched = [p for p in products if p["product_type"] == ptype][:3]
+    for d in deficient:
+        ing_name = d["normalized_ingredient_name"]
+        ing_id = d["ingredient_id"]
+        
+        # 1. 성분이 product_type 문자열 내에 존재하는 상품 필터링 (복합제품 포함)
+        matched = [p for p in products if ing_name in p["product_type"]]
+        
+        # 2. Demographic 점수 및 복합제품 보너스 적용
+        final_matched = []
         for p in matched:
+            score = _calculate_demographic_score(p["product_name"], is_kid, is_female, is_male)
+            
+            # 결핍 성분을 여러 개 포함하는 복합제품일수록 압도적 가산점 부여
+            multi_match_count = sum(1 for def_name in all_deficient_names if def_name in p["product_type"])
+            score += (multi_match_count * 300)
+            
+            if score > -500:
+                final_matched.append((p, score))
+                
+        # 높은 점수순 (적합성 순) 정렬 후 최대 3개 확보
+        final_matched.sort(key=lambda x: x[1], reverse=True)
+        top3 = final_matched[:3]
+        
+        for p, score in top3:
             recommended.append({
                 "product_code": p["product_code"],
                 "product_name": p["product_name"],
@@ -361,6 +404,67 @@ TIMING_ORDER = [
     "BEFORE_DINNER", "AFTER_DINNER",
     "BEFORE_SLEEP",
 ]
+
+
+def _assign_base_timing(has_relax: bool, has_energy: bool, has_fat_soluble: bool, has_gi_irritant: bool) -> str:
+    """영양제 특성 플래그를 기반으로 기본 섭취 타이밍 1개 반환"""
+    if has_relax:
+        return "BEFORE_SLEEP"
+    if has_energy:
+        if has_fat_soluble or has_gi_irritant:
+            return "AFTER_BREAKFAST"
+        return "BEFORE_BREAKFAST"
+    if has_fat_soluble or has_gi_irritant:
+        return "AFTER_BREAKFAST"
+    return "AFTER_BREAKFAST"
+
+
+def _resolve_interactions(supp_profiles: list[dict], interactions: list[dict]):
+    """길항 작용 충돌 분리 및 시너지 동기화 섭취 스케줄 처리 (인플레이스 변형)"""
+    # 1. ANTAGONIST(길항작용) 처리: 배열 안에서 타이밍이 겹치면 뒤로 밀어내기
+    antagonist_pairs = [ia for ia in interactions if ia["type"] == "ANTAGONIST"]
+    for pair in antagonist_pairs:
+        a_id, b_id = pair["ingredient_a"], pair["ingredient_b"]
+        for sa in [p for p in supp_profiles if a_id in p["ingredient_ids"]]:
+            for sb in [p for p in supp_profiles if b_id in p["ingredient_ids"]]:
+                if sa["user_supplement_id"] == sb["user_supplement_id"]:
+                    continue
+                common_timings = set(sa["timings"]).intersection(set(sb["timings"]))
+                if common_timings:
+                    new_b_timings = []
+                    for t in sb["timings"]:
+                        if t in common_timings:
+                            current_idx = TIMING_ORDER.index(t)
+                            new_idx = min(current_idx + 2, len(TIMING_ORDER) - 1)
+                            while TIMING_ORDER[new_idx] in sa["timings"] and new_idx < len(TIMING_ORDER) - 1:
+                                new_idx += 1
+                            new_b_timings.append(TIMING_ORDER[new_idx])
+                        else:
+                            new_b_timings.append(t)
+                    sb["timings"] = sorted(list(set(new_b_timings)), key=lambda x: TIMING_ORDER.index(x))
+                    
+                    if pair.get("note"):
+                        sa["interaction_notes"].append(f"[방해] {pair.get('note')}")
+                        sb["interaction_notes"].append(f"[방해] {pair.get('note')}")
+
+    # 2. SYNERGY(시너지) 처리: 가급적 배열을 동기화하여 동시에 먹게 만듦
+    synergy_pairs = [ia for ia in interactions if ia["type"] == "SYNERGY"]
+    for pair in synergy_pairs:
+        a_id, b_id = pair["ingredient_a"], pair["ingredient_b"]
+        for sa in [p for p in supp_profiles if a_id in p["ingredient_ids"]]:
+            for sb in [p for p in supp_profiles if b_id in p["ingredient_ids"]]:
+                if sa["user_supplement_id"] == sb["user_supplement_id"]:
+                    continue
+                if pair.get("note"):
+                    sa["interaction_notes"].append(f"[시너지] {pair.get('note')}")
+                    sb["interaction_notes"].append(f"[시너지] {pair.get('note')}")
+                if len(sa["timings"]) == len(sb["timings"]):
+                    sb["timings"] = sa["timings"].copy()
+                else:
+                    min_len = min(len(sa["timings"]), len(sb["timings"]))
+                    for i in range(min_len):
+                        sb["timings"][i] = sa["timings"][i]
+                    sb["timings"] = sorted(set(sb["timings"]), key=lambda x: TIMING_ORDER.index(x))
 
 
 def _distribute_timings(base_timing: str, daily_dose: int) -> list[str]:
@@ -407,15 +511,22 @@ def _recommend_timing(
             "has_energy": False,
             "has_relax": False,
             "ingredient_ids": set(),
+            "absorption_notes": [],
+            "interaction_notes": [],
         }
         for ing in supp.get("ingredients", []):
             iid = ing["ingredient_id"]
             profile["ingredient_ids"].add(iid)
             info = master.get(iid, {})
+            
+            if info.get("absorption_note"):
+                profile["absorption_notes"].append(f"[{info.get('normalized_name')}] {info.get('absorption_note')}")
+                
             if info.get("solubility") == "FAT":
                 profile["has_fat_soluble"] = True
-            if info.get("gi_irritant"):
+            if info.get("gi_irritant") == "YES" or info.get("gi_irritant") == "TRUE":
                 profile["has_gi_irritant"] = True
+
             if info.get("effect") == "ENERGY":
                 profile["has_energy"] = True
             if info.get("effect") == "RELAX":
@@ -424,85 +535,19 @@ def _recommend_timing(
 
     # 1. 1차 기본 타이밍(base_timing) 배정 및 횟수(daily_dose) 기반 분배
     for p in supp_profiles:
-        if p["has_relax"]:
-            base_t = "BEFORE_SLEEP"
-        elif p["has_energy"]:
-            if p["has_fat_soluble"] or p["has_gi_irritant"]:
-                base_t = "AFTER_BREAKFAST"
-            else:
-                base_t = "BEFORE_BREAKFAST"
-        elif p["has_fat_soluble"] or p["has_gi_irritant"]:
-            base_t = "AFTER_BREAKFAST"
-        else:
-            base_t = "AFTER_BREAKFAST"  # 기본값
-
-        # 횟수에 맞게 쪼개기
+        base_t = _assign_base_timing(p["has_relax"], p["has_energy"], p["has_fat_soluble"], p["has_gi_irritant"])
         p["timings"] = _distribute_timings(base_t, p["daily_dose"])
 
-    # 2. ANTAGONIST(길항작용) 상호작용 처리: 혹시라도 배열 안에서 타이밍이 겹치면 뒤로 밀어내기
-    antagonist_pairs = [ia for ia in interactions if ia["type"] == "ANTAGONIST"]
-    for pair in antagonist_pairs:
-        a_id = pair["ingredient_a"]
-        b_id = pair["ingredient_b"]
-
-        supp_with_a = [p for p in supp_profiles if a_id in p["ingredient_ids"]]
-        supp_with_b = [p for p in supp_profiles if b_id in p["ingredient_ids"]]
-
-        for sa in supp_with_a:
-            for sb in supp_with_b:
-                if sa["user_supplement_id"] == sb["user_supplement_id"]:
-                    continue
-                
-                # 두 영양제의 타이밍 배열 중 겹치는 교집합 찾기
-                common_timings = set(sa["timings"]).intersection(set(sb["timings"]))
-                if common_timings:
-                    new_b_timings = []
-                    for t in sb["timings"]:
-                        if t in common_timings:
-                            current_idx = TIMING_ORDER.index(t)
-                            # 최소 2칸 뒤로 밀어냄 (충돌 피하기)
-                            new_idx = min(current_idx + 2, len(TIMING_ORDER) - 1)
-                            # 밀어낸 자리도 겹친다면 한 번 더 뒤로 밀어냄
-                            while TIMING_ORDER[new_idx] in sa["timings"] and new_idx < len(TIMING_ORDER) - 1:
-                                new_idx += 1
-                            new_b_timings.append(TIMING_ORDER[new_idx])
-                        else:
-                            new_b_timings.append(t)
-                            
-                    # 리스트 중복 제거 후 오름차순(TIMING_ORDER 기준) 정렬
-                    unique_timings = list(set(new_b_timings))
-                    sb["timings"] = sorted(unique_timings, key=lambda x: TIMING_ORDER.index(x))
-
-    # 3. SYNERGY(시너지) 상호작용 처리: 가급적 배열을 동기화하여 동시에 먹게 만듦
-    synergy_pairs = [ia for ia in interactions if ia["type"] == "SYNERGY"]
-    for pair in synergy_pairs:
-        a_id = pair["ingredient_a"]
-        b_id = pair["ingredient_b"]
-
-        supp_with_a = [p for p in supp_profiles if a_id in p["ingredient_ids"]]
-        supp_with_b = [p for p in supp_profiles if b_id in p["ingredient_ids"]]
-
-        for sa in supp_with_a:
-            for sb in supp_with_b:
-                if sa["user_supplement_id"] == sb["user_supplement_id"]:
-                    continue
-                
-                # 횟수(daily_dose)가 같다면 아예 똑같이 복사
-                if len(sa["timings"]) == len(sb["timings"]):
-                    sb["timings"] = sa["timings"].copy()
-                else:
-                    # 횟수가 다르다면 앞쪽 타이밍만이라도 강제로 동기화
-                    min_len = min(len(sa["timings"]), len(sb["timings"]))
-                    for i in range(min_len):
-                        sb["timings"][i] = sa["timings"][i]
-                    # 동기화 후 정렬
-                    sb["timings"] = sorted(set(sb["timings"]), key=lambda x: TIMING_ORDER.index(x))
+    # 2. 상호작용(길항/시너지) 병합 및 분리 로직 수행
+    _resolve_interactions(supp_profiles, interactions)
 
     return [
         {
             "user_supplement_id": p["user_supplement_id"],
             "alias": p["alias"],
             "intake_timings": p["timings"],
+            "absorption_notes": list(set(p["absorption_notes"])),
+            "interaction_notes": list(set(p["interaction_notes"])),
         }
         for p in supp_profiles
     ]
@@ -568,6 +613,11 @@ def build_report(req: dict, db: Session) -> dict:
         gender=gender,
         age=age,
     )
+
+    # API 응답 하위 호환성 유지를 위해, 프론트엔드 전송 직전 내부 LLM 참조용 데이터(Notes) 삭제
+    for t in timing_recommendations:
+        t.pop("absorption_notes", None)
+        t.pop("interaction_notes", None)
 
     return {
         "ingredient_analysis": filtered_analysis,
