@@ -1,0 +1,61 @@
+# ======================================================
+# 공통 설정 파일 (모든 환경에서 공통으로 적용)
+#
+# [프로파일 구조]
+#   application.yaml              ← 공통 (현재 파일)
+#   application-local.yml         ← 로컬 개발용 (gitignore, 직접 생성 필요)
+#   application-local.yml.example ← 로컬 설정 템플릿 (git 포함, 참고용)
+#   application-prod.yml          ← 운영 환경 (git 포함, 비밀값은 환경변수)
+# ======================================================
+
+spring:
+  application:
+    name: ddoya
+
+  jpa:
+    show-sql: false
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+        default_batch_fetch_size: 100
+
+  mvc:
+    pathmatch:
+      matching-strategy: ant_path_matcher
+
+  servlet:
+    multipart:
+      max-file-size: 10MB
+
+  config:
+    import: optional:file:.env[.properties]
+
+app:
+  s3:
+    enabled: ${S3_ENABLED:true}      # S3 준비 완료 시 true로 변경
+    bucket: ${AWS_S3_BUCKET}
+  fastapi:
+    url: ${FASTAPI_URL:http://localhost:8000}
+    mock_enabled: ${FASTAPI_MOCK_ENABLED} # fastApi 준비 완료 시 제거
+  timezone: Asia/Seoul
+
+firebase:
+  config:
+    # 로컬 환경: 클래스패스 내의 JSON 키 파일 경로 (기본값 제공)
+    path: ${FIREBASE_CONFIG_PATH:classpath:firebase/firebase-service-key.json}
+    # 운영 환경: 보안 및 안정성을 위해 JSON 내용을 Base64 인코딩한 문자열 (시크릿 주입용)
+    base64: ${FIREBASE_CONFIG_BASE64:}
+
+server:
+  port: 8080
+
+logging:
+  level:
+    root: INFO
+    com.ssafy.ddoya: INFO
+
+notification:
+  scheduler:
+    carry-enabled: true
+    intake-enabled: true

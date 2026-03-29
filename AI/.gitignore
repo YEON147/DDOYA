@@ -1,0 +1,38 @@
+# 환경변수
+.env
+
+# 가상환경
+venv/
+.venv/
+env/
+
+# 파이썬 캐시 및 빌드
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+build/
+dist/
+*.egg-info/
+
+# 모델 가중치
+# weights/*.pt
+
+# 임베딩 벡터
+# *.npz
+
+# 주피터
+.ipynb_checkpoints/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+*~
+*.swp
+
+# 로컬 스크립트
+import_data.py

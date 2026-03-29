@@ -1,0 +1,18 @@
+--extra-index-url https://download.pytorch.org/whl/cpu
+
+fastapi
+uvicorn
+openai
+requests
+python-multipart
+boto3
+python-dotenv
+opencv-python-headless
+numpy
+torch
+transformers
+ultralytics
+pillow
+sqlalchemy
+pymysql
+cryptography

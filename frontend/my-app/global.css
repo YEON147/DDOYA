@@ -1,0 +1,53 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+@layer utilities {
+  .font-scdream {
+    font-family: 'SCoreDreamRegular';
+  }
+
+  .font-scdream-thin {
+    font-family: 'SCoreDreamThin';
+  }
+
+  .font-scdream-extralight {
+    font-family: 'SCoreDreamExtraLight';
+  }
+
+  .font-scdream-light {
+    font-family: 'SCoreDreamLight';
+  }
+
+  .font-scdream-regular {
+    font-family: 'SCoreDreamRegular';
+  }
+
+  .font-scdream-medium {
+    font-family: 'SCoreDreamMedium';
+  }
+
+  .font-scdream-bold {
+    font-family: 'SCoreDreamBold';
+  }
+
+  .font-scdream-extrabold {
+    font-family: 'SCoreDreamExtraBold';
+  }
+
+  .font-scdream-heavy {
+    font-family: 'SCoreDreamHeavy';
+  }
+
+  .font-scdream-black {
+    font-family: 'SCoreDreamBlack';
+  }
+}

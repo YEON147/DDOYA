@@ -1,0 +1,34 @@
+# Git
+.git
+.gitignore
+
+# Gradle
+.gradle
+build/
+
+# Node (혹시 프론트 포함된 경우)
+node_modules/
+
+# IDE
+.idea
+.vscode
+*.iml
+
+# OS
+.DS_Store
+
+# logs
+*.log
+logs/
+
+# env (중요)
+.env
+
+# test
+src/test/
+
+# docker
+docker-compose.yml
+
+# 기타
+*.md

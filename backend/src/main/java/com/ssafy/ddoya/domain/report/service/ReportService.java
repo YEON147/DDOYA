@@ -1,0 +1,701 @@
+package com.ssafy.ddoya.domain.report.service;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ssafy.ddoya.domain.common.entity.IngredientMaster;
+import com.ssafy.ddoya.domain.common.entity.Product;
+import com.ssafy.ddoya.domain.common.repository.IngredientMasterRepository;
+import com.ssafy.ddoya.domain.common.repository.ProductRepository;
+import com.ssafy.ddoya.domain.intake.entity.IntakeSchedule;
+import com.ssafy.ddoya.domain.intake.entity.ScheduleType;
+import com.ssafy.ddoya.domain.intake.repository.IntakeScheduleRepository;
+import com.ssafy.ddoya.domain.report.dto.*;
+import com.ssafy.ddoya.domain.report.entity.AnalysisType;
+import com.ssafy.ddoya.domain.report.entity.IntakeTiming;
+import com.ssafy.ddoya.domain.report.entity.Report;
+import com.ssafy.ddoya.domain.report.entity.ReportComments;
+import com.ssafy.ddoya.domain.report.entity.ReportIngredientAnalysis;
+import com.ssafy.ddoya.domain.report.entity.ReportIntakeTimingRecommendation;
+import com.ssafy.ddoya.domain.report.entity.ReportRecommendedProduct;
+import com.ssafy.ddoya.domain.report.repository.ReportCommentsRepository;
+import com.ssafy.ddoya.domain.report.repository.ReportIngredientAnalysisRepository;
+import com.ssafy.ddoya.domain.report.repository.ReportIntakeTimingRecommendationRepository;
+import com.ssafy.ddoya.domain.report.repository.ReportRecommendedProductRepository;
+import com.ssafy.ddoya.domain.report.repository.ReportRepository;
+import com.ssafy.ddoya.domain.supplement.entity.Supplement;
+import com.ssafy.ddoya.domain.supplement.entity.UserSupplementIngredient;
+import com.ssafy.ddoya.domain.supplement.repository.SupplementRepository;
+import com.ssafy.ddoya.domain.supplement.repository.SupplementWithIngredientsRepository;
+import com.ssafy.ddoya.domain.intake.service.IntakeRecordSyncService;
+import com.ssafy.ddoya.domain.user.entity.User;
+import com.ssafy.ddoya.domain.user.entity.UserIntakeTimingSetting;
+import com.ssafy.ddoya.domain.user.repository.UserIntakeTimingSettingRepository;
+import com.ssafy.ddoya.domain.user.repository.UserRepository;
+import com.ssafy.ddoya.global.exception.CustomException;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
+
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
+
+/**
+ * 리포트 생성 및 조회를 담당하는 서비스입니다.
+ */
+@Slf4j
+@Service
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
+public class ReportService {
+
+    private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
+
+    private final ObjectMapper objectMapper;
+
+    @Value("${app.fastapi.url:http://localhost:8000}")
+    private String fastApiUrl;
+
+    private final RestTemplate restTemplate;
+    private final UserRepository userRepository;
+    private final SupplementWithIngredientsRepository supplementWithIngredientsRepository;
+    private final UserIntakeTimingSettingRepository intakeTimingSettingRepository;
+    private final ReportRepository reportRepository;
+    private final ReportIngredientAnalysisRepository ingredientAnalysisRepository;
+    private final ReportRecommendedProductRepository recommendedProductRepository;
+    private final ReportIntakeTimingRecommendationRepository timingRecommendationRepository;
+    private final ReportCommentsRepository reportCommentsRepository;
+    private final IngredientMasterRepository ingredientMasterRepository;
+    private final ProductRepository productRepository;
+    private final IntakeScheduleRepository intakeScheduleRepository;
+    private final IntakeRecordSyncService intakeRecordSyncService;
+    private final SupplementRepository supplementRepository;
+
+    // Self-injection for @Transactional proxy
+    private final ObjectProvider<ReportService> selfProvider;
+
+    /**
+     * 로그인 사용자 기준으로 리포트를 생성 또는 갱신합니다.
+     * 트랜잭션 없이 시작하여 네트워크 호출(FastAPI) 도중 커넥션 점유를 방지합니다.
+     */
+    @Transactional
+    public ReportCreateResponse createOrUpdateReport(Long userId) {
+        // 1. 사용자 조회
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> CustomException.notFound("사용자 정보를 찾을 수 없습니다."));
+
+        // 2. 영양제 + 성분 데이터 조회 (N+1 방지: FETCH JOIN)
+        List<Supplement> supplements = supplementWithIngredientsRepository.findAllWithIngredientsByUserId(userId);
+        if (supplements.isEmpty()) {
+            throw CustomException.badRequest("리포트를 생성할 내 영양제가 없습니다. 먼저 영양제를 등록해주세요.");
+        }
+
+        // 3. FastAPI 요청 DTO 구성 (성분 없는 영양제는 제외)
+        List<FastApiReportRequest.SupplementDto> supplementDtos = buildSupplementDtos(supplements);
+        if (supplementDtos.isEmpty()) {
+            throw CustomException.badRequest("분석 가능한 성분 정보가 있는 영양제가 없습니다. 영양제 성분 정보를 확인해주세요.");
+        }
+
+        FastApiReportRequest request = FastApiReportRequest.builder()
+                .userId(userId)
+                .gender(user.getGender().name())
+                .birthDate(user.getBirthDate())
+                .supplements(supplementDtos)
+                .build();
+
+        // 4. FastAPI 호출 (트랜잭션 외부)
+        FastApiReportResponse fastApiResponse = callFastApiGenerateReport(request);
+
+        // 5. 사용자 섭취 타이밍 설정 한 번에 조회 → Map 변환 (N+1 방지)
+        Map<IntakeTiming, LocalTime> timingSettingMap = buildTimingSettingMap(userId);
+
+        // 6. Report 엔티티 확보 (조회 또는 생성만 수행)
+        Report report = reportRepository.findByUserId(user.getUserId())
+                .orElseGet(() -> reportRepository.save(
+                        Report.builder()
+                                .user(user)
+                                .needsRefresh(false)
+                                .build()
+                ));
+
+        // 7. 트랜잭션 프록시를 통해 저장 로직 호출
+        ReportService self = selfProvider.getIfAvailable();
+        if (self == null) {
+            log.error("[ReportService] Self-provider is not available. Saving in current thread without proxy.");
+            return this.saveReportDataTransaction(report, user, supplements, supplementDtos, fastApiResponse, timingSettingMap);
+        }
+        return self.saveReportDataTransaction(report, user, supplements, supplementDtos, fastApiResponse, timingSettingMap);
+    }
+
+    /**
+     * 사용자의 최신 리포트 상세 정보를 조회합니다.
+     *
+     * @param userId 사용자 ID
+     * @return 리포트 상세 응답 DTO
+     */
+    public ReportDetailResponse getReportDetail(Long userId) {
+        // 1. 리포트 조회 (사용자당 1개)
+        Report report = reportRepository.findByUserId(userId)
+                .orElseThrow(() -> CustomException.notFound("리포트를 찾을 수 없습니다."));
+
+        Long reportId = report.getReportId();
+
+        // 2. 하위 데이터 병렬 또는 순차 조회 (Fetch Join 활용)
+        Optional<ReportComments> commentsOpt = reportCommentsRepository.findByReport_ReportId(reportId);
+        List<ReportRecommendedProduct> recommendedProducts = recommendedProductRepository.findAllByReport_ReportId(reportId);
+        List<ReportIntakeTimingRecommendation> timingRecommendations = timingRecommendationRepository.findAllByReport_ReportId(reportId);
+        List<ReportIngredientAnalysis> analysisEntities = ingredientAnalysisRepository.findAllByReport_ReportIdOrderByIngredient_IngredientIdAsc(reportId);
+
+        // 2.5 사용자별 섭취 타이밍 설정 조회 (N+1 방지용 Map 활용)
+        Map<IntakeTiming, LocalTime> timingSettingMap = buildTimingSettingMap(userId);
+
+        // 3. 추천 제품 그룹화 (Ingredient 기준)
+        List<ReportDetailResponse.RecommendedProductsByIngredientDto> productsByIngredient = recommendedProducts.stream()
+                .collect(Collectors.groupingBy(rrp -> rrp.getIngredient().getIngredientId()))
+                .entrySet().stream()
+                .map(entry -> {
+                    List<ReportRecommendedProduct> group = entry.getValue();
+                    // 그룹 내 첫 번째 데이터에서 성분 정보 추출 (IngredientMaster의 normalizedName 활용)
+                    ReportRecommendedProduct first = group.get(0);
+                    Long ingId = first.getIngredient().getIngredientId();
+                    String ingName = first.getIngredient().getNormalizedName();
+
+                    List<ReportDetailResponse.RecommendedProductDto> productDtos = group.stream()
+                            .map(rrp -> ReportDetailResponse.RecommendedProductDto.builder()
+                                    .productCode(rrp.getProduct().getProductCode())
+                                    .productName(rrp.getProduct().getProductName())
+                                    .build())
+                            .collect(Collectors.toList());
+
+                    return ReportDetailResponse.RecommendedProductsByIngredientDto.builder()
+                            .ingredientId(ingId)
+                            .ingredientName(ingName)
+                            .recommendedProducts(productDtos)
+                            .build();
+                })
+                .collect(Collectors.toList());
+
+        // 4. 섭취 타이밍 그룹화 (영양제 기준 → 영양제 1개당 여러 타이밍 리스트)
+        List<ReportDetailResponse.TimingRecommendationDto> timingRecommendationDtos = timingRecommendations.stream()
+                .collect(Collectors.groupingBy(r -> r.getSupplement().getUserSupplementId()))
+                .entrySet().stream()
+                .map(entry -> {
+                    List<ReportIntakeTimingRecommendation> group = entry.getValue();
+                    String alias = group.get(0).getSupplement().getAlias();
+
+                    List<ReportDetailResponse.TimingRecommendationDto.IntakeTimingInfo> timingInfos = group.stream()
+                            .map(r -> {
+                                IntakeTiming timing = r.getIntakeTiming();
+                                LocalTime settingTime = timingSettingMap.get(timing);
+                                String intakeTimeStr = (settingTime != null) ? settingTime.format(TIME_FORMATTER) : null;
+                                return ReportDetailResponse.TimingRecommendationDto.IntakeTimingInfo.builder()
+                                        .intakeTiming(timing.name())
+                                        .intakeTime(intakeTimeStr)
+                                        .build();
+                            })
+                            .collect(Collectors.toList());
+
+                    return ReportDetailResponse.TimingRecommendationDto.builder()
+                            .userSupplementId(entry.getKey())
+                            .alias(alias)
+                            .intakeTimings(timingInfos)
+                            .build();
+                })
+                .collect(Collectors.toList());
+
+        // 5. 코멘트 조립
+        ReportDetailResponse.ReportCommentsDto commentsDto = commentsOpt.map(c -> ReportDetailResponse.ReportCommentsDto.builder()
+                        .excessComment(c.getExcessComment())
+                        .deficiencyComment(c.getDeficiencyComment())
+                        .productComment(c.getProductComment())
+                        .scheduleComment(c.getScheduleComment())
+                        .build())
+                .orElse(null);
+
+        // 5.5 성분 분석 매핑
+        List<ReportDetailResponse.IngredientAnalysisResponse> analysisDtos = analysisEntities.stream()
+                .map(ia -> ReportDetailResponse.IngredientAnalysisResponse.builder()
+                        .ingredientId(ia.getIngredient().getIngredientId())
+                        .normalizedIngredientName(ia.getNormalizedIngredientName())
+                        .recommendedAmount(ia.getRecommendedAmount())
+                        .currentAmount(ia.getCurrentAmount())
+                        .excessRatio(ia.getExcessRatio())
+                        .excessAmount(ia.getExcessAmount())
+                        .deficiencyRatio(ia.getDeficiencyRatio())
+                        .deficiencyAmount(ia.getDeficiencyAmount())
+                        .unit(ia.getUnit())
+                        .analysisType(ia.getAnalysisType())
+                        .build())
+                .collect(Collectors.toList());
+
+        // 6. 최종 응답 조립
+        return ReportDetailResponse.builder()
+                .reportId(reportId)
+                .needsRefresh(report.getNeedsRefresh())
+                .updatedAt(report.getUpdatedAt() != null ? report.getUpdatedAt() : report.getCreatedAt())
+                .isEditable(false) // 조회 API에서는 항상 false
+                .comments(commentsDto)
+                .recommendedProductsByIngredient(productsByIngredient)
+                .ingredientAnalysis(analysisDtos)
+                .timingRecommendations(timingRecommendationDtos)
+                .build();
+    }
+
+    /**
+     * 리포트에서 추천된 복용 시각을 사용자가 확정하여 실제 스케줄로 저장합니다.
+     * 기존 INTAKE 스케줄은 삭제하되, 기록 동기화(syncOnDelete)를 수행합니다.
+     */
+    @Transactional
+    public ReportIntakeTimingUpdateResponse updateReportIntakeTimings(Long userId, Long reportId, ReportIntakeTimingUpdateRequest request) {
+        // 1. 리포트 소유권 검증
+        Report report = reportRepository.findById(reportId)
+                .orElseThrow(() -> CustomException.notFound("리포트를 찾을 수 없습니다."));
+        if (!report.getUser().getUserId().equals(userId)) {
+            throw CustomException.forbidden("해당 리포트에 대한 권한이 없습니다.");
+        }
+
+        User user = report.getUser();
+
+        // 2. 요청 영양제 ID 목록 추출 및 소유권/중복 검증
+        List<Long> requestedSupplementIds = request.getUserSupplements().stream()
+                .map(ReportIntakeTimingUpdateRequest.UserSupplementTimingRequest::getUserSupplementId)
+                .collect(Collectors.toList());
+
+        // 동일 영양제 중복 요청 체크
+        if (requestedSupplementIds.size() != requestedSupplementIds.stream().distinct().count()) {
+            throw CustomException.badRequest("중복된 영양제 ID가 요청에 포함되어 있습니다.");
+        }
+
+        // 3. 기존 INTAKE 스케줄 일괄 조회 (사용자 ID 및 활성 상태 보안 필터링)
+        List<IntakeSchedule> existingSchedules = intakeScheduleRepository.findByUserSupplementIdInAndUserIdAndScheduleTypeAndIsActiveTrue(requestedSupplementIds, userId, ScheduleType.INTAKE);
+
+        // 4. 기존 스케줄 비활성화 및 기록 정리
+        for (IntakeSchedule schedule : existingSchedules) {
+            // 오늘 MISSED + 미래 기록만 삭제 (과거/확정 이력은 보존)
+            intakeRecordSyncService.syncOnUpdate(schedule.getScheduleId());
+            schedule.deactivate();
+        }
+        // 명시적 반영
+        intakeScheduleRepository.saveAllAndFlush(existingSchedules);
+
+        // 5. 새 INTAKE 스케줄 생성
+        int totalSavedCount = 0;
+        for (ReportIntakeTimingUpdateRequest.UserSupplementTimingRequest supplementRequest : request.getUserSupplements()) {
+            Supplement supplement = supplementRepository.findByIdAndUserId(supplementRequest.getUserSupplementId(), userId)
+                    .orElseThrow(() -> CustomException.notFound("영양제 정보를 찾을 수 없거나 권한이 없습니다: " + supplementRequest.getUserSupplementId()));
+
+            for (String timeStr : supplementRequest.getIntakeTimes()) {
+                LocalTime intakeTime = LocalTime.parse(timeStr);
+                
+                // 새로운 스케줄 생성 (isActive = true)
+                IntakeSchedule newSchedule = IntakeSchedule.builder()
+                        .user(user)
+                        .supplement(supplement)
+                        .intakeTime(intakeTime)
+                        .scheduleType(ScheduleType.INTAKE)
+                        .dosePerIntake(supplement.getDosePerIntake()) 
+                        .isActive(true)
+                        .build();
+                
+                intakeScheduleRepository.save(newSchedule);
+                // 새 스케줄에 대해 오늘분 기록 생성 시도
+                intakeRecordSyncService.syncOnUpsert(newSchedule);
+                totalSavedCount++;
+            }
+        }
+
+        // 6. 리포트 상태 갱신 (더 이상 갱신 필요 없음)
+        report.clearNeedsRefresh();
+
+        return ReportIntakeTimingUpdateResponse.builder()
+                .reportId(reportId)
+                .savedCount(totalSavedCount)
+                .updatedSupplementCount(request.getUserSupplements().size())
+                .needsRefresh(report.getNeedsRefresh())
+                .build();
+    }
+
+    /**
+     * FastAPI 리포트 생성 API를 호출합니다.
+     */
+    private FastApiReportResponse callFastApiGenerateReport(FastApiReportRequest request) {
+        String url = fastApiUrl + "/api/ai/report/generate";
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<FastApiReportRequest> requestEntity = new HttpEntity<>(request, headers);
+
+        try {
+            ResponseEntity<String> responseEntity =
+                    restTemplate.postForEntity(url, requestEntity, String.class);
+
+            log.info("[ReportService] FastAPI status={}", responseEntity.getStatusCode());
+            log.info("[ReportService] FastAPI raw body={}", responseEntity.getBody());
+
+            String rawBody = responseEntity.getBody();
+
+            if (rawBody == null || rawBody.isBlank() || "null".equalsIgnoreCase(rawBody)) {
+                log.error("[ReportService] FastAPI raw body가 비어 있거나 'null'입니다. url={}", url);
+                throw new CustomException(INTERNAL_SERVER_ERROR, "AI 리포트 생성 서버로부터 유효한 응답을 받지 못했습니다.");
+            }
+
+            FastApiReportResponse body = objectMapper.readValue(rawBody, FastApiReportResponse.class);
+
+            if (body == null) {
+                log.error("[ReportService] FastAPI 응답 파싱 결과가 null입니다. rawBody={}", rawBody);
+                throw new CustomException(INTERNAL_SERVER_ERROR, "AI 리포트 응답 형식이 올바르지 않습니다.");
+            }
+
+            if (!body.isSuccess()) {
+                log.error("[ReportService] FastAPI 응답 success=false. message={}", body.getMessage());
+                throw new CustomException(HttpStatus.BAD_GATEWAY, "AI 리포트 생성에 실패했습니다: " + body.getMessage());
+            }
+
+            if (body.getData() == null) {
+                log.error("[ReportService] FastAPI 응답 data가 null입니다.");
+                throw new CustomException(INTERNAL_SERVER_ERROR, "AI 리포트 생성 서버로부터 유효한 데이터를 받지 못했습니다.");
+            }
+
+            return body;
+
+        } catch (CustomException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("[ReportService] FastAPI 호출 실패. url={}", url, e);
+            throw new CustomException(INTERNAL_SERVER_ERROR, "FastAPI 서버 호출 실패");
+        }
+    }
+
+    /**
+     * userId 기준으로 사용자 섭취 타이밍 설정을 한 번에 조회하여
+     * Map<IntakeTiming, LocalTime> 형태로 반환합니다. (N+1 방지)
+     */
+    private Map<IntakeTiming, LocalTime> buildTimingSettingMap(Long userId) {
+        List<UserIntakeTimingSetting> settings = intakeTimingSettingRepository.findAllByUserUserId(userId);
+        return settings.stream()
+                .collect(Collectors.toMap(
+                        UserIntakeTimingSetting::getIntakeTiming,
+                        UserIntakeTimingSetting::getIntakeTime,
+                        (a, b) -> a  // 동일 키 충돌 시 첫 번째 값 사용
+                ));
+    }
+
+    /**
+     * FastAPI 응답 결과를 DB에 저장하고, 응답 DTO를 조립하여 반환합니다.
+     * 실제 DB 작업이므로 트랜잭션을 보장합니다.
+     */
+    @Transactional
+    public ReportCreateResponse saveReportDataTransaction(Report detachedReport, User user, List<Supplement> allSupplements,
+                                               List<FastApiReportRequest.SupplementDto> requestedDtos,
+                                               FastApiReportResponse fastApiResponse,
+                                               Map<IntakeTiming, LocalTime> timingSettingMap) {
+        
+        Long reportId = detachedReport.getReportId();
+        log.info("[ReportService] DB 저장 시작: reportId={}", reportId);
+
+        // 기존 child 데이터 삭제 (clearAutomatically=false 로 수정되었으므로 report 가 detached 되지 않음)
+        ingredientAnalysisRepository.deleteAllByReportId(reportId);
+        recommendedProductRepository.deleteAllByReportId(reportId);
+        timingRecommendationRepository.deleteAllByReportId(reportId);
+
+        // 확실한 managed 상태 확보를 위해 벌크 삭제 후 필요시 재조회 (이미 repository 조치 완료)
+        Report managedReport = reportRepository.findById(reportId)
+                .orElseThrow(() -> new CustomException(INTERNAL_SERVER_ERROR, "Report를 찾을 수 없습니다."));
+        
+        FastApiReportResponse.ReportData data = fastApiResponse.getData();
+
+        // 성분 분석 저장
+        if (data.getIngredientAnalysis() != null) {
+            saveIngredientAnalysisList(managedReport, data.getIngredientAnalysis());
+        }
+
+        // 추천 제품 저장
+        if (data.getRecommendedProducts() != null) {
+            saveRecommendedProducts(managedReport, data.getRecommendedProducts());
+        }
+
+        // 섭취 타이밍 추천 저장
+        Map<Long, Supplement> supplementMap = allSupplements.stream()
+                .collect(Collectors.toMap(Supplement::getUserSupplementId, s -> s));
+        if (data.getTimingRecommendations() != null) {
+            saveTimingRecommendations(managedReport, data.getTimingRecommendations(), supplementMap);
+        }
+
+        // 코멘트 저장/갱신 (Upsert)
+        if (data.getComments() != null) {
+            saveOrUpdateComments(managedReport, data.getComments());
+        }
+
+        // 리포트에 반영된 영양제 is_reflected = true 처리
+        for (FastApiReportRequest.SupplementDto dto : requestedDtos) {
+            Supplement s = supplementMap.get(dto.getUserSupplementId());
+            if (s != null) {
+                s.markReflected();
+            }
+        }
+
+        log.info("[ReportService] 리포트 데이터 저장 완료: userId={}, reportId={}", user.getUserId(), reportId);
+
+        // 최신 리포트 데이터가 반영되었으므로 needs_refresh = false 로 설정
+        managedReport.clearNeedsRefresh();
+
+        // timing_recommendations에 intake_time 주입하여 응답 DTO 조립
+        List<ReportCreateResponse.TimingRecommendationWithTimeDto> timingWithTime =
+                buildTimingWithTime(user.getUserId(), data.getTimingRecommendations(), timingSettingMap);
+
+        return ReportCreateResponse.builder()
+                .reportId(reportId)
+                .needsRefresh(managedReport.getNeedsRefresh())
+                .updatedAt(LocalDateTime.now())
+                .isEditable(true)
+                .ingredientAnalysis(data.getIngredientAnalysis())
+                .recommendedProducts(data.getRecommendedProducts())
+                .timingRecommendations(timingWithTime)
+                .comments(data.getComments())
+                .build();
+    }
+
+    /**
+     * FastAPI의 timing_recommendations 목록에 사용자 설정 intake_time 또는 실제 등록된 스케줄 시각을 주입합니다.
+     */
+    private List<ReportCreateResponse.TimingRecommendationWithTimeDto> buildTimingWithTime(
+            Long userId,
+            List<FastApiReportResponse.TimingRecommendationDto> timingDtos,
+            Map<IntakeTiming, LocalTime> timingSettingMap) {
+
+        if (timingDtos == null) {
+            return List.of();
+        }
+
+        List<ReportCreateResponse.TimingRecommendationWithTimeDto> result = new ArrayList<>();
+        for (FastApiReportResponse.TimingRecommendationDto dto : timingDtos) {
+            Long supplementId = dto.getUserSupplementId();
+            List<IntakeSchedule> registeredSchedules = intakeScheduleRepository
+                    .findBySupplementIdAndUserIdAndScheduleTypeAndIsActiveTrue(supplementId, userId, ScheduleType.INTAKE);
+
+            boolean hasRegisteredSchedule = !registeredSchedules.isEmpty();
+            List<ReportCreateResponse.TimingRecommendationWithTimeDto.IntakeTimingInfo> timingInfos = new ArrayList<>();
+
+            List<String> rawTimings = dto.getIntakeTimings();
+
+            if (hasRegisteredSchedule) {
+                for (int i = 0; i < registeredSchedules.size(); i++) {
+                    IntakeSchedule schedule = registeredSchedules.get(i);
+                    String label = (rawTimings != null && !rawTimings.isEmpty())
+                            ? (i < rawTimings.size() ? rawTimings.get(i) : rawTimings.get(rawTimings.size() - 1))
+                            : null;
+
+                    timingInfos.add(ReportCreateResponse.TimingRecommendationWithTimeDto.IntakeTimingInfo.builder()
+                            .intakeTiming(label)
+                            .intakeTime(schedule.getIntakeTime().format(TIME_FORMATTER))
+                            .build());
+                }
+            } else {
+                if (rawTimings != null) {
+                    for (String timingStr : rawTimings) {
+                        String intakeTimeStr = resolveIntakeTime(timingStr, timingSettingMap);
+                        timingInfos.add(ReportCreateResponse.TimingRecommendationWithTimeDto.IntakeTimingInfo.builder()
+                                .intakeTiming(timingStr)
+                                .intakeTime(intakeTimeStr)
+                                .build());
+                    }
+                }
+            }
+
+            result.add(ReportCreateResponse.TimingRecommendationWithTimeDto.builder()
+                    .hasRegisteredSchedule(hasRegisteredSchedule)
+                    .userSupplementId(supplementId)
+                    .alias(dto.getAlias())
+                    .intakeTimings(timingInfos)
+                    .build());
+        }
+        return result;
+    }
+
+
+    /**
+     * intakeTiming 문자열을 enum으로 변환하여 사용자 설정 시각을 HH:mm로 반환합니다.
+     */
+    private String resolveIntakeTime(String intakeTimingStr, Map<IntakeTiming, LocalTime> timingSettingMap) {
+        if (intakeTimingStr == null || intakeTimingStr.isBlank()) {
+            return null;
+        }
+        try {
+            IntakeTiming timingEnum = IntakeTiming.valueOf(intakeTimingStr);
+            LocalTime localTime = timingSettingMap.get(timingEnum);
+            return (localTime != null) ? localTime.format(TIME_FORMATTER) : null;
+        } catch (IllegalArgumentException e) {
+            log.warn("[ReportService] 알 수 없는 intake_timing={}, intake_time을 null로 처리합니다.", intakeTimingStr);
+            return null;
+        }
+    }
+
+
+    // ── private helper ──────────────────────────────────────────────────────
+
+    private List<FastApiReportRequest.SupplementDto> buildSupplementDtos(List<Supplement> supplements) {
+        List<FastApiReportRequest.SupplementDto> result = new ArrayList<>();
+        for (Supplement supplement : supplements) {
+            List<UserSupplementIngredient> ingredientList = supplement.getIngredients();
+            if (ingredientList == null || ingredientList.isEmpty()) {
+                continue;
+            }
+
+            List<FastApiReportRequest.IngredientDto> ingredientDtos = ingredientList.stream()
+                    .map(i -> FastApiReportRequest.IngredientDto.builder()
+                            .ingredientId(i.getNormalizedIngredient().getIngredientId())
+                            .ingredientName(i.getNormalizedIngredient().getNormalizedName())
+                            .amount(i.getAmount())
+                            .unit(i.getUnit())
+                            .build())
+                    .collect(Collectors.toList());
+
+            result.add(FastApiReportRequest.SupplementDto.builder()
+                    .userSupplementId(supplement.getUserSupplementId())
+                    .alias(supplement.getAlias())
+                    .ingredients(ingredientDtos)
+                    .build());
+        }
+        return result;
+    }
+
+    private void saveIngredientAnalysisList(Report report,
+            List<FastApiReportResponse.IngredientAnalysisDto> analysisList) {
+        List<ReportIngredientAnalysis> entities = new ArrayList<>();
+        for (FastApiReportResponse.IngredientAnalysisDto dto : analysisList) {
+            IngredientMaster ingredient = ingredientMasterRepository.findById(dto.getIngredientId())
+                    .orElse(null);
+            if (ingredient == null) {
+                continue;
+            }
+
+            AnalysisType analysisType;
+            try {
+                analysisType = AnalysisType.valueOf(dto.getAnalysisType());
+            } catch (IllegalArgumentException e) {
+                analysisType = AnalysisType.NORMAL;
+            }
+
+            entities.add(ReportIngredientAnalysis.builder()
+                    .report(report)
+                    .ingredient(ingredient)
+                    .normalizedIngredientName(dto.getNormalizedIngredientName())
+                    .recommendedAmount(dto.getRecommendedAmount())
+                    .currentAmount(dto.getCurrentAmount())
+                    .excessRatio(dto.getExcessRatio())
+                    .excessAmount(dto.getExcessAmount())
+                    .deficiencyRatio(dto.getDeficiencyRatio())
+                    .deficiencyAmount(dto.getDeficiencyAmount())
+                    .unit(dto.getUnit())
+                    .analysisType(analysisType)
+                    .build());
+        }
+        ingredientAnalysisRepository.saveAll(entities);
+    }
+
+    private void saveRecommendedProducts(Report report,
+            List<FastApiReportResponse.RecommendedProductDto> productDtos) {
+        List<ReportRecommendedProduct> entities = new ArrayList<>();
+        for (FastApiReportResponse.RecommendedProductDto dto : productDtos) {
+            Optional<Product> productOpt = productRepository.findById(dto.getProductCode());
+            if (productOpt.isEmpty()) {
+                continue;
+            }
+
+            IngredientMaster ingredient = ingredientMasterRepository.findById(dto.getIngredientId())
+                    .orElse(null);
+            if (ingredient == null) {
+                continue;
+            }
+
+            entities.add(ReportRecommendedProduct.builder()
+                    .report(report)
+                    .product(productOpt.get())
+                    .ingredient(ingredient)
+                    .build());
+        }
+        recommendedProductRepository.saveAll(entities);
+    }
+
+    private void saveTimingRecommendations(Report report,
+            List<FastApiReportResponse.TimingRecommendationDto> timingDtos,
+            Map<Long, Supplement> supplementMap) {
+        List<ReportIntakeTimingRecommendation> entities = new ArrayList<>();
+        for (FastApiReportResponse.TimingRecommendationDto dto : timingDtos) {
+            Supplement supplement = supplementMap.get(dto.getUserSupplementId());
+            if (supplement == null) {
+                continue;
+            }
+
+            List<String> rawTimings = dto.getIntakeTimings();
+            if (rawTimings == null || rawTimings.isEmpty()) {
+                continue;
+            }
+
+            for (String timingStr : rawTimings) {
+                IntakeTiming intakeTiming;
+                try {
+                    intakeTiming = IntakeTiming.valueOf(timingStr);
+                } catch (IllegalArgumentException e) {
+                    continue;
+                }
+
+                entities.add(ReportIntakeTimingRecommendation.builder()
+                        .report(report)
+                        .supplement(supplement)
+                        .intakeTiming(intakeTiming)
+                        .build());
+            }
+        }
+        timingRecommendationRepository.saveAll(entities);
+    }
+
+    private void saveOrUpdateComments(Report report, FastApiReportResponse.CommentsDto commentsDto) {
+        LocalDateTime now = LocalDateTime.now();
+        log.info("saveOrUpdateComments reportId={}", report.getReportId());
+
+        reportCommentsRepository.findByReport_ReportId(report.getReportId())
+                .ifPresentOrElse(
+                        existing -> {
+                            existing.updateComments(
+                                    commentsDto.getExcessComment(),
+                                    commentsDto.getDeficiencyComment(),
+                                    commentsDto.getProductComment(),
+                                    commentsDto.getScheduleComment(),
+                                    now
+                            );
+                        },
+                        () -> {
+                            ReportComments newComments = ReportComments.builder()
+                                    .report(report)
+                                    .excessComment(commentsDto.getExcessComment())
+                                    .deficiencyComment(commentsDto.getDeficiencyComment())
+                                    .productComment(commentsDto.getProductComment())
+                                    .scheduleComment(commentsDto.getScheduleComment())
+                                    .createdAt(now)
+                                    .build();
+                            
+                            log.info("save target entity class={}", newComments.getClass().getName());
+                            log.info("report class={}", report.getClass().getName());
+
+                            reportCommentsRepository.save(newComments);
+                        }
+                );
+    }
+}
