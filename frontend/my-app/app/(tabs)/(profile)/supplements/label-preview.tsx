@@ -4,6 +4,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ScreenContainer } from '@/src/components/common/ScreenContainer';
@@ -22,9 +23,18 @@ import { appAlert } from '@/src/utils/appAlert';
 /** 업로드 직전 `prepareLabelImageForOcr` 로 JPEG 고정 */
 function buildIngredientsOcrFormData(jpegUri: string): FormData {
   const formData = new FormData();
+  
+  // 안드로이드 통신 에러 방지: URI가 file:// 로 시작하도록 강제
+  let formattedUri = jpegUri;
+  if (Platform.OS === 'android' && !jpegUri.startsWith('file://')) {
+    formattedUri = `file://${jpegUri}`;
+  }
+  
+  console.log('[DEBUG] OCR 업로드 URI (안드로이드 확인용):', formattedUri);
+
   formData.append(
     'ingredientsImg',
-    { uri: jpegUri, name: 'label.jpg', type: 'image/jpeg' } as unknown as Blob
+    { uri: formattedUri, name: 'label.jpg', type: 'image/jpeg' } as unknown as Blob
   );
   return formData;
 }
