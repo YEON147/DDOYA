@@ -4,6 +4,7 @@ import type { SupplementCreateRequest } from '@/src/types/supplement';
 import { getBackendErrorMessage } from '@/hooks/apiErrorMessage';
 import { buildSupplementRegisterFormData, supplementApi } from '@/src/api/supplement';
 import { prepareLabelImageForOcr } from '@/src/utils/labelImageForUpload';
+import { refreshCachesAfterSupplementChange } from '@/src/utils/supplementDbChangeSync';
 
 export type RegisterSupplementWithPillInput = {
   pillUri: string;
@@ -34,9 +35,8 @@ export function useCreateSupplementMutation() {
         throw firstErr;
       }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['supplements'] });
-      queryClient.invalidateQueries({ queryKey: ['report'] });
+    onSuccess: async () => {
+      await refreshCachesAfterSupplementChange(queryClient);
     },
   });
 }

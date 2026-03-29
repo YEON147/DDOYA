@@ -12,9 +12,9 @@ export const reportApi = {
   getReport: () => 
     apiClient.get<ReportResponse>('/reports'),
 
-  // 리포트 갱신 (POST /api/reports)
-  updateReport: () => 
-    apiClient.post<ReportCreateResponse>('/reports'),
+  // 리포트 갱신 (POST /api/reports) — AI 분석 등으로 10초 기본 타임아웃에 걸리기 쉬움
+  updateReport: () =>
+    apiClient.post<ReportCreateResponse>('/reports', undefined, { timeout: 180_000 }),
 
   // 리포트 복용 시각 확정 저장 (PATCH /api/reports/{reportId}/intake-timings)
   saveIntakeTimings: (reportId: number, payload: ReportIntakeTimingsSaveRequest) =>
