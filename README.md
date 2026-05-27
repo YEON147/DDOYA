@@ -96,7 +96,7 @@
 
 > **🖥️ 화면 (Screenshots)**
 > <div align="center">
->   <img src="assets/features/데일리섭취루틴.jpg" alt="데일리 섭취 루틴" width="200"/>
+>   <img src="assets/features/데일리섭취루틴.png" alt="데일리 섭취 루틴" width="200"/>
 >   <img src="assets/features/섭취인증.jpg" alt="섭취 인증" width="200"/>
 >   <img src="assets/features/섭취알람.jpg" alt="재고 및 섭취 알람" width="200"/>
 >   <p><em>직관적인 섭취 캘린더 관리와 스마트 알림 시스템</em></p>
