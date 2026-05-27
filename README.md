@@ -19,7 +19,7 @@
 <br>
 
 - **개발 기간** : 2026. 02. 23 ~ 2026. 03. 29 (5주)
-- **플랫폼** : Native App
+- **멀티플랫폼** :React Native(Expo) 기반의 iOS/Android 지원
 - **개발 인원** : 6명 (Frontend 2명, Backend&Infra 2명, AI 2명)
 - **소속 기관** : 삼성 청년 SW·AI 아카데미 14기
 
